@@ -101,8 +101,8 @@ if (db) {
       // Leer rol desde la tabla `usuarios` usando el UUID de Supabase Auth
       const { data: perfil } = await db
         .from('usuarios')
-        .select('rol_id, nombre_completo, roles(codigo)')
-        .eq('auth_user_id', session.user.id)
+        .select('rol_id, nombres, apellidos, roles(codigo)')
+        .eq('id', session.user.id)
         .single();
       if (perfil) {
         rolUsuario.value = perfil.roles?.codigo || 'empleado';
