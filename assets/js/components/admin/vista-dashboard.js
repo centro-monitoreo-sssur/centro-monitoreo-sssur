@@ -1,15 +1,17 @@
-﻿// Vista Dashboard Ejecutivo: Vista limpia con KPIs, gráfica de tendencia y lista de pendientes.
+// Vista Dashboard Ejecutivo: Vista limpia con KPIs, gráfica de tendencia y lista de pendientes.
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from '../../core/vue.js';
 import { Chart } from '../../core/libs.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { useDashboard } from '../../stores/dashboard.js';
 
 export default {
   setup() {
     const { denuncias, nombreDeTipo, colorDeTipo } = useDenuncias();
     const { iconoDeTipo } = useCatalogos();
     const { isDarkMode } = useNavegacion();
+    const { kpis, cargarKpis } = useDashboard();
 
     const canvasTendencia = ref(null);
     const canvasTendenciaMobile = ref(null);
@@ -29,14 +31,18 @@ export default {
       });
     }
 
+    // Si Supabase devolvió KPIs exactos, usarlos; si no, calcular desde filas cargadas
     const dashboardMetricas = computed(() => {
+      // Priorizar kpis exactos del store (count=exact en Supabase)
+      if (kpis.value.total > 0) return kpis.value;
+      // Fallback: calcular desde filas demo
       const lista = denuncias.value || [];
       const total = lista.length;
-      const pendientes = lista.filter(d => d.estado === 'pendiente').length;
-      const resueltas = lista.filter(d => d.estado === 'resuelta').length;
-      const enCurso = lista.filter(d => ['en_revision', 'en_obra'].includes(d.estado)).length;
+      const pendientes = lista.filter(d => d.estado === 'pendiente' || d.estado === 'recibida' || d.estado === 'asignada').length;
+      const resueltas = lista.filter(d => d.estado === 'resuelta' || d.estado === 'cerrada').length;
+      const enCurso = lista.filter(d => d.estado === 'en_atencion' || d.estado === 'en_revision' || d.estado === 'en_obra').length;
       const tasaResolucion = total > 0 ? Math.round((resueltas / total) * 100) : 0;
-      return { total, pendientes, enCurso, tasaResolucion };
+      return { total, pendientes, enCurso, resueltas, tasaResolucion, empleadosActivos: 0 };
     });
 
     const incidentesPrioritarios = computed(() => {
@@ -135,6 +141,7 @@ export default {
       actualizarReloj();
       relojInterval = setInterval(actualizarReloj, 60000);
       nextTick(() => dibujarGraficas());
+      cargarKpis(); // KPIs exactos desde Supabase
     });
 
     onUnmounted(() => {
@@ -148,7 +155,7 @@ export default {
     });
 
     return {
-      dashboardMetricas, incidentesPrioritarios,
+      dashboardMetricas, incidentesPrioritarios, kpis,
       nombreDeTipo, colorDeTipo, iconoDeTipo,
       tiempoRelativo, fechaHoraActual, canvasTendencia, canvasTendenciaMobile,
       verDetalle

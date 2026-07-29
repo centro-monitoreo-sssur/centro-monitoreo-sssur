@@ -6,6 +6,8 @@ import { useCatalogos } from '../../stores/catalogos.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { usePoblacion } from '../../stores/poblacion.js';
 import { useConfiguracion } from '../../stores/configuracion.js';
+import { useIntervenciones } from '../../stores/intervenciones.js';
+import { useDashboard } from '../../stores/dashboard.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
@@ -15,6 +17,8 @@ export default {
     const { cargarDenuncias, suscribirRealtime } = useDenuncias();
     const { cargarPoblacion } = usePoblacion();
     const { config } = useConfiguracion();
+    const { cargarIntervenciones } = useIntervenciones();
+    const { cargarKpis } = useDashboard();
 
     // Estado del modal de logout
     const mostrarModalLogout = ref(false);
@@ -155,6 +159,8 @@ export default {
         await cargarDepartamentos();
         await cargarPoblacion();
         await cargarDenuncias();
+        await cargarIntervenciones();
+        await cargarKpis();
         suscribirRealtime();
       } else if (!contexto) {
         // Si no está autenticado y no hay contexto, ir a login
