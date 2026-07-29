@@ -52,6 +52,10 @@ const KEY = 'global';
 async function cargarDesdeDB() {
   try {
     if (db) {
+      // Solo consultar BD si hay sesión activa (evita 406 antes del login)
+      const { data: sesionData } = await db.auth.getSession();
+      if (!sesionData?.session) throw new Error('sin-sesion');
+
       const { data, error } = await db.from('configuracion').select('valor').eq('clave', KEY).single();
       if (!error && data) {
         return {
@@ -65,7 +69,9 @@ async function cargarDesdeDB() {
       }
     }
   } catch (e) {
-    console.warn('Usando configuración local:', e.message);
+    if (e.message !== 'sin-sesion') {
+      console.warn('Usando configuración local:', e.message);
+    }
   }
   // Fallback to local storage if DB fails or is empty
   try {
