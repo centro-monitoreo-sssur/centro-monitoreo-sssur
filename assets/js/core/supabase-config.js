@@ -1,0 +1,4 @@
+// assets/js/core/supabase-config.js
+
+export const SUPABASE_URL = 'https://qfxiusdmcrbfadelybox.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmeGl1c2RtY3JiZmFkZWx5Ym94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMzQyNzIsImV4cCI6MjEwMDkxMDI3Mn0.zn5bj177ZQpnYZrHh1WHtdfxo_gKSRC6dmACOZGBTgk';
