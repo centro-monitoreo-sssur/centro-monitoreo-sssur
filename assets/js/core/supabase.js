@@ -5,13 +5,12 @@
 // la instancia a `db` para evitar la colisión con el objeto global
 // `supabase` que expone el CDN.
 // ============================================================
-export const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
-export const SUPABASE_ANON_KEY = 'TU-ANON-KEY-PUBLICA';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 
 // `conexionOk` es true solo cuando hay un cliente Supabase real
 // configurado (es decir, when los placeholders fueron reemplazados).
 export const conexionOk =
-  typeof window.supabase !== 'undefined' && !SUPABASE_URL.includes('TU-PROYECTO');
+  typeof window.supabase !== 'undefined' && SUPABASE_URL && !SUPABASE_URL.includes('XXXXXXXXXXXXXXXXXXXX');
 
 export let db = null;
 try {
