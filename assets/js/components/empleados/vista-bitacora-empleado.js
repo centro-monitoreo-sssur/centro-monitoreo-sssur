@@ -1,17 +1,19 @@
 // Vista: Bitácora del Empleado
-// Historial de todas las intervenciones en las que el empleado fue asignado.
+// Historial de intervenciones (casos) donde el empleado fue usuario_responsable_id.
 import { ref, computed, onMounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { db } from '../../core/supabase.js';
 
 export default {
   setup() {
-    const { irA } = useNavegacion();
+    const { irA, usuarioId } = useNavegacion();
 
     const intervenciones = ref([]);
+    const cargando = ref(false);
     const filtroEstado = ref('todas');
     const busqueda = ref('');
 
-    // DEMO: Historial de intervenciones del empleado — reemplazar con API real
+    // DEMO: Historial fallback si no hay Supabase o el empleado no tiene casos aún
     const historialDemo = [
       {
         id: 101,
@@ -70,18 +72,87 @@ export default {
       }
     ];
 
-    onMounted(() => {
-      const guardadas = localStorage.getItem('intervenciones_empleado');
-      if (guardadas) {
-        const parseadas = JSON.parse(guardadas);
-        // Fusionar demo con las reales guardadas (evitar duplicados por id)
-        const idsReales = new Set(parseadas.map(i => i.id));
-        const extras = historialDemo.filter(d => !idsReales.has(d.id));
-        intervenciones.value = [...parseadas, ...extras];
-      } else {
+    // Mapeo de estado_codigo de Supabase → estado display
+    const mapEstado = (cod) => {
+      const mapa = {
+        recibida: 'pendiente',
+        asignada: 'pendiente',
+        en_atencion: 'en_proceso',
+        resuelta: 'completada',
+        cerrada: 'completada',
+        anulada: 'completada',
+      };
+      return mapa[cod] || cod;
+    };
+
+    // Mapeo de prioridad_id → texto
+    const mapPrioridad = (id) => {
+      if (id <= 1) return 'alta';
+      if (id === 2) return 'media';
+      return 'baja';
+    };
+
+    const cargarBitacora = async () => {
+      cargando.value = true;
+      try {
+        const uid = usuarioId.value || localStorage.getItem('usuario_id');
+        if (db && uid) {
+          const { data, error } = await db
+            .from('casos')
+            .select(`
+              id,
+              titulo,
+              descripcion,
+              estado_codigo,
+              prioridad_id,
+              direccion_referencia,
+              resolucion,
+              created_at,
+              fecha_cierre
+            `)
+            .eq('usuario_responsable_id', uid)
+            .is('deleted_at', null)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          if (data && data.length > 0) {
+            intervenciones.value = data.map(c => ({
+              id: c.id,
+              titulo: c.titulo,
+              descripcion: c.descripcion,
+              prioridad: mapPrioridad(c.prioridad_id),
+              estado: mapEstado(c.estado_codigo),
+              ubicacion: c.direccion_referencia,
+              fecha: c.created_at,
+              fechaCierre: c.fecha_cierre || null,
+              resolucion: c.resolucion || null
+            }));
+          } else {
+            // Sin casos asignados aún: usar demo como ejemplo
+            intervenciones.value = historialDemo;
+          }
+        } else {
+          // Sin Supabase: fallback demo con localStorage
+          const guardadas = localStorage.getItem('intervenciones_empleado');
+          if (guardadas) {
+            const parseadas = JSON.parse(guardadas);
+            const idsReales = new Set(parseadas.map(i => i.id));
+            const extras = historialDemo.filter(d => !idsReales.has(d.id));
+            intervenciones.value = [...parseadas, ...extras];
+          } else {
+            intervenciones.value = historialDemo;
+          }
+        }
+      } catch (e) {
+        console.warn('Bitácora: usando datos demo.', e.message);
         intervenciones.value = historialDemo;
+      } finally {
+        cargando.value = false;
       }
-    });
+    };
+
+    onMounted(cargarBitacora);
 
     const intervencionesFiltradas = computed(() => {
       let lista = intervenciones.value;
@@ -95,7 +166,6 @@ export default {
           i.ubicacion.toLowerCase().includes(q)
         );
       }
-      // Más recientes primero
       return [...lista].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
     });
 
@@ -128,6 +198,8 @@ export default {
       estadisticas,
       filtroEstado,
       busqueda,
+      cargando,
+      cargarBitacora,
       getPrioridadColor,
       getPrioridadBg,
       getEstadoColor,

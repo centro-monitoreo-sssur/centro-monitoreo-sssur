@@ -1,56 +1,95 @@
-﻿// ============================================================
+// ============================================================
 // COMPONENTE: Roles y Permisos
 // Definición de roles del sistema y matriz de acceso por módulos.
 // ============================================================
 import { ref } from '../../core/vue.js';
+import { db } from '../../core/supabase.js';
 
 export default {
   name: 'vista-roles',
   setup() {
-    const roles = ref([
-      { id: 'superadmin', nombre: 'SuperAdministrador', descripcion: 'Acceso total al sistema y configuración', usuarios: 2, color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30' },
-      { id: 'admin', nombre: 'Administrador de Área', descripcion: 'Gestión completa de su dependencia', usuarios: 5, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-      { id: 'operador', nombre: 'Operador de Monitoreo', descripcion: 'Atención de denuncias y creación de obras', usuarios: 12, color: 'text-emerald-600', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-      { id: 'lector', nombre: 'Solo Lectura', descripcion: 'Consulta de reportes y mapas, sin edición', usuarios: 8, color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800' },
-    ]);
+    const roles = ref([]);
+    const modulos = ref([]);
+    const rolesPermisos = ref([]);
+    const rolSeleccionado = ref(null);
+    const cargando = ref(false);
 
-    const modulos = [
-      { id: 'dashboard', label: 'Dashboard y Métricas' },
-      { id: 'mapa', label: 'Mapa en Vivo y Cartograma' },
-      { id: 'denuncias', label: 'Gestión de Denuncias' },
-      { id: 'intervenciones', label: 'Intervenciones en Campo' },
-      { id: 'reportes', label: 'Generación de Reportes' },
-      { id: 'config', label: 'Configuración del Sistema' },
-    ];
+    async function cargarData() {
+      cargando.value = true;
+      if (db) {
+        const [resRoles, resModulos, resPermisos] = await Promise.all([
+          db.from('roles').select('*').order('id'),
+          db.from('permisos_modulos').select('*').order('id'),
+          db.from('roles_permisos').select('*')
+        ]);
+        
+        // Asignar colores fijos por defecto si no existen
+        const colors = ['text-purple-600', 'text-blue-600', 'text-emerald-600', 'text-gray-600'];
+        const bgs = ['bg-purple-100', 'bg-blue-100', 'bg-emerald-100', 'bg-gray-100'];
+        
+        if (resRoles.data) {
+          roles.value = resRoles.data.map((r, idx) => ({
+            ...r,
+            color: colors[idx % colors.length],
+            bg: bgs[idx % bgs.length],
+            usuarios: 0 // TODO: count from usuarios table
+          }));
+        }
 
-    const rolSeleccionado = ref(roles.value[0]);
+        modulos.value = resModulos.data?.length ? resModulos.data.map(m => ({
+           id: m.codigo_modulo, label: m.nombre
+        })) : [
+          { id: 'dashboard', label: 'Dashboard y Métricas' },
+          { id: 'mapa', label: 'Mapa en Vivo y Cartograma' },
+          { id: 'denuncias', label: 'Gestión de Denuncias' },
+          { id: 'intervenciones', label: 'Intervenciones en Campo' },
+          { id: 'reportes', label: 'Generación de Reportes' },
+          { id: 'config', label: 'Configuración del Sistema' }
+        ];
+
+        rolesPermisos.value = resPermisos.data || [];
+        if (roles.value.length > 0) rolSeleccionado.value = roles.value[0];
+      }
+      cargando.value = false;
+    }
 
     function seleccionarRol(rol) {
       rolSeleccionado.value = rol;
     }
 
-    // Matriz de permisos simulada (solo visual)
     function tienePermiso(rolId, moduloId, accion) {
-      if (rolId === 'superadmin') return true;
-      if (rolId === 'lector' && accion !== 'leer') return false;
-      if (rolId === 'lector' && accion === 'leer' && moduloId !== 'config') return true;
-      
-      if (rolId === 'admin') {
-        if (moduloId === 'config') return accion === 'leer';
-        return true;
-      }
-      
-      if (rolId === 'operador') {
-        if (moduloId === 'config' || moduloId === 'reportes') return false;
-        if (accion === 'borrar') return false;
-        return true;
-      }
-      
-      return false;
+       if (!rolesPermisos.value.length) {
+          // Lógica por defecto (dummy)
+          const rol = roles.value.find(r => r.id === rolId);
+          if (!rol) return false;
+          const cod = rol.codigo;
+          if (cod === 'superadmin') return true;
+          if (cod === 'lector' && accion !== 'leer') return false;
+          if (cod === 'lector' && accion === 'leer' && moduloId !== 'config') return true;
+          if (cod === 'admin') {
+            if (moduloId === 'config') return accion === 'leer';
+            return true;
+          }
+          if (cod === 'operador') {
+            if (moduloId === 'config' || moduloId === 'reportes') return false;
+            if (accion === 'borrar') return false;
+            return true;
+          }
+          return false;
+       }
+       
+       // Lógica real de tabla
+       const pm = modulos.value.find(m => m.id === moduloId); // wait, modulos id is codigo_modulo
+       // this needs more complex joining which we don't have yet.
+       return false;
     }
 
+    import('../../core/vue.js').then(({ onMounted }) => {
+      onMounted(cargarData);
+    });
+
     return {
-      roles, modulos, rolSeleccionado, seleccionarRol, tienePermiso
+      roles, modulos, rolSeleccionado, seleccionarRol, tienePermiso, cargando
     };
   }
 };

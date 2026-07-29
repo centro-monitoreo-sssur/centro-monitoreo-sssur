@@ -13,9 +13,32 @@ async function cargarPoblacion() {
   cargandoPoblacion.value = true;
   try {
     if (db) {
-      const { data, error } = await db.from('ciudadanos').select('*');
+      const { data, error } = await db
+        .from('ciudadanos')
+        .select(`
+          id,
+          dui,
+          telefono,
+          nombres,
+          apellidos,
+          activo,
+          created_at,
+          distritos ( nombre )
+        `);
       if (error) throw error;
-      if (data && data.length) poblacion.value = data;
+      if (data) {
+        poblacion.value = data.map(c => ({
+          id: c.id,
+          dui: c.dui || '',
+          telefono: c.telefono || '',
+          nombre: `${c.nombres} ${c.apellidos}`,
+          email: '', // email requeriría auth.users view, lo dejamos vacío por ahora
+          distrito: c.distritos?.nombre || 'Desconocido',
+          estado: c.activo ? 'activo' : 'inactivo',
+          fechaRegistro: c.created_at,
+          verificado: true // temporal
+        }));
+      }
     } else {
       await new Promise((r) => setTimeout(r, 200)); // latencia simulada
     }

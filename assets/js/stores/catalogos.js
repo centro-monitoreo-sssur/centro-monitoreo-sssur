@@ -39,8 +39,15 @@ async function cargarDepartamentos() {
     if (db) {
       const { data, error } = await db
         .from('departamentos')
-        .select('id, nombre, codigo, activo')
-        .eq('activo', true)
+        .select(`
+          id, 
+          nombre, 
+          codigo, 
+          estado,
+          direcciones_administrativas (
+            nombre
+          )
+        `)
         .order('nombre');
       if (error) throw error;
       if (data && data.length) departamentos.value = data;

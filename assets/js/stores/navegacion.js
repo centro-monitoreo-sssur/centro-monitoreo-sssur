@@ -19,6 +19,8 @@ const isDarkMode = ref(localStorage.getItem('color-theme') === 'dark');
 const autenticado = ref(localStorage.getItem('sesion_activa') === 'true');
 const usuarioActual = ref(localStorage.getItem('usuario_autenticado') || '');
 const rolUsuario = ref(localStorage.getItem('rol_usuario') || '');
+// UUID de Supabase Auth — necesario para filtrar casos por usuario_responsable_id
+const usuarioId = ref(localStorage.getItem('usuario_id') || '');
 
 // Error de autenticación (para mostrarlo en el formulario de login)
 const errorAuth = ref('');
@@ -98,6 +100,8 @@ if (db) {
     if (session?.user) {
       autenticado.value = true;
       usuarioActual.value = session.user.email;
+      usuarioId.value = session.user.id;
+      localStorage.setItem('usuario_id', session.user.id);
       // Leer rol desde la tabla `usuarios` usando el UUID de Supabase Auth
       const { data: perfil } = await db
         .from('usuarios')
@@ -114,9 +118,11 @@ if (db) {
       autenticado.value = false;
       usuarioActual.value = '';
       rolUsuario.value = '';
+      usuarioId.value = '';
       localStorage.removeItem('sesion_activa');
       localStorage.removeItem('usuario_autenticado');
       localStorage.removeItem('rol_usuario');
+      localStorage.removeItem('usuario_id');
       vistaActual.value = 'login';
     }
   });
@@ -185,7 +191,7 @@ export function useNavegacion() {
     vistaActual, sidebarAbierto, sidebarColapsado, logoError, toggleSidebar,
     mapaFullscreen, toggleMapaFullscreen,
     isDarkMode, toggleDarkMode,
-    autenticado, usuarioActual, rolUsuario,
+    autenticado, usuarioActual, rolUsuario, usuarioId,
     errorAuth, cargandoAuth,
     setAutenticado, iniciarSesion, cerrarSesion,
     navOperacion, navAdmin, titulos, tituloVista, irA,

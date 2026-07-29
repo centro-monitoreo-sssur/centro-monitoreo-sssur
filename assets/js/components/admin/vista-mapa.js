@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // VISTA: Mapa en vivo (consola de monitoreo municipal).
 // Vista única para visualizar todo lo que recibe el sistema. Hereda la
 // identidad visual institucional (ver .kilocode/rules/04-sistema-diseno):
@@ -970,35 +970,6 @@ export default {
       sincronizar();
     }, { immediate: true });
 
-    /* ─── Simular nueva denuncia (demo) ─── */
-    const alertTemplates = [
-      { tipo: 'Social-Ruido', title: 'Riña vecinal en Plaza Central', address: 'Plaza Central Panchimalco', lat: 13.6170, lng: -89.1860 },
-      { tipo: 'Obras-Calle', title: 'Nuevo bache en calle principal', address: 'Calle Principal Santo Tomás', lat: 13.6445, lng: -89.1375 },
-      { tipo: 'Civil-Arbol', title: 'Árbol en riesgo de caída', address: 'Mirador Rosario de Mora', lat: 13.5730, lng: -89.2000 },
-      { tipo: 'Residuos-Basura', title: 'Basura frente al mercado municipal', address: 'Mercado Municipal San Marcos', lat: 13.6560, lng: -89.1885 },
-      { tipo: 'Alumbrado-Luz', title: 'Sector sin alumbrado — 3 cuadras', address: 'Colonia Los Pinos, Santiago Texacuangos', lat: 13.6415, lng: -89.1145 },
-    ];
-    let alertIdx = 0;
-    function simularDenuncia() {
-      const tpl = alertTemplates[alertIdx % alertTemplates.length]; alertIdx++;
-      const now = new Date();
-      const d = {
-        id: `sim_${Date.now()}`,
-        tipo_id: tpl.tipo,
-        direccion: tpl.address,
-        lat: tpl.lat + (Math.random() - 0.5) * 0.004,
-        lng: tpl.lng + (Math.random() - 0.5) * 0.004,
-        estado: 'pendiente',
-        created_at: now.toISOString(),
-        descripcion: tpl.title,
-      };
-      denuncias.value = [...(denuncias.value || []), d];
-      // Sincronizar mapa para mostrar el nuevo marcador
-      nextTick(() => {
-        sincronizar();
-      });
-    }
-
     /* ─── Toggles de capas ─── */
     function toggleCat(id) {
       visibilidad[id] = !visibilidad[id];
@@ -1086,13 +1057,6 @@ export default {
       clockInt = setInterval(tick, 1000);
       nextTick(() => { initMap(); if (lmap) lmap.invalidateSize(); });
       window.addEventListener('resize', _kpiResizeHandler, { passive: true });
-      const alertas = [
-        [5000, 'Nueva denuncia: ruido excesivo en Col. Centro — asignada a CAM', 'CAM · NUEVA DENUNCIA', '#e07b3a'],
-        [16000, 'Intervención al 60% — retiro de árbol caído, Calle El Progreso', 'PROTECCIÓN CIVIL · ACTUALIZACIÓN', '#27a86e'],
-        [28000, 'Luminaria apagada en intersección de alta accidentalidad reportada', 'ALUMBRADO · NUEVA DENUNCIA', '#2098b8'],
-      ];
-      alertas.forEach(([ms, text, label, color]) => setTimeout(() => addToast(text, color, label), ms));
-      setInterval(simularDenuncia, 48000);
     });
 
     onUnmounted(() => {
@@ -1119,7 +1083,7 @@ export default {
       cambiarTile, obtenerUbicacion, ubicacionActiva, ubicacionCargando, toggleCat, selectAndZoom, toggleRoutes, toggleInterv,
       zoomRoute, zoomInterv, flyToFeed,
       doZoomIn, doZoomOut, resetView, fitAll,
-      simularDenuncia, dismissToast,
+      dismissToast,
       // Filtros
       mostrarPanelFiltros, filtros, filtrosActivos, DISTRITOS, hoy,
       aplicarFiltros, limpiarFiltros, tiposDenuncia,

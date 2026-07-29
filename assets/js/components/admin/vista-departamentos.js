@@ -22,10 +22,14 @@ export default {
     /* ─── Computeds ─── */
     const departamentosFiltrados = computed(() => {
       return departamentos.value.filter(departamento => {
-        const coincideBusqueda = departamento.nombre_dpto.toLowerCase().includes(filtroBusqueda.value.toLowerCase()) ||
-                                departamento.cod_dpto.toLowerCase().includes(filtroBusqueda.value.toLowerCase());
+        const nombre = departamento.nombre || '';
+        const codigo = departamento.codigo || '';
+        const direccion = departamento.direcciones_administrativas?.nombre || '';
         
-        const coincideDireccion = !filtroDireccion.value || departamento.nombre_direccion === filtroDireccion.value;
+        const coincideBusqueda = nombre.toLowerCase().includes(filtroBusqueda.value.toLowerCase()) ||
+                                codigo.toLowerCase().includes(filtroBusqueda.value.toLowerCase());
+        
+        const coincideDireccion = !filtroDireccion.value || direccion === filtroDireccion.value;
         const coincideEstado = !filtroEstado.value || departamento.estado === filtroEstado.value;
         
         return coincideBusqueda && coincideDireccion && coincideEstado;
@@ -38,7 +42,9 @@ export default {
     
     const direccionesDisponibles = computed(() => {
       const direcciones = new Set();
-      departamentos.value.forEach(d => direcciones.add(d.nombre_direccion));
+      departamentos.value.forEach(d => {
+        if (d.direcciones_administrativas?.nombre) direcciones.add(d.direcciones_administrativas.nombre);
+      });
       return Array.from(direcciones).sort();
     });
 
@@ -52,10 +58,9 @@ export default {
     const abrirModalEditar = (departamento) => {
       departamentoSeleccionado.value = departamento ? { ...departamento } : {
         id: null,
-        cod_dpto: '',
-        nombre_dpto: '',
+        codigo: '',
+        nombre: '',
         codigo_direccion: '',
-        nombre_direccion: '',
         estado: 'activo'
       };
       modalEditar.value = true;
