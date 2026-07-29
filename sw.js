@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.0.2';
+const CACHE_VERSION = 'v1.0.3';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
 // Recursos estáticos mínimos requeridos para la app offline
