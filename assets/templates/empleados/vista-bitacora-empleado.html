@@ -1,0 +1,116 @@
+<!-- ============================================================
+     VISTA: Bitácora del Empleado (Historial de Intervenciones)
+     Portal de Empleados · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-gray-50 flex flex-col pb-24">
+
+  <!-- Topbar -->
+  <div class="bg-white/90 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-50 shadow-sm">
+    <div class="px-4 py-3 flex items-center justify-between pt-safe">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-book-open text-indigo-600"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-gray-900 leading-tight">Mi Bitácora</h1>
+          <p class="text-[11px] text-gray-500 font-medium">Historial de intervenciones</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estadísticas rápidas -->
+  <div class="px-4 pt-5 pb-3">
+    <div class="grid grid-cols-4 gap-2">
+      <div class="bg-white rounded-2xl p-3 text-center shadow-sm border border-gray-100">
+        <p class="text-2xl font-black text-gray-900">{{ estadisticas.total }}</p>
+        <p class="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Total</p>
+      </div>
+      <div class="bg-white rounded-2xl p-3 text-center shadow-sm border border-emerald-100">
+        <p class="text-2xl font-black text-emerald-600">{{ estadisticas.completadas }}</p>
+        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-wider mt-0.5">Listas</p>
+      </div>
+      <div class="bg-white rounded-2xl p-3 text-center shadow-sm border border-blue-100">
+        <p class="text-2xl font-black text-blue-600">{{ estadisticas.enProceso }}</p>
+        <p class="text-[9px] text-blue-500 font-bold uppercase tracking-wider mt-0.5">En curso</p>
+      </div>
+      <div class="bg-white rounded-2xl p-3 text-center shadow-sm border border-red-100">
+        <p class="text-2xl font-black text-red-600">{{ estadisticas.pendientes }}</p>
+        <p class="text-[9px] text-red-500 font-bold uppercase tracking-wider mt-0.5">Pendientes</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buscador + Filtros -->
+  <div class="px-4 pb-4 space-y-3">
+    <!-- Buscador -->
+    <div class="relative">
+      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+      <input v-model="busqueda" type="text" placeholder="Buscar por título o ubicación..." class="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm transition-shadow">
+    </div>
+    <!-- Filtros por estado -->
+    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+      <button v-for="f in [{k:'todas',l:'Todas'},{k:'completada',l:'Completadas'},{k:'en_proceso',l:'En Proceso'},{k:'pendiente',l:'Pendientes'}]" :key="f.k"
+        @click="filtroEstado = f.k"
+        :class="filtroEstado === f.k ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'"
+        class="shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95">
+        {{ f.l }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Lista de intervenciones -->
+  <div class="px-4 space-y-3 flex-1">
+
+    <!-- Empty state -->
+    <div v-if="intervencionesFiltradas.length === 0" class="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100 mt-4">
+      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-book-open text-gray-300 text-2xl"></i>
+      </div>
+      <h3 class="font-bold text-gray-700 mb-1">Sin resultados</h3>
+      <p class="text-sm text-gray-400">No hay intervenciones con esos filtros.</p>
+    </div>
+
+    <!-- Cards -->
+    <div v-for="item in intervencionesFiltradas" :key="item.id"
+      @click="verDetalle(item)"
+      class="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 cursor-pointer active:scale-95 transition-transform relative overflow-hidden">
+
+      <!-- Barra lateral de prioridad -->
+      <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-3xl" :class="getPrioridadColor(item.prioridad)"></div>
+
+      <div class="pl-3">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-2 gap-2">
+          <div class="flex-1 min-w-0">
+            <h4 class="font-bold text-gray-900 text-sm leading-snug truncate">{{ item.titulo }}</h4>
+            <p class="text-[11px] text-gray-500 mt-0.5">Asignada: {{ formatDate(item.fecha) }}</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0" :class="getEstadoColor(item.estado)">
+            <i :class="'fa-solid ' + getEstadoIcon(item.estado)" class="mr-1 text-[9px]"></i>
+            {{ getEstadoLabel(item.estado) }}
+          </span>
+        </div>
+
+        <!-- Descripción -->
+        <p class="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">{{ item.descripcion }}</p>
+
+        <!-- Pie: ubicación + fecha cierre -->
+        <div class="flex items-center justify-between text-[11px] text-gray-500">
+          <span class="flex items-center gap-1.5 min-w-0">
+            <i class="fa-solid fa-map-pin text-red-400 shrink-0"></i>
+            <span class="truncate">{{ item.ubicacion }}</span>
+          </span>
+          <span v-if="item.fechaCierre" class="flex items-center gap-1.5 shrink-0 text-emerald-600 font-bold">
+            <i class="fa-solid fa-flag-checkered"></i>
+            {{ formatDate(item.fechaCierre) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+</div>

@@ -1,0 +1,151 @@
+<!-- ======================= VISTA: DASHBOARD EJECUTIVO ======================= -->
+<div class="h-full flex flex-col p-4 md:p-6">
+
+  <!-- CABECERA -->
+  <div class="mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+    <p class="text-gray-500 dark:text-gray-400 mt-1">Centro de Monitoreo Municipal · {{ fechaHoraActual }}</p>
+  </div>
+
+  <!-- KPIs PRINCIPALES -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Total</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ dashboardMetricas.total }}</p>
+        </div>
+        <div class="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+          <i class="fas fa-inbox text-blue-600 dark:text-blue-400"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Pendientes</p>
+          <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ dashboardMetricas.pendientes }}</p>
+        </div>
+        <div class="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+          <i class="fas fa-clock text-red-600 dark:text-red-400"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-normal text-gray-500 dark:text-gray-400">En Curso</p>
+          <p class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ dashboardMetricas.enCurso }}</p>
+        </div>
+        <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+          <i class="fas fa-hard-hat text-amber-600 dark:text-amber-400"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Resolución</p>
+          <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ dashboardMetricas.tasaResolucion }}%</p>
+        </div>
+        <div class="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+          <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYOUT DESKTOP (oculto en móvil) -->
+  <div class="hidden lg:flex flex-1 flex-row gap-6 min-h-0">
+    
+    <!-- GRÁFICA DE TENDENCIA -->
+    <div class="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-0">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Tendencia de Incidentes</h2>
+      </div>
+      <div class="flex-1 min-h-0 relative" style="min-height: 300px;">
+        <canvas ref="canvasTendencia" class="absolute inset-0 w-full h-full"></canvas>
+      </div>
+    </div>
+
+    <!-- INCIDENTES PENDIENTES -->
+    <div class="w-96 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-0">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Pendientes</h2>
+        <span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-2.5 py-0.5 rounded">
+          {{ incidentesPrioritarios.length }}
+        </span>
+      </div>
+      <div class="flex-1 overflow-y-auto space-y-3">
+        <div v-if="incidentesPrioritarios.length === 0" class="text-center py-12 text-gray-400">
+          <i class="fas fa-check-circle text-4xl mb-3 text-emerald-400"></i>
+          <p class="text-sm">Todo en orden</p>
+        </div>
+        <div v-for="incidente in incidentesPrioritarios" :key="incidente.id"
+             class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+             @click="verDetalle(incidente)">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                 :style="{background: colorDeTipo(incidente.tipo_id) + '20', color: colorDeTipo(incidente.tipo_id)}">
+              <i :class="'fas ' + iconoDeTipo(incidente.tipo_id)" class="text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ incidente.descripcion }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ incidente.direccion }}</p>
+              <p class="text-xs text-gray-400 mt-2">{{ tiempoRelativo(incidente.created_at) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAYOUT MÓVIL (oculto en desktop) -->
+  <div class="lg:hidden flex flex-col gap-6 flex-1 min-h-0">
+    
+    <!-- GRÁFICA DE TENDENCIA -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-0">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Tendencia de Incidentes</h2>
+      </div>
+      <div class="flex-1 min-h-0 relative" style="min-height: 250px;">
+        <canvas ref="canvasTendenciaMobile" class="absolute inset-0 w-full h-full"></canvas>
+      </div>
+    </div>
+
+    <!-- INCIDENTES PENDIENTES -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col min-h-0">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Pendientes</h2>
+        <span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-2.5 py-0.5 rounded">
+          {{ incidentesPrioritarios.length }}
+        </span>
+      </div>
+      <div class="flex-1 overflow-y-auto space-y-3">
+        <div v-if="incidentesPrioritarios.length === 0" class="text-center py-12 text-gray-400">
+          <i class="fas fa-check-circle text-4xl mb-3 text-emerald-400"></i>
+          <p class="text-sm">Todo en orden</p>
+        </div>
+        <div v-for="incidente in incidentesPrioritarios" :key="incidente.id"
+             class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+             @click="verDetalle(incidente)">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                 :style="{background: colorDeTipo(incidente.tipo_id) + '20', color: colorDeTipo(incidente.tipo_id)}">
+              <i :class="'fas ' + iconoDeTipo(incidente.tipo_id)" class="text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ incidente.descripcion }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ incidente.direccion }}</p>
+              <p class="text-xs text-gray-400 mt-2">{{ tiempoRelativo(incidente.created_at) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

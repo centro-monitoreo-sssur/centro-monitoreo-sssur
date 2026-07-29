@@ -1,0 +1,4 @@
+/* Layout: sidebar, topbar y mapa Leaflet (responsivo, mobile-first). */
+.nav-item{transition:background-color .15s ease, color .15s ease;}
+.nav-item.activo{background:rgba(255,255,255,.10); box-shadow: inset 3px 0 0 var(--gold);}
+[v-cloak]{display:none;}

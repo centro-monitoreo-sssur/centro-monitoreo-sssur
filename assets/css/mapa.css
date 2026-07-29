@@ -1,0 +1,461 @@
+/* ============================================================
+   VISTA MAPA EN VIVO — estilos de la consola de monitoreo.
+   Paleta municipal (ver .kilocode/rules/04-sistema-diseno.md): superficie
+   clara, tarjetas blancas, acento institucional (--brand / --gold). Los
+   paneles flotan sobre el mapa CartoDB light_all, dentro de .mapa-vista.
+   Solo quedan aquí keyframes y controles que Tailwind no cubre bien.
+   ============================================================ */
+.mapa-vista {
+  --mv-brand: #001ba0;
+  --mv-gold: #ffcc00;
+  --mv-surface: #ffffff;
+  --mv-surface2: #f3f4f8;
+  --mv-border: #e5e7eb;
+  --mv-border-hi: #cbd5e1;
+  --mv-text: #1f2937;
+  --mv-text-sec: #6b7280;
+  --mv-font: "Inter", system-ui, sans-serif;
+  --mv-mono: "JetBrains Mono", monospace;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--mv-surface2);
+  position: relative;
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+/* Overrides de variables en dark mode */
+.dark .mapa-vista {
+  --mv-surface: #1f2937;
+  --mv-surface2: #111827;
+  --mv-border: #374151;
+  --mv-border-hi: #4b5563;
+  --mv-text: #f9fafb;
+  --mv-text-sec: #9ca3af;
+}
+.mv-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Tooltip del cartograma */
+.leaflet-tooltip-carto {
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1f2937;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  min-width: 180px;
+  pointer-events: none;
+}
+.dark .leaflet-tooltip-carto {
+  background: rgba(17, 24, 39, 0.97);
+  border-color: rgba(255,255,255,0.08);
+  color: #f9fafb;
+}
+/* Eliminar el borde/outline negro que Leaflet aplica al hacer foco en polígonos SVG */
+.leaflet-interactive:focus {
+  outline: none !important;
+}
+.leaflet-container svg path:focus {
+  outline: none !important;
+}
+
+.leaflet-container {
+  background: #eef1f6;
+}
+
+/* Attribution de Leaflet discretamente institucional */
+.mapa-vista .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.85) !important;
+  color: #9ca3af !important;
+  font-size: 9px !important;
+  font-family: var(--mv-mono) !important;
+}
+.dark .mapa-vista .leaflet-control-attribution {
+  background: rgba(31, 41, 55, 0.85) !important;
+}
+.mapa-vista .leaflet-control-attribution a {
+  color: #94a3b8 !important;
+}
+
+/* Popups con la paleta del sistema */
+.mapa-vista .dp .leaflet-popup-content-wrapper {
+  background: var(--mv-surface) !important;
+  color: var(--mv-text) !important;
+  border: 1px solid var(--mv-border-hi) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.18) !important;
+}
+.mapa-vista .dp .leaflet-popup-tip {
+  background: var(--mv-surface) !important;
+}
+.mapa-vista .dp .leaflet-popup-close-button {
+  color: var(--mv-text-sec) !important;
+}
+.mapa-vista .dp .leaflet-popup-content {
+  margin: 12px 15px !important;
+  font-family: var(--mv-font);
+}
+
+/* ── Botón de control (barra inferior) ── */
+.mv-btn {
+  height: 36px;
+  min-width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--mv-surface2);
+  border: 1px solid var(--mv-border);
+  border-radius: 9px;
+  color: var(--mv-text-sec);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 13px;
+  font-family: var(--mv-mono);
+  padding: 0 9px;
+  white-space: nowrap;
+}
+.mv-btn:hover {
+  color: var(--mv-text);
+  border-color: var(--mv-border-hi);
+  background: var(--mv-surface);
+}
+.mv-btn.active {
+  color: var(--mv-brand);
+  border-color: var(--mv-brand);
+  background: rgba(39, 75, 214, 0.1);
+}
+.mv-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--mv-border);
+}
+
+/* ── Tabs para abrir/cerrar paneles ── */
+.mv-ptab {
+  position: absolute;
+  z-index: 41;
+  top: 50%;
+  width: 18px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--mv-surface);
+  border: 1px solid var(--mv-border);
+  color: var(--mv-text-sec);
+  font-size: 9px;
+  transition: transform 0.3s ease-in-out, color 0.15s, border-color 0.15s, background 0.15s;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.10);
+}
+.mv-ptab:hover {
+  color: var(--mv-text);
+  border-color: var(--mv-border-hi);
+  background: var(--mv-surface-hi, #f3f4f6);
+}
+/* Izquierda: ancla en el borde derecho del panel (300px) */
+.mv-ptab.l {
+  left: 300px;
+  transform: translateY(-50%);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+}
+/* Cuando el panel izq. está cerrado, la pestaña se desliza junto con él */
+.mv-ptab.l.panel-closed {
+  transform: translateY(-50%) translateX(-300px);
+}
+/* Derecha: ancla en el borde izquierdo del panel (312px desde la derecha) */
+.mv-ptab.r {
+  right: 312px;
+  transform: translateY(-50%);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.10);
+}
+/* Cuando el panel der. está cerrado, la pestaña se desliza junto con él */
+.mv-ptab.r.panel-closed {
+  transform: translateY(-50%) translateX(312px);
+}
+.mv-ptab.hidden-tab {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Switch de capa (toggle) ── */
+.mv-tog {
+  width: 32px;
+  height: 18px;
+  border-radius: 9999px;
+  position: relative;
+  cursor: pointer;
+  background: var(--mv-border-hi);
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.mv-tog.on {
+  background: var(--mv-brand);
+}
+.mv-tog::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--mv-surface);
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.mv-tog.on::after {
+  transform: translateX(14px);
+}
+
+/* ── Scrollbar ── */
+.mv-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.mv-scroll::-webkit-scrollbar-thumb {
+  background: var(--mv-border-hi);
+  border-radius: 3px;
+}
+
+/* ── Toasts ── */
+.mv-toast-wrap {
+  position: absolute;
+  bottom: 56px;
+  left: 1rem;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 440px;
+}
+.mv-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--mv-surface);
+  border: 1px solid var(--mv-border-hi);
+  border-left-width: 4px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  pointer-events: all;
+  width: 340px;
+  animation: toastIn 0.35s ease forwards;
+}
+.mv-toast.exit {
+  animation: toastOut 0.3s ease forwards;
+}
+@keyframes toastIn {
+  from {
+    transform: translateY(-16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+
+/* ── Animaciones de marcadores (nuevas denuncias) ── */
+.mv-ripple {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid;
+  animation: rippleOut 1.6s ease-out forwards;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+@keyframes rippleOut {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* ── Transiciones de paneles ── */
+/* ── Pantalla completa: el mapa cubre todo el viewport (oculta shell) ── */
+.mapa-vista.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  height: 100%;
+  min-height: 0;
+}
+
+.mv-panel {
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s;
+}
+
+/* ── Estilos de Clústeres (Institucionales) ── */
+.marker-cluster-small {
+  background-color: rgba(0, 27, 160, 0.3) !important;
+}
+.marker-cluster-small div {
+  background-color: rgba(0, 27, 160, 0.85) !important;
+  color: white !important;
+}
+
+.marker-cluster-medium {
+  background-color: rgba(224, 123, 58, 0.4) !important;
+}
+.marker-cluster-medium div {
+  background-color: rgba(224, 123, 58, 0.9) !important;
+  color: white !important;
+}
+
+.marker-cluster-large {
+  background-color: rgba(220, 38, 38, 0.4) !important;
+}
+.marker-cluster-large div {
+  background-color: rgba(220, 38, 38, 0.9) !important;
+  color: white !important;
+}
+
+.marker-cluster span {
+  font-family: var(--mv-font) !important;
+  font-weight: bold !important;
+  font-size: 13px !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ── Herramienta de Medición de Distancias ── */
+.mv-medicion-tt {
+  background: #001ba0;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--mv-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  white-space: nowrap;
+}
+.mv-medicion-tt::before {
+  border-top-color: #001ba0 !important;
+}
+
+/* ══ Cartograma: animación del panel lateral de detalle ══ */
+.slide-panel-enter-active,
+.slide-panel-leave-active {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity   0.25s ease;
+}
+.slide-panel-enter-from,
+.slide-panel-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.slide-panel-enter-to,
+.slide-panel-leave-from {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* ══ Modal de detalle de incidente (Mapa en Vivo) ══════════════════════
+   Fade + scale sutil — premium, sin bounce exagerado.
+   El backdrop aplica su propio fade independiente.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Backdrop */
+.modal-detalle-enter-active { transition: opacity 0.22s ease; }
+.modal-detalle-leave-active { transition: opacity 0.18s ease; }
+.modal-detalle-enter-from,
+.modal-detalle-leave-to    { opacity: 0; }
+
+/* Tarjeta del modal — escala + leve traslado vertical */
+.modal-detalle-enter-active .modal-card {
+  transition:
+    opacity    0.26s cubic-bezier(0.4, 0, 0.2, 1),
+    transform  0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal-detalle-leave-active .modal-card {
+  transition:
+    opacity   0.18s ease,
+    transform 0.18s cubic-bezier(0.4, 0, 1, 1);
+}
+.modal-detalle-enter-from .modal-card {
+  opacity: 0;
+  transform: scale(0.94) translateY(10px);
+}
+.modal-detalle-leave-to .modal-card {
+  opacity: 0;
+  transform: scale(0.96) translateY(6px);
+}
+.modal-detalle-enter-to .modal-card,
+.modal-detalle-leave-from .modal-card {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* Scrollbar del panel de detalle */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
+/* Polígono del cartograma al pasar el mouse */
+.carto-poly { cursor: pointer; }
+
+/* ════════════════════════════════════════════════════════════════
+   RESPONSIVIDAD — evitar solapamiento de botones flotantes y paneles
+   en pantallas pequeñas. Por debajo de 768px los paneles laterales
+/* ==========================================================================
+   RESPONSIVE Y MÓVILES (Tailwind maneja el layout principal)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Toasts responsivos */
+  .mv-toast { width: calc(100vw - 2rem) !important; max-width: 340px; }
+  .mv-toast-wrap { left: 1rem; right: 1rem; max-width: none; }
+  
+  /* Footer de controles: permitir scroll horizontal si no cabe */
+  .mv-footer { overflow-x: auto; }
+}

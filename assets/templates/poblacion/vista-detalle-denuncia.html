@@ -1,0 +1,159 @@
+<!-- ============================================================
+     VISTA: Detalle de Denuncia (Estilo iOS Mobile)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-gray-100 pb-20">
+  <!-- iOS Status Bar Simulation -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button @click="irA('mis-denuncias')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        </button>
+        <div>
+          <h1 class="text-lg font-semibold text-gray-900">Detalle de Denuncia</h1>
+          <p class="text-xs text-gray-500" v-if="denuncia">#{{ denuncia.id }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div v-if="denuncia && categoria" class="px-4 py-6 space-y-6">
+    <!-- Información de la Categoría -->
+    <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+      <div class="flex items-center space-x-4 mb-4">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center"
+          :class="getColorClass(categoria.color).icon">
+          <i :class="'fa-solid ' + categoria.icono + ' text-white text-2xl'"></i>
+        </div>
+        <div class="flex-1">
+          <h2 class="font-bold text-gray-900 text-lg">{{ categoria.nombre }}</h2>
+          <p class="text-sm text-gray-500 mt-1">{{ categoria.departamento }}</p>
+        </div>
+      </div>
+      <p class="text-sm text-gray-600 bg-gray-50 rounded-xl p-3">{{ categoria.descripcion }}</p>
+    </div>
+
+    <!-- Estado Actual y Progreso -->
+    <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-gray-900 text-base">Estado Actual</h3>
+        <span class="text-xs text-gray-500">{{ formatearFecha(denuncia.fecha) }}</span>
+      </div>
+      
+      <div v-if="estadoActual" class="mb-4">
+        <div class="flex items-center space-x-3 p-4 rounded-2xl"
+          :class="getColorClassEstado(estadoActual.color).bg">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center"
+            :class="getColorClassEstado(estadoActual.color).icon">
+            <i :class="'fa-solid ' + estadoActual.icono + ' text-white text-xl'"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-gray-900 text-base"
+              :class="getColorClassEstado(estadoActual.color).text">{{ estadoActual.nombre }}</h4>
+            <p class="text-sm text-gray-600">{{ estadoActual.descripcion }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Progreso -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-gray-500">Progreso</span>
+          <span class="text-xs font-bold text-blue-600">{{ Math.round(porcentajeProgreso) }}%</span>
+        </div>
+        <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+          <div class="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+            :style="{ width: porcentajeProgreso + '%' }"></div>
+        </div>
+      </div>
+
+      <!-- Timeline de Estados -->
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Historial de Estados</h4>
+        <div class="relative">
+          <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+          
+          <div v-for="(estado, index) in flujoEstados" :key="estado.id" 
+            class="relative flex items-start space-x-4 pb-4 last:pb-0">
+            <div class="relative z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300"
+              :class="index <= indiceEstadoActual ? getColorClassEstado(estado.color).icon : 'bg-gray-200'">
+              <i v-if="index < indiceEstadoActual" class="fa-solid fa-check text-white text-xs"></i>
+              <i v-else-if="index === indiceEstadoActual" class="fa-solid fa-circle text-white text-xs"></i>
+              <i v-else class="fa-solid fa-circle text-gray-400 text-xs"></i>
+            </div>
+            <div class="flex-1 pt-1">
+              <h5 class="text-sm font-semibold"
+                :class="index <= indiceEstadoActual ? 'text-gray-900' : 'text-gray-400'">{{ estado.nombre }}</h5>
+              <p class="text-xs text-gray-500">{{ estado.descripcion }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Descripción del Incidente -->
+    <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+      <h3 class="font-bold text-gray-900 text-base mb-3">Descripción del Incidente</h3>
+      <p class="text-sm text-gray-600 leading-relaxed">{{ denuncia.descripcion }}</p>
+    </div>
+
+    <!-- Ubicación -->
+    <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+      <h3 class="font-bold text-gray-900 text-base mb-3">Ubicación</h3>
+      <a 
+        v-if="denuncia.coordenadas"
+        :href="'https://www.google.com/maps/search/?api=1&query=' + denuncia.coordenadas"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center space-x-3 text-sm bg-blue-50 hover:bg-blue-100 rounded-xl p-3 transition-all duration-200 cursor-pointer border border-blue-100">
+        <i class="fa-solid fa-map-marker-alt text-red-500 text-lg"></i>
+        <span class="font-mono text-blue-700 font-medium">{{ denuncia.coordenadas }}</span>
+        <i class="fa-solid fa-external-link-alt text-blue-500 ml-auto"></i>
+      </a>
+      <div v-else class="flex items-center space-x-3 text-sm text-gray-400">
+        <i class="fa-solid fa-map-marker-alt text-lg"></i>
+        <span class="font-mono">No disponible</span>
+      </div>
+    </div>
+
+    <!-- Información Adicional -->
+    <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+      <h3 class="font-bold text-gray-900 text-base mb-3">Información Adicional</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-gray-500">Reportado como:</span>
+          <span class="font-semibold text-gray-900">{{ denuncia.anonima ? 'Anónimo' : 'Identificado' }}</span>
+        </div>
+        <div class="flex items-center justify-between py-2">
+          <span class="text-gray-500">Fecha de reporte:</span>
+          <span class="font-semibold text-gray-900">{{ formatearFecha(denuncia.fecha) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="space-y-3">
+      <button class="w-full py-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all duration-300 hover:shadow-xl active:scale-95">
+        <i class="fa-solid fa-bell mr-2"></i>
+        Recibir Notificaciones
+      </button>
+      <button class="w-full py-4 bg-gray-200 text-gray-700 font-bold rounded-2xl transition-all duration-300 hover:bg-gray-300 active:scale-95">
+        <i class="fa-solid fa-share-nodes mr-2"></i>
+        Compartir Denuncia
+      </button>
+    </div>
+  </div>
+
+  <!-- Estado de carga -->
+  <div v-else class="flex items-center justify-center h-64">
+    <div class="text-center">
+      <i class="fa-solid fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i>
+      <p class="text-gray-500">Cargando detalles...</p>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="poblacion"></bottom-tab-bar>
+</div>

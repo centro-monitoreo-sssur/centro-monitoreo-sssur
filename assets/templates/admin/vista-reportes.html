@@ -1,0 +1,183 @@
+<!-- ======================= VISTA: REPORTES ======================= -->
+<div class="h-full flex flex-col p-4 lg:p-6">
+
+  <!-- CABECERA ─────────────────────────────────────────────────── -->
+  <div class="mb-6 flex items-center justify-between flex-wrap gap-3 flex-shrink-0">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Reportes y Estadísticas</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        Centro de Monitoreo Municipal · San Salvador Sur
+      </p>
+    </div>
+  </div>
+
+  <!-- KPIs ─────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 flex-shrink-0">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+          <i class="fas fa-layer-group text-indigo-500"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total</p>
+          <p class="text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">{{ reporteMetricas.total }}</p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Registros filtrados</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+          <i class="fas fa-hard-hat text-amber-500"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Activas</p>
+          <p class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-tight">{{ reporteMetricas.enObra }}</p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">En intervención</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+          <i class="fas fa-check-circle text-emerald-500"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Resolución</p>
+          <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-tight">{{ reporteMetricas.tasaResolucion }}%</p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ reporteMetricas.resueltas }} resueltas</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+          <i class="fas fa-clock text-red-500"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Pendientes</p>
+          <p class="text-2xl font-extrabold text-red-600 dark:text-red-400 leading-tight">{{ reporteMetricas.pendientes }}</p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Sin atender</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS ─────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6 flex-shrink-0">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+        <i class="fas fa-filter text-blue-500 text-sm"></i>
+      </div>
+      <div>
+        <h3 class="text-sm font-bold text-gray-800 dark:text-white">Filtros de Reporte</h3>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">Personaliza el rango de datos a analizar</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <!-- Estado -->
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Estado</label>
+        <select v-model="filtroEstadoReporte"
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          <option :value="null">Todos</option>
+          <option v-for="e in estadosPosibles" :key="e" :value="e">{{ etiquetaEstado(e) }}</option>
+        </select>
+      </div>
+
+      <!-- Tipo -->
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Tipo de Denuncia</label>
+        <select v-model="filtroTipoReporte"
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          <option :value="null">Todos</option>
+          <option v-for="t in tiposDenuncia" :key="t.id" :value="t.id">{{ t.nombre }}</option>
+        </select>
+      </div>
+
+      <!-- Desde -->
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Fecha Desde</label>
+        <input type="date" v-model="fechaMinReporte"
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+      </div>
+
+      <!-- Hasta -->
+      <div>
+        <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Fecha Hasta</label>
+        <input type="date" v-model="fechaMaxReporte"
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+      </div>
+
+      <!-- Restablecer -->
+      <div class="flex items-end">
+        <button @click="restablecerFiltrosReporte"
+          class="w-full flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+          <i class="fas fa-rotate-left text-xs"></i> Restablecer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRÁFICAS ───────────────────────────────────────────────── -->
+  <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Gráfica Barras Horizontales (Top Tipos) -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors flex flex-col min-h-0">
+      <div class="shrink-0 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+            <i class="fas fa-chart-bar text-purple-500 text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-white">Top Tipos</h3>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">Categorías más reportadas</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 min-h-0 relative">
+        <canvas ref="canvasBarrasHorizontales" class="absolute inset-0 w-full h-full"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfica Dona por Distrito -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors flex flex-col min-h-0">
+      <div class="shrink-0 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+            <i class="fas fa-map-location-dot text-emerald-500 text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-white">Por Distrito</h3>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">Distribución geográfica</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 min-h-0 relative">
+        <canvas ref="canvasDonaDistrito" class="absolute inset-0 w-full h-full"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfica Línea de Tiempo -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors flex flex-col min-h-0">
+      <div class="shrink-0 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center">
+            <i class="fas fa-chart-line text-cyan-500 text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-white">Línea de Tiempo</h3>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">Evolución temporal</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 min-h-0 relative">
+        <canvas ref="canvasLineaTiempo" class="absolute inset-0 w-full h-full"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,122 @@
+<!-- Vista de Login (se muestra cuando no está autenticado) -->
+<vista-login v-if="vistaActual === 'login'"></vista-login>
+
+<!-- Vista de Registro de Población (se muestra cuando no está autenticado con contexto población) -->
+<vista-registro-poblacion v-else-if="vistaActual === 'registro-poblacion'"></vista-registro-poblacion>
+
+<!-- Vistas PWA (se muestran sin shell - completamente independientes) -->
+<div v-else-if="vistaActual === 'pwa-poblacion'" class="min-h-screen">
+  <vista-pwa-poblacion></vista-pwa-poblacion>
+</div>
+
+<div v-else-if="vistaActual === 'pwa-empleado'" class="min-h-screen">
+  <vista-pwa-empleado></vista-pwa-empleado>
+</div>
+
+<!-- Vistas funcionales PWA (sin shell) -->
+<div v-else-if="vistaActual === 'crear-denuncia'" class="min-h-screen">
+  <vista-crear-denuncia></vista-crear-denuncia>
+</div>
+
+<div v-else-if="vistaActual === 'mis-denuncias'" class="min-h-screen">
+  <vista-mis-denuncias></vista-mis-denuncias>
+</div>
+
+<div v-else-if="vistaActual === 'mapa-distrito'" class="min-h-screen">
+  <vista-mapa-distrito></vista-mapa-distrito>
+</div>
+
+<div v-else-if="vistaActual === 'mis-intervenciones'" class="min-h-screen">
+  <vista-mis-intervenciones></vista-mis-intervenciones>
+</div>
+
+<div v-else-if="vistaActual === 'levantar-denuncia'" class="min-h-screen">
+  <vista-levantar-denuncia></vista-levantar-denuncia>
+</div>
+
+<div v-else-if="vistaActual === 'cierre-incidente'" class="min-h-screen">
+  <vista-cierre-incidente></vista-cierre-incidente>
+</div>
+
+<div v-else-if="vistaActual === 'buzon-offline'" class="min-h-screen">
+  <vista-buzon-offline></vista-buzon-offline>
+</div>
+
+<div v-else-if="vistaActual === 'detalle-denuncia'" class="min-h-screen">
+  <vista-detalle-denuncia></vista-detalle-denuncia>
+</div>
+
+<div v-else-if="vistaActual === 'detalle-intervencion'" class="min-h-screen">
+  <vista-detalle-intervencion></vista-detalle-intervencion>
+</div>
+
+<div v-else-if="vistaActual === 'bitacora-empleado'" class="min-h-screen">
+  <vista-bitacora-empleado></vista-bitacora-empleado>
+</div>
+
+<div v-else-if="vistaActual === 'mi-perfil-poblacion'" class="min-h-screen">
+  <vista-mi-perfil-poblacion></vista-mi-perfil-poblacion>
+</div>
+
+<div v-else-if="vistaActual === 'mi-perfil-empleado'" class="min-h-screen">
+  <vista-mi-perfil-empleado></vista-mi-perfil-empleado>
+</div>
+
+<div v-else-if="vistaActual === 'mapa-vivo'" class="min-h-screen">
+  <vista-mapa-vivo></vista-mapa-vivo>
+</div>
+
+<div v-else-if="vistaActual === 'noticias'" class="min-h-screen">
+  <vista-noticias></vista-noticias>
+</div>
+
+
+
+<!-- Shell principal (se muestra cuando está autenticado en modo admin) -->
+<div v-else class="h-screen overflow-hidden flex">
+
+  <!-- OVERLAY MÓVIL (cierra el sidebar al tocar fuera) — Mobile First -->
+  <div v-if="sidebarAbierto && !ocultarShell" @click="sidebarAbierto=false"
+       class="fixed inset-0 bg-black/40 z-30 lg:hidden"></div>
+
+  <!-- SIDEBAR -->
+  <app-sidebar v-show="!ocultarShell"></app-sidebar>
+
+  <!-- COLUMNA PRINCIPAL -->
+  <div class="flex-1 min-w-0 flex flex-col overflow-hidden">
+
+    <!-- TOPBAR -->
+    <app-topbar v-show="!ocultarShell"></app-topbar>
+
+    <main :class="['flex-1 w-full mx-auto overflow-hidden', vistaActual === 'mapa' || vistaActual === 'cartograma' || vistaActual === 'reportes' ? 'overflow-hidden' : 'overflow-auto px-4 lg:px-8 py-6 max-w-[1600px]']">
+      <vista-dashboard v-if="vistaActual==='dashboard'"></vista-dashboard>
+      <vista-mapa v-else-if="vistaActual==='mapa'"></vista-mapa>
+      <vista-cartograma v-else-if="vistaActual==='cartograma'"></vista-cartograma>
+      <vista-reportes v-else-if="vistaActual==='reportes'"></vista-reportes>
+      <vista-denuncias v-else-if="vistaActual==='denuncias'"></vista-denuncias>
+      <vista-intervenciones v-else-if="vistaActual==='intervenciones'"></vista-intervenciones>
+      <vista-usuarios v-else-if="vistaActual==='usuarios'"></vista-usuarios>
+      <vista-poblacion v-else-if="vistaActual==='poblacion'"></vista-poblacion>
+      <vista-departamentos v-else-if="vistaActual==='departamentos'"></vista-departamentos>
+      <vista-roles v-else-if="vistaActual==='roles'"></vista-roles>
+      <vista-bitacora v-else-if="vistaActual==='bitacora'"></vista-bitacora>
+      <vista-configuracion v-else-if="vistaActual==='config'"></vista-configuracion>
+      <vista-placeholder v-else :titulo="tituloVista"></vista-placeholder>
+    </main>
+
+    <footer v-show="!ocultarShell && vistaActual !== 'mapa' && vistaActual !== 'cartograma'" class="text-center text-[11px] text-gray-400 py-4">
+      Municipalidad de San Salvador Sur — Centro de Operaciones Integrado
+    </footer>
+  </div>
+</div>
+
+<!-- Modal de Confirmación (global, fuera del sidebar) -->
+<modal-confirmacion 
+  v-if="mostrarModalLogout"
+  :mostrar="mostrarModalLogout"
+  titulo="Cerrar Sesión"
+  mensaje="¿Estás seguro de que deseas cerrar tu sesión? Tendrás que volver a ingresar tus credenciales."
+  textoConfirmar="Cerrar Sesión"
+  @cerrar="mostrarModalLogout = false"
+  @confirmar="confirmarLogout">
+</modal-confirmacion>

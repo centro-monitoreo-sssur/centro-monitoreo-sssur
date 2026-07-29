@@ -1,0 +1,511 @@
+<!-- ============================================================
+     VISTA: Levantar Denuncia (Diseño UX/UI Senior · Material 3 Inspired)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-[#f8f9fb]">
+
+  <!-- ── HEADER STICKY ── -->
+  <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100">
+    <!-- Barra superior de navegación -->
+    <div class="px-4 pt-3 pb-2 flex items-center gap-3">
+      <button @click="cancelarDenuncia"
+        class="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-red-500 active:scale-95 transition-all duration-150 px-1 py-1">
+        <i class="fa-solid fa-xmark text-base"></i>
+        <span>Cancelar</span>
+      </button>
+      <div class="flex-1 min-w-0 text-center">
+        <h1 class="text-[15px] font-semibold text-gray-900 leading-none">Levantar Denuncia</h1>
+      </div>
+      <!-- Indicador de paso actual en formato pill -->
+      <div class="flex-shrink-0 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+        {{ pasoActual }}/{{ totalPasos }}
+      </div>
+    </div>
+
+    <!-- Progress Bar segmentado -->
+    <div class="px-4 pb-3">
+      <div class="flex gap-1.5">
+        <div v-for="paso in totalPasos" :key="paso" class="flex-1 h-1 rounded-full transition-all duration-500"
+          :class="paso <= pasoActual ? 'bg-emerald-500' : 'bg-gray-200'">
+        </div>
+      </div>
+      <!-- Steps label row -->
+      <div class="flex justify-between mt-1.5 px-0.5">
+        <button v-for="paso in totalPasos" :key="paso" @click="irAPaso(paso)"
+          class="text-[10px] font-medium transition-colors duration-200 flex-1 text-left"
+          :class="paso < pasoActual ? 'text-emerald-500' : paso === pasoActual ? 'text-emerald-600 font-bold' : 'text-gray-400'">
+          {{ paso === 1 ? 'Categoría' : paso === 2 ? 'Ubicación' : 'Detalles' }}
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── CONTENIDO ── -->
+  <main class="px-4 pt-5">
+
+    <!-- ═══════════════════════════════════════
+         PASO 1 · CATEGORÍA
+    ═══════════════════════════════════════ -->
+    <div v-if="pasoActual === 1" class="space-y-5">
+
+      <!-- Encabezado del paso -->
+      <div class="flex items-start gap-3">
+        <div
+          class="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md shadow-emerald-500/30">
+          <i class="fa-solid fa-tag text-white text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 leading-tight">¿Qué deseas reportar?</h2>
+          <p class="text-sm text-gray-500 mt-0.5">Selecciona la categoría que mejor describa el problema</p>
+        </div>
+      </div>
+
+      <!-- Tabs Style SOSAFE -->
+      <div class="flex p-1.5 bg-gray-200/70 rounded-2xl mb-5">
+        <button v-for="tab in Object.keys(categoriasTabs)" :key="tab" @click="tabActivo = tab"
+          class="flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300"
+          :class="tabActivo === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+          {{ tab }}
+        </button>
+      </div>
+
+      <!-- Grid de categorías SOSAFE Style (3 columnas circulares) -->
+      <div class="pb-24">
+        <div class="grid grid-cols-3 gap-x-2 gap-y-6">
+          <button v-for="categoria in categoriasTabs[tabActivo]" :key="categoria.id"
+            @click="formulario.categoriaId = categoria.id"
+            class="flex flex-col items-center gap-2 relative group transition-all duration-200 active:scale-[0.92]">
+
+            <!-- Icono circular -->
+            <div
+              class="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 shadow-sm border-[3px]"
+              :class="[
+                formulario.categoriaId === categoria.id ? getColorClass(categoria.color).icon + ' border-gray-900 shadow-lg scale-105' : getColorClass(categoria.color).icon + ' border-white/50 opacity-90'
+              ]">
+              <i :class="'fa-solid ' + categoria.icono + ' text-[26px] text-white'"></i>
+
+              <!-- Check de seleccionado -->
+              <div v-if="formulario.categoriaId === categoria.id"
+                class="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center bg-gray-900 border-2 border-white shadow-sm z-10">
+                <i class="fa-solid fa-check text-white text-[10px]"></i>
+              </div>
+            </div>
+
+            <!-- Texto -->
+            <p class="text-[10px] font-semibold text-center leading-tight px-1 line-clamp-3 h-10 flex items-start justify-center"
+              :class="formulario.categoriaId === categoria.id ? 'text-gray-900 font-bold' : 'text-gray-600'">
+              {{ categoria.nombre }}
+            </p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         PASO 2 · UBICACIÓN
+    ═══════════════════════════════════════ -->
+    <div v-if="pasoActual === 2" class="space-y-4">
+
+      <!-- Encabezado del paso -->
+      <div class="flex items-start gap-3">
+        <div
+          class="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md shadow-emerald-500/30">
+          <i class="fa-solid fa-location-dot text-white text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 leading-tight">¿Dónde ocurrió?</h2>
+          <p class="text-sm text-gray-500 mt-0.5">Usa el GPS o desliza el mapa para seleccionar la ubicación</p>
+        </div>
+      </div>
+
+      <!-- Contenedor Flex para separar controles y mapa -->
+      <div class="flex flex-col gap-3" style="height: calc(100svh - 310px); min-height: 250px;">
+
+        <!-- Tarjeta de Controles -->
+        <div class="bg-white rounded-3xl border border-gray-100 shadow-sm flex-shrink-0 flex flex-col overflow-hidden">
+
+          <!-- Controles del mapa: GPS + capas -->
+          <div class="px-4 pt-4 pb-3 flex gap-2.5">
+            <!-- Botón GPS (principal) -->
+            <button @click="obtenerUbicacion"
+              class="flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-semibold text-sm transition-all duration-200 active:scale-[0.98]"
+              :class="cargandoUbicacion
+              ? 'bg-emerald-50 text-emerald-500 cursor-wait'
+              : ubicacionActiva
+                ? (precisionUbicacion > 100
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 hover:bg-emerald-700'">
+              <i v-if="cargandoUbicacion" class="fa-solid fa-circle-notch fa-spin text-sm"></i>
+              <i v-else-if="ubicacionActiva && precisionUbicacion > 100"
+                class="fa-solid fa-triangle-exclamation text-sm"></i>
+              <i v-else-if="ubicacionActiva" class="fa-solid fa-circle-check text-sm"></i>
+              <i v-else class="fa-solid fa-location-crosshairs text-sm"></i>
+              <span v-if="cargandoUbicacion">Buscando señal GPS…</span>
+              <span v-else-if="ubicacionActiva && precisionUbicacion > 100">Baja precisión · ±{{ precisionUbicacion }}m
+                · Reintentar</span>
+              <span v-else-if="ubicacionActiva">GPS activo · ±{{ precisionUbicacion }}m · Actualizar</span>
+              <span v-else>Obtener mi ubicación</span>
+            </button>
+
+            <!-- Botón capas -->
+            <button @click="mostrarMenuCapas = !mostrarMenuCapas"
+              class="w-12 h-[46px] rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-95 border"
+              :class="mostrarMenuCapas ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'">
+              <i class="fa-solid fa-layer-group text-sm"></i>
+            </button>
+          </div>
+
+          <!-- Selector de capas (colapsable) -->
+          <div v-if="mostrarMenuCapas" class="px-4 pb-3">
+            <div class="flex gap-2 p-1 bg-gray-100 rounded-2xl">
+              <button @click="cambiarTile('cartomap')"
+                class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200"
+                :class="estiloTile === 'cartomap' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+                <i class="fa-solid fa-sun"></i> Claro
+              </button>
+              <button @click="cambiarTile('google')"
+                class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200"
+                :class="estiloTile === 'google' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+                <i class="fa-solid fa-map"></i> Maps
+              </button>
+              <button @click="cambiarTile('satellite')"
+                class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-200"
+                :class="estiloTile === 'satellite' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+                <i class="fa-solid fa-satellite"></i> Satélite
+              </button>
+            </div>
+          </div>
+
+          <!-- Banner de advertencia de jurisdicción -->
+          <div v-if="mostrarAdvertenciaJurisdiccion"
+            class="mx-4 mb-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <i class="fa-solid fa-triangle-exclamation text-red-500 text-base flex-shrink-0"></i>
+            <div>
+              <p class="text-xs font-semibold text-red-800">Fuera de jurisdicción</p>
+              <p class="text-[11px] text-red-600 mt-0.5">{{ validacionJurisdiccion.mensaje }}</p>
+            </div>
+          </div>
+
+          <!-- Banner de éxito: coordenadas listas -->
+          <div v-if="coordenadasSeleccionadas && !mostrarAdvertenciaJurisdiccion"
+            class="mx-4 mb-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <i class="fa-solid fa-circle-check text-emerald-500 text-base flex-shrink-0"></i>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-emerald-800">Ubicación confirmada</p>
+              <p class="text-[11px] text-emerald-600 mt-0.5 font-mono truncate">{{ coordenadasSeleccionadas }}</p>
+            </div>
+          </div>
+
+        </div> <!-- Fin de Tarjeta de Controles -->
+
+        <!-- Tarjeta del Mapa -->
+        <div
+          class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden relative flex-1 min-h-0 w-full">
+          <div id="map-levantar-denuncia" class="absolute inset-0 z-0"></div>
+
+          <!-- Pin Fijo Central (InDrive Style) -->
+          <div
+            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-black/50 rounded-full z-10 pointer-events-none">
+          </div>
+          <div
+            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full pb-0.5 z-10 pointer-events-none transition-transform duration-200">
+            <i class="fa-solid fa-location-dot text-[40px] text-emerald-600 drop-shadow-lg"
+              style="filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); -webkit-text-stroke: 2px white;"></i>
+          </div>
+
+          <!-- Animación de búsqueda GPS (Radar) -->
+          <div v-if="cargandoUbicacion" class="absolute inset-0 z-20 flex items-center justify-center bg-white/40 backdrop-blur-[2px]">
+            <div class="relative flex items-center justify-center">
+              <div class="absolute w-32 h-32 rounded-full border-[3px] border-emerald-500 opacity-0 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+              <div class="absolute w-24 h-24 rounded-full border-[3px] border-emerald-500 opacity-0 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite_0.5s]"></div>
+              <div class="absolute w-16 h-16 rounded-full border-[3px] border-emerald-500 opacity-0 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite_1s]"></div>
+              <div class="w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center relative z-10">
+                <i class="fa-solid fa-satellite-dish text-emerald-600 text-xl animate-pulse"></i>
+              </div>
+            </div>
+            <div class="absolute bottom-6 bg-white/90 backdrop-blur shadow-lg px-4 py-2 rounded-full text-xs font-bold text-emerald-600 shadow-emerald-500/20 flex items-center gap-2">
+              <i class="fa-solid fa-circle-notch fa-spin"></i> Localizando...
+            </div>
+          </div>
+
+          <!-- Hint flotante sobre el mapa -->
+          <div class="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none z-10">
+            <div
+              class="bg-black/60 backdrop-blur-md text-white text-xs font-medium px-4 py-2 rounded-full flex items-center gap-2 shadow-lg">
+              <i class="fa-solid fa-arrows-up-down-left-right"></i>
+              Mueve el mapa para ajustar
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         PASO 3 · DETALLES
+    ═══════════════════════════════════════ -->
+    <div v-if="pasoActual === 3" class="space-y-4 pb-24">
+
+      <!-- Encabezado del paso -->
+      <div class="flex items-start gap-3">
+        <div
+          class="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md shadow-emerald-500/30">
+          <i class="fa-solid fa-pen-to-square text-white text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 leading-tight">Detalles del reporte</h2>
+          <p class="text-sm text-gray-500 mt-0.5">Completa la información y envía tu denuncia</p>
+        </div>
+      </div>
+
+      <!-- Resumen compacto de lo que ya eligió -->
+      <div v-if="categoriaSeleccionada"
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          :class="getColorClass(categoriaSeleccionada.color).icon">
+          <i :class="'fa-solid ' + categoriaSeleccionada.icono + ' text-white text-base'"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-gray-900 leading-none truncate">{{ categoriaSeleccionada.nombre }}</p>
+          <p class="text-xs text-gray-400 mt-1 leading-none">{{ categoriaSeleccionada.departamento }}</p>
+        </div>
+        <!-- Badge de ubicación lista -->
+        <div v-if="coordenadasSeleccionadas"
+          class="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2.5 py-1.5 rounded-xl flex-shrink-0">
+          <i class="fa-solid fa-location-dot text-[10px]"></i>
+          <span>GPS</span>
+        </div>
+      </div>
+
+      <!-- Campo: Descripción -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-4 pt-4 pb-2 flex items-center gap-2">
+          <i class="fa-solid fa-align-left text-emerald-500 text-sm"></i>
+          <label class="text-sm font-semibold text-gray-900">Descripción del incidente</label>
+          <span class="ml-auto text-[10px] font-medium text-red-400 bg-red-50 px-1.5 py-0.5 rounded-md">Requerido</span>
+        </div>
+        <div class="px-4 pb-4">
+          <textarea v-model="formulario.descripcion" rows="4" maxlength="500"
+            placeholder="Describe qué ocurrió, desde cuándo, y cualquier detalle que sea útil para los agentes de campo…"
+            class="w-full text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 resize-none transition-all duration-200"></textarea>
+          <div class="flex items-center justify-between mt-2">
+            <p class="text-[10px] text-gray-400">Mín. 10 caracteres para enviar</p>
+            <p class="text-[10px] font-medium"
+              :class="formulario.descripcion.length < 10 ? 'text-gray-400' : 'text-emerald-500'">
+              {{ formulario.descripcion.length }}/500
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campo: Fotografía -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-4 pt-4 pb-2 flex items-center gap-2">
+          <i class="fa-solid fa-camera text-emerald-500 text-sm"></i>
+          <label class="text-sm font-semibold text-gray-900">Evidencia fotográfica</label>
+          <span
+            class="ml-auto text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md">Opcional</span>
+        </div>
+
+        <div class="px-4 pb-4">
+          <!-- Estado: sin foto -->
+          <label v-if="formulario.fotos.length < 2 && !formulario.fotoProcesando"
+            class="group flex items-center gap-4 w-full border-2 border-dashed border-gray-200 rounded-xl p-4 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/30 transition-all duration-200">
+            <div
+              class="w-12 h-12 rounded-xl bg-gray-100 group-hover:bg-emerald-100 flex items-center justify-center flex-shrink-0 transition-colors duration-200">
+              <i
+                class="fa-solid fa-cloud-arrow-up text-gray-400 group-hover:text-emerald-500 text-xl transition-colors duration-200"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-700 group-hover:text-emerald-700">Toca para adjuntar foto ({{
+                formulario.fotos.length }}/2)</p>
+              <p class="text-xs text-gray-400 mt-0.5">JPG · PNG · Se optimizarán a 5MB máx.</p>
+            </div>
+            <input type="file" accept="image/*" multiple capture="environment" class="hidden"
+              @change="procesarFotografia" />
+          </label>
+
+          <!-- Estado: procesando -->
+          <div v-if="formulario.fotoProcesando" class="flex items-center gap-4 border border-gray-200 rounded-xl p-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-xl"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-gray-700">Optimizando imagen…</p>
+              <p class="text-xs text-gray-400 mt-0.5">Reduciendo tamaño sin perder calidad</p>
+            </div>
+          </div>
+
+          <!-- Estado: foto lista -->
+          <div v-if="formulario.fotos.length > 0 && !formulario.fotoProcesando" class="grid grid-cols-2 gap-3 mt-3">
+            <div v-for="(foto, index) in formulario.fotos" :key="index"
+              class="relative rounded-xl overflow-hidden h-32 border border-gray-100 shadow-sm">
+              <img :src="foto" class="w-full h-full object-cover" alt="Evidencia adjunta">
+              <!-- Overlay oscuro sutil -->
+              <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+              <!-- Badge de optimización -->
+              <div
+                class="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm text-white text-[9px] font-semibold px-2 py-1 rounded-md">
+                <i class="fa-solid fa-bolt text-yellow-400"></i> Optimizado
+              </div>
+              <!-- Botón eliminar -->
+              <button @click="removerFotografia(index)"
+                class="absolute top-2 right-2 w-7 h-7 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-red-500 active:scale-95 transition-all duration-200 shadow-sm">
+                <i class="fa-solid fa-xmark text-[10px]"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campo: Reporte anónimo -->
+      <label
+        class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 cursor-pointer hover:border-emerald-200 transition-colors duration-200">
+        <!-- Toggle custom -->
+        <div class="relative flex-shrink-0">
+          <input type="checkbox" v-model="formulario.anonima" class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-200 rounded-full transition-colors duration-300 peer-checked:bg-emerald-500">
+          </div>
+          <div
+            class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 peer-checked:translate-x-5">
+          </div>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-gray-900">Reporte anónimo</p>
+          <p class="text-xs text-gray-400 mt-0.5">Tu nombre no será visible públicamente</p>
+        </div>
+        <div class="flex-shrink-0">
+          <i class="fa-solid fa-user-secret text-gray-400 text-base"
+            :class="formulario.anonima ? 'text-emerald-500' : 'text-gray-300'"></i>
+        </div>
+      </label>
+
+      <!-- Aviso legal / privacidad -->
+      <div class="flex items-start gap-2.5 px-1">
+        <i class="fa-solid fa-shield-halved text-gray-300 text-sm mt-0.5 flex-shrink-0"></i>
+        <p class="text-[11px] text-gray-400 leading-relaxed">
+          Al enviar esta denuncia aceptas que la información proporcionada será tratada por la Alcaldía de San Salvador
+          Sur conforme a la normativa de protección de datos vigente.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── BOTTOM NAV / BOTONES DE ACCIÓN ── -->
+  <!-- Paso 1: solo Continuar -->
+  <div v-if="pasoActual === 1"
+    class="fixed bottom-4 left-0 right-0 z-40 px-4 pb-1 pt-3 bg-gradient-to-t from-[#f8f9fb] via-[#f8f9fb]/90 to-transparent">
+    <button @click="siguientePaso" :disabled="!formulario.categoriaId"
+      class="w-full py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="formulario.categoriaId
+        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700'
+        : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
+      <span v-if="!formulario.categoriaId">Selecciona una categoría para continuar</span>
+      <span v-else>Continuar <i class="fa-solid fa-arrow-right ml-2"></i></span>
+    </button>
+  </div>
+
+  <!-- Paso 2: Atrás + Continuar -->
+  <div v-if="pasoActual === 2"
+    class="fixed bottom-4 left-0 right-0 z-40 px-4 pb-1 pt-3 bg-gradient-to-t from-[#f8f9fb] via-[#f8f9fb]/90 to-transparent flex gap-2.5">
+    <button @click="anteriorPaso"
+      class="w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm">
+      <i class="fa-solid fa-arrow-left text-sm"></i>
+    </button>
+    <button @click="siguientePaso" :disabled="!coordenadasSeleccionadas"
+      class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="coordenadasSeleccionadas
+        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700'
+        : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
+      <span v-if="!coordenadasSeleccionadas">Marca la ubicación en el mapa</span>
+      <span v-else>Continuar <i class="fa-solid fa-arrow-right ml-2"></i></span>
+    </button>
+  </div>
+
+  <!-- Paso 3: Atrás + Enviar -->
+  <div v-if="pasoActual === 3"
+    class="fixed bottom-4 left-0 right-0 z-40 px-4 pb-1 pt-3 bg-gradient-to-t from-[#f8f9fb] via-[#f8f9fb]/90 to-transparent flex gap-2.5">
+    <button @click="anteriorPaso"
+      class="w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm">
+      <i class="fa-solid fa-arrow-left text-sm"></i>
+    </button>
+    <button @click="guardarDenuncia" :disabled="formulario.descripcion.length < 10"
+      class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="formulario.descripcion.length >= 10
+        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700'
+        : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
+      <span v-if="formulario.descripcion.length < 10">Escribe una descripción para enviar</span>
+      <span v-else>Enviar denuncia <i class="fa-solid fa-paper-plane ml-2"></i></span>
+    </button>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+
+  <!-- ── MODAL: Fuera de Jurisdicción ── -->
+  <div v-if="mostrarModalFueraJurisdiccion" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="cerrarModalFueraJurisdiccion"></div>
+    <div
+      class="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up mx-4 mb-0 sm:mb-4">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-5 sm:hidden"></div>
+      <div class="flex flex-col items-center text-center gap-4 mb-6">
+        <div class="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center">
+          <i class="fa-solid fa-location-xmark text-red-500 text-2xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Fuera de jurisdicción</h3>
+          <p class="text-sm text-gray-500 mt-1.5">{{ validacionJurisdiccion.mensaje }}</p>
+        </div>
+      </div>
+      <button @click="cerrarModalFueraJurisdiccion"
+        class="w-full py-3.5 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 active:scale-[0.98] transition-all duration-200 shadow-md shadow-emerald-500/25">
+        Entendido
+      </button>
+    </div>
+  </div>
+
+  <!-- ── MODAL: Confirmación de cancelación ── -->
+  <div v-if="mostrarConfirmacionCancelar" class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="mostrarConfirmacionCancelar = false"></div>
+    <div
+      class="relative bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up mx-4 mb-0 sm:mb-4">
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-5 sm:hidden"></div>
+      <div class="flex flex-col items-center text-center gap-4 mb-6">
+        <div class="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center">
+          <i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">¿Salir sin guardar?</h3>
+          <p class="text-sm text-gray-500 mt-1.5">Se perderá la información que has ingresado hasta ahora.</p>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <button @click="confirmarCancelacion"
+          class="w-full py-3.5 bg-red-500 text-white font-bold rounded-2xl hover:bg-red-600 active:scale-[0.98] transition-all duration-200">
+          Sí, salir
+        </button>
+        <button @click="mostrarConfirmacionCancelar = false"
+          class="w-full py-3.5 bg-gray-100 text-gray-700 font-semibold rounded-2xl hover:bg-gray-200 active:scale-[0.98] transition-all duration-200">
+          Continuar con el reporte
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  @keyframes slide-up {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+</style>

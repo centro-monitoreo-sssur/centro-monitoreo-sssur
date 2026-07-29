@@ -1,0 +1,96 @@
+<!-- ============================================================
+     VISTA: Detalle de Intervención (Empleado)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-gray-50 flex flex-col relative pb-20">
+  
+  <!-- Header / Topbar -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between pt-safe">
+      <div class="flex items-center space-x-3">
+        <button @click="volver" class="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors active:scale-95">
+          <i class="fa-solid fa-arrow-left text-gray-600"></i>
+        </button>
+        <div v-if="intervencion">
+          <h1 class="text-lg font-bold text-gray-900">Intervención #{{ intervencion.id }}</h1>
+          <p class="text-xs text-gray-500 font-medium">{{ formatDate(intervencion.fecha) }}</p>
+        </div>
+        <div v-else>
+          <h1 class="text-lg font-bold text-gray-900">Cargando...</h1>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="cargando" class="flex-1 flex flex-col items-center justify-center">
+    <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-4xl mb-4"></i>
+    <p class="text-gray-500 font-medium animate-pulse">Cargando detalles...</p>
+  </div>
+
+  <div v-else-if="intervencion" class="flex-1 overflow-y-auto">
+    <!-- Mapa miniatura de la ubicación -->
+    <div class="h-48 w-full bg-gray-200 relative">
+      <div id="map-detalle-intervencion" class="absolute inset-0 z-0 w-full h-full"></div>
+      <div class="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_-10px_20px_rgba(0,0,0,0.1)]"></div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="px-5 py-6 space-y-6 -mt-4 relative z-20">
+      
+      <!-- Card Principal -->
+      <div class="bg-white rounded-3xl p-5 shadow-xl shadow-gray-200/50 border border-gray-100 flex flex-col gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-gray-900 mb-2 leading-tight">{{ intervencion.titulo }}</h2>
+          <p class="text-sm text-gray-600 leading-relaxed">{{ intervencion.descripcion }}</p>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100">
+            <span class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1 block">Estado</span>
+            <span class="px-2 py-1 rounded-lg text-xs font-bold inline-flex items-center justify-center" :class="getEstadoColor(intervencion.estado)">
+              {{ getEstadoLabel(intervencion.estado) }}
+            </span>
+          </div>
+          <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100">
+            <span class="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1 block">Prioridad</span>
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full shadow-sm" :class="getPrioridadColor(intervencion.prioridad).replace('bg-', 'bg-').replace('500', '500')"></div>
+              <span class="text-xs font-bold text-gray-700 capitalize">{{ intervencion.prioridad }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ubicación Detallada -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3 px-2">Ubicación a atender</h3>
+        <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-start gap-4">
+          <div class="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
+            <i class="fa-solid fa-map-location-dot text-red-500 text-lg"></i>
+          </div>
+          <div>
+            <p class="text-sm text-gray-900 font-semibold mb-1">{{ intervencion.ubicacion }}</p>
+            <button class="text-xs font-bold text-emerald-600 flex items-center gap-1.5 active:scale-95 transition-transform">
+              <i class="fa-solid fa-diamond-turn-right"></i> Obtener ruta
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones de cierre -->
+      <div class="pt-4 pb-safe">
+        <button v-if="intervencion.estado !== 'completada'" @click="irACierre" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
+          <i class="fa-solid fa-clipboard-check text-lg"></i> Iniciar Cierre de Incidente
+        </button>
+        
+        <div v-else class="w-full bg-gray-100 text-gray-500 font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 text-base">
+          <i class="fa-solid fa-check-double text-lg"></i> Incidente Resuelto
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+</div>

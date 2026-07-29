@@ -1,0 +1,292 @@
+<!-- ============================================================
+     VISTA: Noticias Municipales (Ciudadanos)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-[#f4f6fb] flex flex-col">
+
+  <!-- ── DETALLE DE NOTICIA ── -->
+  <div v-if="noticiaSeleccionada"
+    class="min-h-screen bg-white flex flex-col animate-slide-in-right">
+
+    <!-- Header detalle -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-100">
+      <div class="px-4 pt-safe pt-3 pb-3 flex items-center gap-3">
+        <button @click="volverAlFeed"
+          class="w-9 h-9 rounded-2xl bg-gray-100 flex items-center justify-center active:scale-90 transition-transform">
+          <i class="fa-solid fa-arrow-left text-gray-700 text-sm"></i>
+        </button>
+        <div class="flex-1 min-w-0">
+          <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{{ noticiaSeleccionada.categoria }}</p>
+          <h1 class="text-base font-bold text-gray-900 leading-tight line-clamp-1">{{ noticiaSeleccionada.titulo }}</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenido del detalle -->
+    <div class="flex-1 overflow-y-auto pb-32">
+
+      <!-- Card de imagen / mini-mapa si aplica -->
+      <div v-if="noticiaSeleccionada.coordenadas && !mostrandoMapa"
+        class="mx-4 mt-4 rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
+        <!-- Placeholder imagen categoría -->
+        <div class="h-44 flex items-center justify-center relative"
+          :class="getIconBgClasses(noticiaSeleccionada.categoriaColor)">
+          <i :class="'fa-solid ' + noticiaSeleccionada.categoriaIcono + ' text-white text-6xl opacity-20'"></i>
+          <div class="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <div :class="'w-16 h-16 rounded-2xl ' + getIconBgClasses(noticiaSeleccionada.categoriaColor) + ' bg-white/20 flex items-center justify-center'">
+              <i :class="'fa-solid ' + noticiaSeleccionada.categoriaIcono + ' text-white text-3xl'"></i>
+            </div>
+            <span class="text-white font-bold text-sm drop-shadow">{{ noticiaSeleccionada.categoria }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mapa del detalle -->
+      <div v-if="mostrandoMapa" class="mx-4 mt-4 rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
+        <div id="mapa-noticia-detalle" class="w-full" style="height: 260px;"></div>
+      </div>
+
+      <!-- Cuerpo -->
+      <div class="px-4 pt-4 space-y-4">
+
+        <!-- Badge categoria + Zona -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full"
+            :class="getBadgeClasses(noticiaSeleccionada.categoriaColor)">
+            <i :class="'fa-solid ' + noticiaSeleccionada.categoriaIcono + ' text-[10px]'"></i>
+            {{ noticiaSeleccionada.categoria }}
+          </span>
+          <span v-if="esMiZona(noticiaSeleccionada)"
+            class="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full bg-blue-600 text-white">
+            <i class="fa-solid fa-location-dot text-[10px]"></i>
+            En tu zona
+          </span>
+        </div>
+
+        <!-- Descripción -->
+        <p class="text-sm text-gray-700 leading-relaxed">{{ noticiaSeleccionada.descripcion }}</p>
+
+        <!-- Datos: fecha, distritos -->
+        <div class="bg-gray-50 rounded-2xl p-4 flex items-start justify-between gap-3">
+          <div class="flex items-start gap-3">
+            <div class="bg-blue-600 text-white rounded-xl p-2.5 flex-shrink-0 text-center min-w-[48px]">
+              <p class="text-[9px] font-bold uppercase leading-none">{{ new Date(noticiaSeleccionada.fecha).toLocaleDateString('es-SV', { month: 'short' }).toUpperCase() }}</p>
+              <p class="text-xl font-black leading-none mt-0.5">{{ new Date(noticiaSeleccionada.fecha).getDate() }}</p>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-gray-900">
+                {{ new Date(noticiaSeleccionada.fecha).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' }) }}
+              </p>
+              <p class="text-xs text-gray-500 mt-0.5">{{ noticiaSeleccionada.distritos.join(', ') }}</p>
+            </div>
+          </div>
+          <!-- Botón "Ver en mapa" solo si tiene coordenadas -->
+          <button v-if="noticiaSeleccionada.coordenadas || noticiaSeleccionada.trazado"
+            @click="verEnMapa"
+            class="flex flex-col items-center gap-1 active:scale-90 transition-transform">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+              <i class="fa-solid fa-map-location-dot text-blue-600 text-base"></i>
+            </div>
+            <span class="text-[10px] font-semibold text-blue-600">Ver pin</span>
+          </button>
+        </div>
+
+        <!-- Autor -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
+            :class="getIconBgClasses(noticiaSeleccionada.autorColor)">
+            <i :class="'fa-solid ' + noticiaSeleccionada.autorIcono + ' text-white text-sm'"></i>
+          </div>
+          <div>
+            <p class="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+              {{ noticiaSeleccionada.autor }}
+              <span class="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-check text-white text-[8px]"></i>
+              </span>
+            </p>
+            <p class="text-xs text-gray-500">Publicado {{ formatearFechaRelativa(noticiaSeleccionada.fecha) }}</p>
+          </div>
+        </div>
+
+        <!-- Respuestas oficiales -->
+        <div v-if="noticiaSeleccionada.respuestas.length > 0" class="space-y-3">
+          <div class="h-px bg-gray-100"></div>
+          <div v-for="(resp, i) in noticiaSeleccionada.respuestas" :key="i"
+            class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <i class="fa-solid fa-building-columns text-white text-xs"></i>
+            </div>
+            <div class="flex-1 bg-blue-50 rounded-2xl rounded-tl-sm px-4 py-3">
+              <div class="flex items-center gap-1.5 mb-1.5">
+                <p class="text-xs font-bold text-blue-900">{{ resp.autor }}</p>
+                <span class="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                  <i class="fa-solid fa-check text-white text-[8px]"></i>
+                </span>
+                <span class="text-[10px] text-blue-400 ml-auto">{{ formatearFechaRelativa(resp.fecha) }}</span>
+              </div>
+              <p class="text-xs text-blue-800 leading-relaxed">{{ resp.texto }}</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Bottom tab bar en detalle -->
+    <bottom-tab-bar tipo="poblacion"></bottom-tab-bar>
+  </div>
+
+  <!-- ── FEED PRINCIPAL ── -->
+  <template v-else>
+
+    <!-- Header sticky -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-100">
+      <div class="px-4 pt-safe pt-3 pb-2">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h1 class="text-xl font-black text-gray-900">Noticias</h1>
+            <p class="text-xs text-gray-400 mt-0.5">Avisos de la Alcaldía
+              <span v-if="distritoUsuario" class="text-blue-500 font-semibold">· {{ distritoUsuario }}</span>
+            </p>
+          </div>
+          <!-- Badge no leídas -->
+          <div v-if="noLeidasCount > 0"
+            class="bg-red-500 text-white text-xs font-black rounded-full px-2.5 py-1 min-w-[28px] text-center shadow-md shadow-red-500/30">
+            {{ noLeidasCount }}
+          </div>
+        </div>
+
+        <!-- Chips de filtro (scroll horizontal) -->
+        <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button v-for="cat in categoriasNoticias" :key="cat.id"
+            @click="filtroActivo = cat.id"
+            class="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[12px] font-semibold transition-all duration-200 active:scale-95"
+            :class="filtroActivo === cat.id
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+            <i :class="'fa-solid ' + cat.icono + ' text-[10px]'"></i>
+            {{ cat.label }}
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Feed -->
+    <main class="flex-1 overflow-y-auto pb-32">
+
+      <!-- Sin resultados -->
+      <div v-if="noticiasFiltradas.length === 0"
+        class="flex flex-col items-center justify-center py-20 px-8 text-center gap-4">
+        <div class="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center">
+          <i class="fa-solid fa-newspaper text-gray-300 text-3xl"></i>
+        </div>
+        <div>
+          <p class="font-bold text-gray-700">Sin noticias</p>
+          <p class="text-sm text-gray-400 mt-1">No hay avisos para este filtro en tu zona.</p>
+        </div>
+      </div>
+
+      <!-- Tarjetas de noticias -->
+      <div class="px-4 pt-4 space-y-3">
+        <article v-for="noticia in noticiasFiltradas" :key="noticia.id"
+          @click="abrirDetalle(noticia)"
+          class="bg-white rounded-3xl shadow-sm border border-gray-100/80 overflow-hidden active:scale-[0.98] transition-all duration-200 cursor-pointer"
+          :class="!noticia.leida ? 'border-l-4 border-l-blue-500' : ''">
+
+          <!-- Cabecera de la tarjeta -->
+          <div class="p-4">
+            <div class="flex items-start gap-3">
+              <!-- Icono de categoría -->
+              <div class="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                :class="getIconBgClasses(noticia.categoriaColor)">
+                <i :class="'fa-solid ' + noticia.categoriaIcono + ' text-white text-base'"></i>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-[13px] font-bold text-gray-900 leading-tight line-clamp-2">{{ noticia.titulo }}</p>
+                    <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <!-- Badge "En tu zona" si aplica -->
+                      <span v-if="esMiZona(noticia)"
+                        class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        <i class="fa-solid fa-location-dot text-[9px]"></i>
+                        Tu zona
+                      </span>
+                      <span class="text-[11px] text-gray-400">{{ formatearFechaRelativa(noticia.fecha) }}</span>
+                    </div>
+                  </div>
+                  <!-- Punto no leída -->
+                  <div v-if="!noticia.leida"
+                    class="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
+                </div>
+
+                <p class="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{{ noticia.descripcion }}</p>
+              </div>
+            </div>
+
+            <!-- Mini-mapa placeholder si tiene trazado -->
+            <div v-if="noticia.trazado"
+              class="mt-3 h-[90px] rounded-2xl bg-gradient-to-br from-orange-50 to-red-50 border border-red-100 flex items-center justify-center gap-2 overflow-hidden relative">
+              <div class="absolute inset-0 opacity-10">
+                <svg width="100%" height="100%"><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#ef4444" stroke-width="4" stroke-dasharray="12,8"/></svg>
+              </div>
+              <div class="relative flex items-center gap-2 px-3">
+                <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <i class="fa-solid fa-road-barrier text-white text-xs"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-red-700">Cierre de vía</p>
+                  <p class="text-[10px] text-red-500">Toca para ver el trazo en el mapa</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-red-400 text-xs ml-auto"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer de la tarjeta -->
+          <div class="px-4 pb-3 flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <div class="w-5 h-5 rounded-full flex items-center justify-center"
+                :class="getIconBgClasses(noticia.autorColor)">
+                <i :class="'fa-solid ' + noticia.autorIcono + ' text-white text-[8px]'"></i>
+              </div>
+              <span class="text-[11px] font-semibold text-gray-500">{{ noticia.autor }}</span>
+              <div class="w-3.5 h-3.5 bg-blue-500 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-check text-white text-[7px]"></i>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 text-gray-400">
+              <span class="flex items-center gap-1 text-[11px]">
+                <i class="fa-regular fa-comment text-[11px]"></i>
+                {{ noticia.respuestas.length }}
+              </span>
+              <i class="fa-solid fa-chevron-right text-[11px]"></i>
+            </div>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <!-- Bottom Tab Bar -->
+    <bottom-tab-bar tipo="poblacion"></bottom-tab-bar>
+  </template>
+
+</div>
+
+<style>
+.animate-slide-in-right {
+  animation: slide-in-right 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes slide-in-right {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+</style>

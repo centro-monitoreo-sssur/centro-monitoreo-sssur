@@ -1,0 +1,630 @@
+<!-- ======================= VISTA: CONFIGURACIÓN ======================= -->
+<div class="min-h-full">
+
+  <!-- CABECERA ─────────────────────────────────────────────────── -->
+  <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Configuración del Sistema</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        Centro de Monitoreo Municipal · San Salvador Sur
+      </p>
+    </div>
+    <!-- Botón Guardar global -->
+    <button @click="guardarYNotificar"
+      class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+      :class="guardado
+        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20'">
+      <i :class="guardado ? 'fa-solid fa-check' : 'fa-solid fa-floppy-disk'"></i>
+      {{ guardado ? 'Guardado' : 'Guardar Cambios' }}
+    </button>
+  </div>
+
+  <!-- TABS ─────────────────────────────────────────────────────── -->
+  <div class="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 flex-wrap">
+    <button v-for="tab in tabs" :key="tab.id"
+      @click="tabActiva = tab.id"
+      class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex-1 min-w-[120px] justify-center"
+      :class="tabActiva === tab.id
+        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm font-semibold'
+        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+      <i :class="'fa-solid ' + tab.icono" class="text-[13px]"></i>
+      {{ tab.label }}
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 1 — DEPENDENCIAS Y CATEGORÍAS
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'categorias'" class="space-y-5">
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-layer-group text-blue-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Tipos de Denuncia por Dependencia</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Personaliza colores e íconos de cada categoría</p>
+        </div>
+      </div>
+
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="cat in catLocal" :key="cat.id"
+          class="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+
+          <!-- Vista previa del marcador -->
+          <div class="shrink-0 flex items-center justify-center w-10 h-10">
+            <div class="w-[22px] h-[22px] rounded-full border-2 border-white shadow-md transition-all"
+              :style="{ background: (config.categorias ? config.categorias.find(c=>c.id===cat.id)?.color : cat.color) || cat.color }">
+            </div>
+          </div>
+
+          <!-- Nombre y área -->
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-gray-800 dark:text-white truncate">{{ cat.nombre }}</div>
+            <div class="text-[11px] text-gray-400 mt-0.5">
+              <i class="fa-solid fa-building-columns mr-1"></i>{{ cat.area }}
+            </div>
+          </div>
+
+          <!-- Ícono actual -->
+          <div class="shrink-0 w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+            :style="{ color: (config.categorias ? config.categorias.find(c=>c.id===cat.id)?.color : cat.color) || cat.color }">
+            <i :class="['fa-solid', cat.icono]" class="text-sm"></i>
+          </div>
+
+          <!-- Color picker -->
+          <div class="shrink-0 flex items-center gap-2">
+            <label class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Color</label>
+            <div class="relative">
+              <input type="color"
+                :value="(config.categorias ? config.categorias.find(c=>c.id===cat.id)?.color : cat.color) || cat.color"
+                @input="e => actualizarColor(cat.id, e.target.value)"
+                class="w-9 h-9 rounded-lg border-2 border-gray-200 dark:border-gray-600 cursor-pointer p-0.5 bg-white dark:bg-gray-700">
+            </div>
+            <span class="text-[10px] font-mono text-gray-400 w-[58px]">
+              {{ (config.categorias ? config.categorias.find(c=>c.id===cat.id)?.color : cat.color) || cat.color }}
+            </span>
+          </div>
+
+          <!-- Paleta rápida -->
+          <div class="shrink-0 flex gap-1.5">
+            <div v-for="c in ['#e07272','#e09a50','#5aaa7a','#b8845a','#5b8de8','#9b72e0','#e8726b','#5ac0ba']"
+              :key="c"
+              @click="actualizarColor(cat.id, c)"
+              class="w-5 h-5 rounded-full cursor-pointer border-2 transition-transform hover:scale-110 hover:border-gray-400"
+              :style="{ background: c, borderColor: ((config.categorias ? config.categorias.find(cc=>cc.id===cat.id)?.color : cat.color) === c) ? '#1d4ed8' : 'transparent' }">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info card sobre colores -->
+    <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 flex gap-3 text-sm">
+      <i class="fa-solid fa-circle-info text-blue-500 mt-0.5 shrink-0"></i>
+      <div class="text-blue-700 dark:text-blue-300">
+        Los colores se aplican de forma inmediata en el Mapa en Vivo, Cartograma y Dashboard. Si Supabase está configurado, los cambios se guardan localmente y tienen prioridad sobre la BD.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 2 — NOTIFICACIONES
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'notificaciones'" class="space-y-5">
+
+    <!-- Alertas sonoras -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-volume-high text-amber-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Alertas Sonoras</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Configuración del tono al recibir nuevas denuncias</p>
+        </div>
+        <!-- Toggle principal -->
+        <div class="ml-auto">
+          <div class="relative inline-block w-11 h-6 cursor-pointer" @click="config.notificaciones.sonidoActivo = !config.notificaciones.sonidoActivo">
+            <div class="w-11 h-6 rounded-full transition-colors" :class="config.notificaciones.sonidoActivo ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.notificaciones.sonidoActivo ? 'translate-x-5' : ''"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-5 space-y-6" :class="{'opacity-50 pointer-events-none': !config.notificaciones.sonidoActivo}">
+
+        <!-- Selector de tono -->
+        <div>
+          <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">Tono de Alerta</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <button v-for="(def, nombre) in TONOS" :key="nombre"
+              @click="config.notificaciones.tono = nombre; previewTono(nombre)"
+              class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left"
+              :class="config.notificaciones.tono === nombre
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all"
+                :class="(tonoPreview === nombre) ? 'bg-blue-500 scale-90' : config.notificaciones.tono === nombre ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'">
+                <i class="fa-solid text-sm"
+                  :class="nombre === 'none' ? 'fa-volume-xmark text-gray-400' : (tonoPreview === nombre ? 'fa-music text-white' : 'fa-play text-blue-500')"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold capitalize" :class="config.notificaciones.tono === nombre ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'">
+                  {{ nombre === 'chime' ? 'Campanilla' : nombre === 'beep' ? 'Beep' : nombre === 'ding' ? 'Ding' : nombre === 'pulse' ? 'Pulso' : 'Silencio' }}
+                </div>
+                <div class="text-[10px] text-gray-400">{{ nombre !== 'none' ? 'Clic para probar' : 'Sin sonido' }}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Volumen -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Volumen</label>
+            <span class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">{{ config.notificaciones.volumen }}%</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-volume-off text-gray-400 text-sm"></i>
+            <input type="range" min="0" max="100" v-model.number="config.notificaciones.volumen"
+              class="flex-1 h-2 rounded-full appearance-none cursor-pointer accent-blue-500">
+            <i class="fa-solid fa-volume-high text-gray-400 text-sm"></i>
+          </div>
+        </div>
+
+        <!-- Intervalo de actualización -->
+        <div>
+          <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">Frecuencia de Verificación</label>
+          <div class="flex gap-2 flex-wrap">
+            <button v-for="s in [10, 15, 30, 60, 120]" :key="s"
+              @click="config.notificaciones.intervaloActualizacion = s"
+              class="px-4 py-2 rounded-lg text-xs font-semibold border-2 transition-all"
+              :class="config.notificaciones.intervaloActualizacion === s
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300'">
+              {{ s < 60 ? s + 's' : (s/60) + ' min' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notificaciones del navegador -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-desktop text-purple-500 text-sm"></i>
+        </div>
+        <div class="flex-1">
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Notificaciones del Navegador</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Push nativo del sistema operativo</p>
+        </div>
+        <div>
+          <span v-if="notifBrowser" class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-check-circle"></i> Permitidas
+          </span>
+          <button v-else @click="solicitarPermisoNotif"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-colors">
+            Activar
+          </button>
+        </div>
+      </div>
+      <div class="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
+        Las notificaciones push aparecen en la esquina del escritorio incluso cuando el Centro de Monitoreo está minimizado. Útil para operadores de guardia.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 3 — MAPA
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'mapa'" class="space-y-5">
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-map text-emerald-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Configuración del Mapa en Vivo</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Centro, zoom y visualización predeterminada</p>
+        </div>
+      </div>
+
+      <div class="p-5 space-y-6">
+
+        <!-- Centro del mapa -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Latitud Central</label>
+            <input type="number" step="0.0001" v-model.number="config.mapa.lat"
+              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Longitud Central</label>
+            <input type="number" step="0.0001" v-model.number="config.mapa.lng"
+              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all">
+          </div>
+        </div>
+
+        <!-- Zoom inicial -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Zoom Inicial</label>
+            <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">z{{ config.mapa.zoom }}</span>
+          </div>
+          <input type="range" min="10" max="19" v-model.number="config.mapa.zoom"
+            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-emerald-500">
+          <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+            <span>z10 — Ciudad</span><span>z15 — Colonia</span><span>z19 — Calle</span>
+          </div>
+        </div>
+
+        <!-- Estilo de mapa -->
+        <div>
+          <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-3">Estilo de Mapa Predeterminado</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <button v-for="e in estilosMapaOpciones" :key="e.id"
+              @click="config.mapa.estilo = e.id"
+              class="px-4 py-3 rounded-xl border-2 text-left text-xs font-semibold transition-all"
+              :class="config.mapa.estilo === e.id
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300'">
+              {{ e.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Tamaño de marcador -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Tamaño de Marcadores</label>
+            <div class="flex items-center gap-2">
+              <div class="rounded-full bg-blue-500 transition-all border-2 border-white shadow"
+                :style="{ width: config.mapa.tamanoMarcador + 'px', height: config.mapa.tamanoMarcador + 'px' }">
+              </div>
+              <span class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">{{ config.mapa.tamanoMarcador }}px</span>
+            </div>
+          </div>
+          <input type="range" min="10" max="30" v-model.number="config.mapa.tamanoMarcador"
+            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-500">
+        </div>
+
+        <!-- Radio de clustering -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Radio de Agrupación (Clustering)</label>
+            <span class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400">{{ config.mapa.radioCluster }}px</span>
+          </div>
+          <input type="range" min="20" max="120" v-model.number="config.mapa.radioCluster"
+            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-purple-500">
+          <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+            <span>Más granular</span><span>Más agrupado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 4 — SISTEMA
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'sistema'" class="space-y-5">
+
+    <!-- Apariencia -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-palette text-violet-500 text-sm"></i>
+        </div>
+        <h2 class="text-sm font-bold text-gray-800 dark:text-white">Apariencia</h2>
+      </div>
+      <div class="p-5 space-y-4">
+        <!-- Modo oscuro -->
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-gray-800 dark:text-white">Modo Oscuro</div>
+            <div class="text-[11px] text-gray-400">Interfaz con fondo oscuro para uso nocturno</div>
+          </div>
+          <div class="relative inline-block w-11 h-6 cursor-pointer" @click="toggleDarkMode">
+            <div class="w-11 h-6 rounded-full transition-colors" :class="isDarkMode ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="isDarkMode ? 'translate-x-5' : ''"></div>
+          </div>
+        </div>
+        <!-- Animaciones -->
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-medium text-gray-800 dark:text-white">Animaciones de la UI</div>
+            <div class="text-[11px] text-gray-400">Transiciones y micro-animaciones de la interfaz</div>
+          </div>
+          <div class="relative inline-block w-11 h-6 cursor-pointer" @click="config.apariencia.animaciones = !config.apariencia.animaciones">
+            <div class="w-11 h-6 rounded-full transition-colors" :class="config.apariencia.animaciones ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.apariencia.animaciones ? 'translate-x-5' : ''"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 5 — ACCESO URL (KILL SWITCHES)
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'acceso'" class="space-y-5">
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-link text-orange-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Kill Switches de Acceso por URL</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Controla qué módulos pueden accederse mediante parámetros URL</p>
+        </div>
+      </div>
+
+      <div class="p-5 space-y-6">
+        <!-- Contexto Población -->
+        <div class="flex items-center justify-between p-4 rounded-xl border-2 transition-all"
+          :class="config.accesoContextos.poblacion ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20'">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center"
+              :class="config.accesoContextos.poblacion ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'">
+              <i :class="config.accesoContextos.poblacion ? 'fa-solid fa-users' : 'fa-solid fa-ban'" class="text-sm"></i>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-gray-800 dark:text-white">Módulo Ciudadanos</div>
+              <div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono">?contexto=poblacion</div>
+            </div>
+          </div>
+          <div class="relative inline-block w-11 h-6 cursor-pointer" @click="config.accesoContextos.poblacion = !config.accesoContextos.poblacion">
+            <div class="w-11 h-6 rounded-full transition-colors" :class="config.accesoContextos.poblacion ? 'bg-emerald-500' : 'bg-red-500'"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.accesoContextos.poblacion ? 'translate-x-5' : ''"></div>
+          </div>
+        </div>
+
+        <!-- Contexto Empleados -->
+        <div class="flex items-center justify-between p-4 rounded-xl border-2 transition-all"
+          :class="config.accesoContextos.empleados ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20'">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center"
+              :class="config.accesoContextos.empleados ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'">
+              <i :class="config.accesoContextos.empleados ? 'fa-solid fa-hard-hat' : 'fa-solid fa-ban'" class="text-sm"></i>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-gray-800 dark:text-white">Módulo Empleados de Campo</div>
+              <div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono">?contexto=empleados</div>
+            </div>
+          </div>
+          <div class="relative inline-block w-11 h-6 cursor-pointer" @click="config.accesoContextos.empleados = !config.accesoContextos.empleados">
+            <div class="w-11 h-6 rounded-full transition-colors" :class="config.accesoContextos.empleados ? 'bg-emerald-500' : 'bg-red-500'"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.accesoContextos.empleados ? 'translate-x-5' : ''"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info card -->
+    <div class="rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 px-4 py-3 flex gap-3 text-sm">
+      <i class="fa-solid fa-triangle-exclamation text-orange-500 mt-0.5 shrink-0"></i>
+      <div class="text-orange-700 dark:text-orange-300">
+        <strong>Importante:</strong> Desactivar un kill switch impedirá que los usuarios accedan al módulo correspondiente mediante el parámetro URL. El Centro de Monitoreo (panel de administración) siempre estará disponible en la URL base sin parámetros.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 6 — SEGURIDAD
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+          <i class="fa-solid fa-sliders text-gray-500 text-sm"></i>
+        </div>
+        <h2 class="text-sm font-bold text-gray-800 dark:text-white">Parámetros Operativos</h2>
+      </div>
+      <div class="p-5 space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <!-- Max denuncias -->
+          <div>
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Máx. Denuncias Visibles</label>
+            <input type="number" min="50" max="1000" step="50" v-model.number="config.sistema.maxDenunciasVisibles"
+              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+            <p class="text-[11px] text-gray-400 mt-1">Límite para el render del mapa. Mayor = más carga.</p>
+          </div>
+          <!-- Timeout sesión -->
+          <div>
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Timeout de Sesión (min)</label>
+            <input type="number" min="5" max="480" step="5" v-model.number="config.sistema.timeoutSesionMin"
+              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+            <p class="text-[11px] text-gray-400 mt-1">Minutos de inactividad antes de cerrar sesión.</p>
+          </div>
+          <!-- Organización -->
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Nombre de la Organización</label>
+            <input type="text" v-model="config.sistema.organizacion"
+              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Versión / Info -->
+    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 rounded-2xl border border-blue-200 dark:border-blue-800 p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+          <i class="fa-solid fa-circle-info text-white text-sm"></i>
+        </div>
+        <h3 class="text-sm font-bold text-blue-800 dark:text-blue-300">Información del Sistema</h3>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[11px]">
+        <div class="bg-white/60 dark:bg-blue-900/20 rounded-lg px-3 py-2">
+          <div class="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">Versión</div>
+          <div class="font-mono text-gray-700 dark:text-gray-300">{{ config.sistema.version }}</div>
+        </div>
+        <div class="bg-white/60 dark:bg-blue-900/20 rounded-lg px-3 py-2">
+          <div class="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">Motor</div>
+          <div class="font-mono text-gray-700 dark:text-gray-300">Vue 3 · Leaflet 1.9</div>
+        </div>
+        <div class="bg-white/60 dark:bg-blue-900/20 rounded-lg px-3 py-2">
+          <div class="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">Backend</div>
+          <div class="font-mono text-gray-700 dark:text-gray-300">Supabase (PG)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 5 — SEGURIDAD
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'seguridad'" class="space-y-5">
+
+    <!-- Sesiones activas -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-shield-halved text-rose-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Sesiones Registradas</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Últimos accesos al sistema</p>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="s in sesionesDemo" :key="s.ip + s.fecha"
+          class="flex items-center gap-4 px-5 py-3">
+          <div class="w-2 h-2 rounded-full shrink-0"
+            :class="s.activa ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-semibold text-gray-800 dark:text-white truncate">{{ s.user }}</div>
+            <div class="text-[10px] text-gray-400 truncate">{{ s.agente }}</div>
+          </div>
+          <div class="shrink-0 text-right">
+            <div class="text-[10px] font-mono text-gray-500 dark:text-gray-400">{{ s.ip }}</div>
+            <div class="text-[10px] text-gray-400">{{ s.fecha }}</div>
+          </div>
+          <div class="shrink-0">
+            <span v-if="s.activa" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">Activa</span>
+            <span v-else class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500">Cerrada</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conexión Supabase -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-database text-green-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Conexión a Supabase</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Credenciales configuradas en el archivo de entorno</p>
+        </div>
+      </div>
+      <div class="p-5 space-y-3">
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+          <i class="fa-solid fa-link text-gray-400 text-sm w-4"></i>
+          <span class="text-xs text-gray-500 dark:text-gray-400 flex-1">URL del proyecto</span>
+          <span class="text-[11px] font-mono text-gray-400">••••••.supabase.co</span>
+        </div>
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+          <i class="fa-solid fa-key text-gray-400 text-sm w-4"></i>
+          <span class="text-xs text-gray-500 dark:text-gray-400 flex-1">Anon Key</span>
+          <span class="text-[11px] font-mono text-gray-400">eyJ••••••••••••••</span>
+        </div>
+        <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 flex gap-2 text-[11px] text-amber-700 dark:text-amber-400">
+          <i class="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
+          Para cambiar las credenciales, edita el archivo <code class="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">assets/js/core/supabase.js</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TAB 6 — EXPORTACIÓN
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'exportacion'" class="space-y-5">
+
+    <!-- Exportar -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-file-export text-indigo-500 text-sm"></i>
+        </div>
+        <h2 class="text-sm font-bold text-gray-800 dark:text-white">Exportar Configuración</h2>
+      </div>
+      <div class="p-5">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Descarga un archivo JSON con toda la configuración actual del sistema. Puedes usar este archivo para restaurar la configuración o replicarla en otra instancia.
+        </p>
+        <button @click="exportarJSON"
+          class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all shadow-md shadow-indigo-500/20">
+          <i class="fa-solid fa-download"></i>
+          Descargar cm-config.json
+        </button>
+      </div>
+    </div>
+
+    <!-- Importar -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-file-import text-teal-500 text-sm"></i>
+        </div>
+        <h2 class="text-sm font-bold text-gray-800 dark:text-white">Importar Configuración</h2>
+      </div>
+      <div class="p-5">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Carga un archivo JSON de configuración previamente exportado. La configuración actual será reemplazada.
+        </p>
+        <label class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-all shadow-md shadow-teal-500/20 cursor-pointer w-fit">
+          <i class="fa-solid fa-upload"></i>
+          Seleccionar archivo
+          <input type="file" accept=".json" @change="onFileImport" class="hidden">
+        </label>
+        <p v-if="errorImport" class="mt-3 text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1">
+          <i class="fa-solid fa-circle-xmark"></i> {{ errorImport }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Restablecer -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-rose-200 dark:border-rose-800 shadow-sm">
+      <div class="px-5 py-4 border-b border-rose-100 dark:border-rose-800 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-rotate-left text-rose-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-rose-700 dark:text-rose-400">Restablecer Valores de Fábrica</h2>
+          <p class="text-[11px] text-rose-400">Esta acción no se puede deshacer</p>
+        </div>
+      </div>
+      <div class="p-5">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Elimina toda la configuración personalizada y vuelve a los valores predeterminados del sistema.
+        </p>
+        <div v-if="!confirmarReset">
+          <button @click="confirmarReset = true"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 text-sm font-semibold hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-all">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            Restablecer configuración
+          </button>
+        </div>
+        <div v-else class="flex items-center gap-3">
+          <button @click="resetear(); confirmarReset = false"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold transition-all shadow-md shadow-rose-500/20">
+            <i class="fa-solid fa-check"></i>
+            Confirmar Reset
+          </button>
+          <button @click="confirmarReset = false"
+            class="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

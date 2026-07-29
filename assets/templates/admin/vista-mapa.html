@@ -1,0 +1,974 @@
+<!-- ======================= VISTA: MAPA EN VIVO (municipal) ======================= -->
+<div class="mapa-vista" :class="{'is-fullscreen': mapaFullscreen}">
+
+  <!-- MAPA -->
+  <div id="map-mapa" class="mv-map"></div>
+
+  <!-- Controles superiores derechos: estilo de mapa + filtros + pantalla completa -->
+  <div class="absolute top-3 right-3 z-40 transition-all duration-300 ease-in-out"
+    :class="{
+      'lg:-translate-x-[312px]': rpanelOpen,
+      'flex items-center gap-2': !isLgUp,
+      'flex flex-col items-center gap-2': isLgUp
+    }">
+    <!-- Botón de Barras Laterales (Zen Mode) -->
+    <button
+      class="bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 hover:bg-white dark:hover:bg-gray-700 rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 p-2 flex flex-col items-center justify-center w-[46px] h-[46px] transition-colors"
+      :class="sidebarsOpen ? 'border-blue-500 ring-2 ring-blue-200 dark:border-blue-500 dark:ring-blue-800' : ''"
+      @click="toggleSidebars" :title="sidebarsOpen ? 'Ocultar barras laterales' : 'Mostrar barras laterales'">
+      <i class="fa-solid fa-table-columns text-lg"
+        :class="sidebarsOpen ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'"></i>
+    </button>
+
+    <!-- Botón de Ubicación Actual -->
+    <button
+      class="bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 hover:bg-white dark:hover:bg-gray-700 rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 p-2 flex flex-col items-center justify-center w-[46px] h-[46px] transition-colors"
+      :class="ubicacionActiva ? 'border-blue-500 ring-2 ring-blue-200 dark:border-blue-500 dark:ring-blue-800' : ''"
+      @click="obtenerUbicacion" :title="ubicacionCargando ? 'Obteniendo ubicación...' : (ubicacionActiva ? 'Ubicación activa' : 'Obtener mi ubicación')">
+      <i v-if="!ubicacionCargando" class="fa-solid fa-location-crosshairs text-lg"
+        :class="ubicacionActiva ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'"></i>
+      <div v-else class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    </button>
+
+    <!-- Botón de capas y menú flotante -->
+    <div class="relative">
+      <button
+        class="bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 hover:bg-white dark:hover:bg-gray-700 rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 p-2 flex flex-col items-center justify-center w-[46px] h-[46px] transition-colors"
+        @click="mostrarMenuCapas = !mostrarMenuCapas; mostrarPanelFiltros = false" title="Capas y Herramientas">
+        <i class="fa-solid fa-layer-group text-gray-700 dark:text-gray-300 text-lg"></i>
+      </button>
+
+      <!-- Popover de capas -->
+      <div v-show="mostrarMenuCapas"
+        class="absolute top-[52px] right-0 lg:w-80 w-[min(340px,calc(100vw-24px))]
+               max-lg:fixed max-lg:top-[130px] max-lg:left-1/2 max-lg:-translate-x-1/2
+               rounded-2xl shadow-xl border border-indigo-100 dark:border-gray-700 p-5 flex flex-col gap-5 z-50 origin-top-right transition-all bg-white dark:bg-gray-800">
+
+        <div class="flex justify-between items-center">
+          <h3 class="text-[15px] font-bold text-gray-800 dark:text-white">Detalles del mapa</h3>
+          <button @click="mostrarMenuCapas = false"
+            class="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"><i
+              class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- Tipo de mapa -->
+        <div>
+          <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Tipo de mapa
+          </h4>
+          <div class="grid grid-cols-4 gap-2">
+            <!-- Claro -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('cartomap')">
+              <div
+                class="w-[52px] h-[52px] rounded-xl border-2 transition-all bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                :class="estiloTile==='cartomap' ? 'border-blue-600 ring-2 ring-blue-200' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
+                <i class="fa-solid fa-sun text-gray-400 dark:text-gray-300 text-2xl"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center"
+                :class="estiloTile==='cartomap'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Claro</span>
+            </div>
+            <!-- Oscuro -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('darkmap')">
+              <div
+                class="w-[52px] h-[52px] rounded-xl border-2 transition-all bg-gray-800 flex items-center justify-center"
+                :class="estiloTile==='darkmap' ? 'border-blue-600 ring-2 ring-blue-200' : 'border-transparent group-hover:border-gray-600'">
+                <i class="fa-solid fa-moon text-gray-400 text-2xl"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center"
+                :class="estiloTile==='darkmap'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Oscuro</span>
+            </div>
+            <!-- Mapa -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('google')">
+              <div
+                class="w-[52px] h-[52px] rounded-xl border-2 transition-all bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center"
+                :class="estiloTile==='google' ? 'border-blue-600 ring-2 ring-blue-200' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
+                <i class="fa-solid fa-map-location-dot text-blue-500 text-2xl"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center"
+                :class="estiloTile==='google'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Maps</span>
+            </div>
+            <!-- Satélite -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('satellite')">
+              <div
+                class="w-[52px] h-[52px] rounded-xl border-2 transition-all bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center"
+                :class="estiloTile==='satellite' ? 'border-blue-600 ring-2 ring-blue-200' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
+                <i class="fa-solid fa-earth-americas text-emerald-600 dark:text-emerald-400 text-2xl"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center"
+                :class="estiloTile==='satellite'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Satélite</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-px bg-gray-200 dark:bg-gray-700 -mx-1"></div>
+
+        <!-- Herramientas -->
+        <div>
+          <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Herramientas
+            del mapa</h4>
+          <div class="grid grid-cols-5 gap-2">
+            <!-- Clustering -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group"
+              @click="toggleHerramienta('clustering')">
+              <div class="w-[52px] h-[52px] rounded-xl border-2 transition-all flex items-center justify-center"
+                :class="herramientasActivas.clustering ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent bg-gray-50 dark:bg-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-500'">
+                <i class="fa-solid fa-circle-nodes text-2xl"
+                  :class="herramientasActivas.clustering ? 'text-blue-600' : 'text-gray-400'"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center leading-tight"
+                :class="herramientasActivas.clustering?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Agrupar<br>Pines</span>
+            </div>
+            <!-- Heatmap -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="toggleHerramienta('heatmap')">
+              <div class="w-[52px] h-[52px] rounded-xl border-2 transition-all flex items-center justify-center"
+                :class="herramientasActivas.heatmap ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent bg-gray-50 dark:bg-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-500'">
+                <i class="fa-solid fa-fire text-2xl"
+                  :class="herramientasActivas.heatmap ? 'text-rose-500' : 'text-gray-400'"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center leading-tight"
+                :class="herramientasActivas.heatmap?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Mapa
+                de<br>Calor</span>
+            </div>
+            <!-- Medición -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group relative">
+              <div @click="toggleHerramienta('medicion')"
+                class="w-[52px] h-[52px] rounded-xl border-2 transition-all flex items-center justify-center"
+                :class="herramientasActivas.medicion ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent bg-gray-50 dark:bg-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-500'">
+                <i class="fa-solid fa-ruler-combined text-2xl"
+                  :class="herramientasActivas.medicion ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'"></i>
+              </div>
+              <span @click="toggleHerramienta('medicion')" class="text-[10px] font-medium text-center leading-tight"
+                :class="herramientasActivas.medicion?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Medir<br>Distancia</span>
+
+              <!-- Submenú de modo de medición -->
+              <div v-if="herramientasActivas.medicion"
+                class="absolute top-[80px] left-1/2 -translate-x-1/2 w-[140px] bg-white dark:bg-gray-800 shadow-md border border-gray-200 dark:border-gray-700 rounded-lg p-1.5 flex flex-col gap-1 z-50">
+                <button
+                  @click.stop="medicionModo = 'linea'; toggleHerramienta('medicion'); toggleHerramienta('medicion');"
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md text-[10px] text-left transition-colors"
+                  :class="medicionModo === 'linea' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                  <i class="fa-solid fa-ruler"></i> Línea recta
+                </button>
+                <button
+                  @click.stop="medicionModo = 'ruta'; toggleHerramienta('medicion'); toggleHerramienta('medicion');"
+                  class="flex items-center gap-2 px-2 py-1.5 rounded-md text-[10px] text-left transition-colors"
+                  :class="medicionModo === 'ruta' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                  <i class="fa-solid fa-route"></i> Ruta mapa
+                </button>
+              </div>
+            </div>
+            <!-- Distritos GeoJSON -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group"
+              @click="toggleHerramienta('distritos')">
+              <div class="w-[52px] h-[52px] rounded-xl border-2 transition-all flex items-center justify-center"
+                :class="herramientasActivas.distritos ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent bg-gray-50 dark:bg-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-500'">
+                <i class="fa-solid fa-draw-polygon text-2xl"
+                  :class="herramientasActivas.distritos ? 'text-blue-600' : 'text-gray-400'"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center leading-tight"
+                :class="herramientasActivas.distritos?'text-blue-700 font-bold':'text-gray-600 dark:text-gray-400'">Límites<br>Municipio</span>
+            </div>
+
+            <!-- Polígonos -->
+            <div class="flex flex-col items-center gap-1.5 cursor-pointer group"
+              @click="toggleHerramienta('poligonos')">
+              <div class="w-[52px] h-[52px] rounded-xl border-2 transition-all flex items-center justify-center"
+                :class="herramientasActivas.poligonos ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent bg-gray-50 dark:bg-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-500'">
+                <i class="fa-solid fa-vector-square text-2xl"
+                  :class="herramientasActivas.poligonos ? 'text-blue-600' : 'text-gray-400'"></i>
+              </div>
+              <span class="text-[10px] font-medium text-center leading-tight"
+                :class="herramientasActivas.poligonos?'text-blue-700 font-bold':'text-gray-600 dark:text-gray-400'">Dibujar<br>Polígono</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BOTÓN FILTROS -->
+    <button
+      class="bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 hover:bg-white dark:hover:bg-gray-700 rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 p-2 flex flex-col items-center justify-center w-[46px] h-[46px] transition-colors relative"
+      :class="filtrosActivos ? 'border-blue-500 dark:border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : ''"
+      @click="mostrarPanelFiltros = !mostrarPanelFiltros; mostrarMenuCapas = false" title="Filtrar puntos del mapa">
+      <i class="fa-solid fa-filter text-lg"
+        :class="filtrosActivos ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'"></i>
+      <!-- Badge indicador de filtros activos -->
+      <span v-if="filtrosActivos"
+        class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white text-[8px] font-black flex items-center justify-center leading-none">
+        {{ [filtros.distrito, filtros.estadoIncidencia, filtros.tipoIncidencia,
+        filtros.historicoActivo].filter(Boolean).length }}
+      </span>
+    </button>
+
+    <button
+      class="bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 hover:bg-white dark:hover:bg-gray-700 rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 p-2 flex flex-col items-center justify-center w-[46px] h-[46px] transition-colors"
+      @click="toggleMapaFullscreen" :title="mapaFullscreen ? 'Mostrar menú' : 'Pantalla completa'">
+      <i class="text-lg text-gray-700 dark:text-gray-300"
+        :class="mapaFullscreen ? 'fa-solid fa-compress' : 'fa-solid fa-expand'"></i>
+    </button>
+  </div>
+  <!-- Panel de filtros (Desacoplado para cálculo correcto de max-height) -->
+  <div v-show="mostrarPanelFiltros"
+    class="mv-filtros-panel absolute top-[60px] right-[60px] w-[320px] max-w-[calc(100vw-130px)] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden bg-white dark:bg-gray-800 flex flex-col transition-transform duration-300 ease-in-out"
+    :class="{'lg:-translate-x-[312px]': rpanelOpen}" style="max-height: calc(100% - 110px);">
+
+    <!-- Cabecera -->
+    <div
+      class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-filter text-blue-600 text-sm"></i>
+        <span class="text-[13px] font-bold text-gray-800 dark:text-white">Filtrar Incidencias</span>
+        <span v-if="filtrosActivos"
+          class="text-[9px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+          Activo
+        </span>
+      </div>
+      <button @click="mostrarPanelFiltros = false"
+        class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
+    </div>
+
+    <div class="p-4 flex flex-col gap-4 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+
+      <!-- FILTRO: Distrito -->
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+          <i class="fa-solid fa-map mr-1 text-blue-500"></i>Distrito
+        </label>
+        <select v-model="filtros.distrito" @change="aplicarFiltros"
+          class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+          <option value="">Todos los distritos</option>
+          <option v-for="d in DISTRITOS" :key="d" :value="d">{{ d }}</option>
+        </select>
+      </div>
+
+      <!-- FILTRO: Centro Poblacional -->
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+          <i class="fa-solid fa-city mr-1 text-emerald-500"></i>Centro Poblacional
+        </label>
+        <input type="text" v-model="filtros.centroPoblacional" @input="aplicarFiltros"
+          placeholder="Ej: Col. Centro, Cantón El Pino…"
+          class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+        <p class="text-[9px] text-gray-400 mt-1">
+          <i class="fa-solid fa-info-circle mr-0.5"></i>Próximamente: selector por polígono de centro poblacional.
+        </p>
+      </div>
+
+      <div class="h-px bg-gray-100 dark:bg-gray-700"></div>
+
+      <!-- FILTRO: Tipo de Incidencia -->
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+          <i class="fa-solid fa-clipboard-list mr-1 text-amber-500"></i>Tipo de Incidencia
+        </label>
+        <div class="flex flex-col gap-1.5 max-h-[120px] overflow-y-auto pr-1 custom-scrollbar">
+          <label class="flex items-center gap-2 cursor-pointer group">
+            <input type="radio" name="tipoInc" value="" v-model="filtros.tipoIncidencia" @change="aplicarFiltros"
+              class="w-3 h-3 accent-blue-600">
+            <span
+              class="text-[11px] font-medium text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">
+              Todos los tipos
+            </span>
+          </label>
+          <label v-for="cat in tiposDenuncia" :key="cat.id" class="flex items-center gap-2 cursor-pointer group">
+            <input type="radio" name="tipoInc" :value="cat.id" v-model="filtros.tipoIncidencia" @change="aplicarFiltros"
+              class="w-3 h-3 accent-blue-600">
+            <div class="w-2 h-2 rounded-full flex-shrink-0" :style="{background: cat.color_hex}"></div>
+            <span
+              class="text-[11px] font-medium text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition truncate">
+              {{ cat.nombre }}
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- FILTRO: Estado -->
+      <div>
+        <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+          <i class="fa-solid fa-circle-half-stroke mr-1 text-violet-500"></i>Estado
+        </label>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button v-for="est in [
+              {v:'', l:'Todos', cls:'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'},
+              {v:'pendiente', l:'Pendiente', cls:'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'},
+              {v:'en_revision', l:'En revisión', cls:'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'},
+              {v:'en_obra', l:'En obra', cls:'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'},
+              {v:'resuelta', l:'Resuelta', cls:'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'},
+            ]" :key="est.v" @click="filtros.estadoIncidencia = est.v; aplicarFiltros()" :class="['px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all border-2',
+                       est.cls,
+                       filtros.estadoIncidencia === est.v ? 'border-current shadow-sm' : 'border-transparent']">{{
+            est.l }}</button>
+        </div>
+      </div>
+
+      <div class="h-px bg-gray-100 dark:bg-gray-700"></div>
+
+      <!-- FILTRO: Histórico / Rango de fechas -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <i class="fa-solid fa-clock-rotate-left mr-1 text-indigo-500"></i>Histórico de Incidencias
+          </label>
+          <!-- Toggle -->
+          <button @click="filtros.historicoActivo = !filtros.historicoActivo; aplicarFiltros()"
+            :class="['w-[36px] h-5 rounded-full relative transition-all duration-300 flex-shrink-0 outline-none',
+                       filtros.historicoActivo ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600 border border-transparent dark:border-gray-500']">
+            <span :class="['absolute top-[2px] left-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300',
+                             filtros.historicoActivo ? 'translate-x-[16px]' : 'translate-x-0']"></span>
+          </button>
+        </div>
+
+        <transition name="slide-panel">
+          <div v-if="filtros.historicoActivo"
+            class="flex flex-col gap-2.5 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3">
+            <p class="text-[9px] text-indigo-700 dark:text-indigo-300 font-medium">
+              <i class="fa-solid fa-info-circle mr-1"></i>
+              Muestra incidencias en el período seleccionado. Sin fechas = todas.
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label
+                  class="block text-[9px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Desde</label>
+                <input type="date" v-model="filtros.fechaInicio" :max="filtros.fechaFin || hoy" @change="aplicarFiltros"
+                  class="w-full px-2 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-gray-900 text-[11px] text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+              </div>
+              <div>
+                <label
+                  class="block text-[9px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">Hasta</label>
+                <input type="date" v-model="filtros.fechaFin" :min="filtros.fechaInicio" :max="hoy"
+                  @change="aplicarFiltros"
+                  class="w-full px-2 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-gray-900 text-[11px] text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+              </div>
+            </div>
+            <button v-if="filtros.fechaInicio || filtros.fechaFin"
+              @click="filtros.fechaInicio=''; filtros.fechaFin=''; aplicarFiltros()"
+              class="text-[9px] text-indigo-500 hover:text-indigo-700 font-semibold text-right transition-colors">
+              <i class="fa-solid fa-xmark mr-0.5"></i>Limpiar fechas
+            </button>
+          </div>
+        </transition>
+      </div>
+
+    </div>
+
+    <!-- Acciones (Fijas abajo) -->
+    <div class="p-3 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex gap-2 flex-shrink-0">
+      <button @click="limpiarFiltros"
+        class="flex-1 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-rotate-left text-[10px]"></i>Limpiar
+      </button>
+      <button @click="aplicarFiltros(); mostrarPanelFiltros = false"
+        class="flex-[2] py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+        <i class="fa-solid fa-check text-[10px]"></i>Aplicar filtros
+      </button>
+    </div>
+  </div>
+
+  <!-- Botón Toggle KPIs (solo móvil/tablet) — anclado a la izquierda para no tapar los bot.flotantes -->
+  <button
+    class="lg:hidden absolute top-3 left-3 z-50 bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-full shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 px-3 py-[7px] flex items-center gap-1.5 transition-colors"
+    @click="kpisOpen = !kpisOpen">
+    <i class="fa-solid fa-chart-pie text-gray-700 dark:text-gray-300 text-xs"></i>
+    <span class="text-xs font-bold text-gray-700 dark:text-gray-300">Resumen</span>
+    <i class="text-[10px] text-gray-400" :class="kpisOpen ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"></i>
+  </button>
+
+  <!-- KPIs resumen — siempre visible en desktop; toggle en móvil/tablet -->
+  <div class="mv-kpis absolute left-1/2 -translate-x-1/2 z-40 lg:top-3
+              lg:flex lg:items-stretch lg:gap-2
+              max-lg:top-14 max-lg:flex-wrap max-lg:justify-center max-lg:gap-2 max-lg:w-[90vw] max-lg:px-2"
+    :class="(isLgUp || kpisOpen) ? 'flex' : 'hidden'">
+    <div
+      class="rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 px-4 py-1.5 text-center min-w-[78px] bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 transition-colors">
+      <div class="text-xl font-extrabold font-mono text-gray-900 dark:text-white leading-tight">{{ total }}</div>
+      <div class="text-[9px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Denuncias</div>
+    </div>
+    <div
+      class="rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 px-4 py-1.5 text-center min-w-[78px] bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 transition-colors">
+      <div class="text-xl font-extrabold font-mono text-red-600 dark:text-red-400 leading-tight">{{ pendientes }}</div>
+      <div class="text-[9px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Pendientes</div>
+    </div>
+    <div
+      class="rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 px-4 py-1.5 text-center min-w-[78px] bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 transition-colors">
+      <div class="text-xl font-extrabold font-mono text-amber-600 dark:text-amber-400 leading-tight">{{ enCurso }}</div>
+      <div class="text-[9px] uppercase tracking-wider text-gray-500 dark:text-gray-400">En curso</div>
+    </div>
+    <div
+      class="rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 px-4 py-1.5 text-center min-w-[78px] bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 transition-colors">
+      <div class="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 leading-tight">{{ resueltas }}
+      </div>
+      <div class="text-[9px] uppercase tracking-wider text-gray-500 dark:text-gray-400">Resueltas</div>
+    </div>
+  </div>
+
+
+  <!-- PANEL FEED — Desktop: lateral izquierdo | Móvil: oculto (ver Bottom Sheet unificado abajo) -->
+  <div class="mv-panel absolute left-0 z-40 bg-white/95 backdrop-blur-md dark:bg-gray-800/95 flex flex-col overflow-hidden shadow-2xl shadow-gray-900/15 transition-transform duration-300 ease-in-out
+           lg:top-0 lg:bottom-0 lg:w-[300px] lg:border-r border-gray-200/80 dark:border-gray-700
+           max-lg:hidden" :class="{'lg:-translate-x-full': !feedOpen, 'lg:translate-x-0': feedOpen}">
+    <div class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center">
+      <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"
+          :style="hasNewFeed ? 'animation:pulseRing 1.6s ease-out infinite;' : ''"></span>
+        Feed de Incidencias
+        <span class="ml-1 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full px-2 py-0.5">{{ feedItems.length
+          }}</span>
+      </div>
+    </div>
+    <div class="mv-scroll overflow-y-auto flex-1">
+      <div v-for="item in feedItems" :key="item.id"
+        class="flex gap-2 p-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer transition hover:bg-gray-50 dark:hover:bg-gray-700/50"
+        :class="{'bg-amber-50/60 dark:bg-amber-900/20': item.isNew}" @click="flyToFeed(item)">
+        <div class="w-2 h-2 rounded-full mt-1.5 shrink-0" :style="{background:item.color}"></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 mb-1 flex-wrap">
+            <span class="text-[10px] font-bold tracking-wide" :style="{color:item.color}">{{ item.catShort }}</span>
+            <span :class="badgeEstado(item.estado)">{{ etiquetaEstado(item.estado) }}</span>
+            <span class="text-[9px] ml-auto shrink-0 font-mono text-gray-400">{{ item.time }}</span>
+          </div>
+          <div class="text-xs font-medium text-gray-800 leading-snug truncate">{{ item.title }}</div>
+          <div class="text-[10px] mt-0.5 truncate text-gray-500">
+            <i class="fa-solid fa-location-dot" style="width:11px;margin-right:2px;"></i>{{ item.address }}
+          </div>
+        </div>
+      </div>
+      <div v-if="feedItems.length===0" class="p-8 text-center text-gray-400">
+        <i class="fas fa-inbox text-2xl mb-2"></i>
+        <p class="text-xs">Sin incidencias registradas</p>
+      </div>
+    </div>
+  </div>
+  <div class="mv-ptab l max-lg:hidden" :class="{'panel-closed': !feedOpen}" @click="feedOpen=!feedOpen"
+    :title="feedOpen ? 'Cerrar feed' : 'Abrir feed'">
+    <i :class="feedOpen ? 'fa-solid fa-chevron-left' : 'fa-solid fa-chevron-right'"></i>
+  </div>
+
+  <!-- PANEL CAPAS — Desktop: lateral derecho | Móvil: oculto (ver Bottom Sheet unificado abajo) -->
+  <div class="mv-panel absolute right-0 z-40 bg-white/95 backdrop-blur-md dark:bg-gray-800/95 flex flex-col overflow-hidden shadow-2xl shadow-gray-900/15 transition-transform duration-300 ease-in-out
+           lg:top-0 lg:bottom-0 lg:w-[312px] lg:border-l border-gray-200/80 dark:border-gray-700
+           max-lg:hidden" :class="{'lg:translate-x-full': !rpanelOpen, 'lg:translate-x-0': rpanelOpen}">
+    <div class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center">
+      <div
+        class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <i class="fa-solid fa-layer-group text-[var(--brand)] dark:text-blue-400"></i> Capas del Mapa
+      </div>
+    </div>
+    <div class="mv-scroll overflow-y-auto flex-1">
+      <div class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipos de Denuncia</div>
+      <div v-for="cat in categories" :key="cat.id"
+        class="flex items-center gap-2.5 px-3 py-2 cursor-pointer border-l-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+        :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--brand)] dark:border-blue-400' : 'border-transparent'"
+        @click="selectAndZoom(cat.id)">
+        <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{background:cat.color}"></div>
+        <i :class="['fa-solid', cat.icon]" class="text-[13px] w-4 text-center shrink-0" :style="{color:cat.color}"></i>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{{ cat.name }}</div>
+          <div class="text-[10px] truncate text-gray-500 dark:text-gray-400">{{ cat.area }}</div>
+        </div>
+        <span
+          class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{
+          cat.points.length }}</span>
+        <div class="mv-tog" :class="{on:visibilidad[cat.id]}" @click.stop="toggleCat(cat.id)" role="switch"
+          :aria-checked="visibilidad[cat.id]" :aria-label="'Mostrar '+cat.name" tabindex="0"
+          @keydown.enter.prevent="toggleCat(cat.id)" @keydown.space.prevent="toggleCat(cat.id)"></div>
+      </div>
+      <div class="h-px bg-gray-200 dark:bg-gray-700 mx-3 my-2"></div>
+      <div class="px-3 py-1 flex items-center gap-2">
+        <div class="flex-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tramos en Intervención</div>
+        <span
+          class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{
+          routes.length }}</span>
+        <div class="mv-tog" :class="{on:routesVis}" @click="toggleRoutes" role="switch" :aria-checked="routesVis"
+          aria-label="Mostrar tramos" tabindex="0" @keydown.enter.prevent="toggleRoutes"
+          @keydown.space.prevent="toggleRoutes"></div>
+      </div>
+      <div v-for="r in routes" :key="r.id"
+        class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-2 border-transparent"
+        @click="zoomRoute(r)">
+        <div class="flex-1 min-w-0">
+          <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ r.name }}</div>
+          <div class="text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">{{ r.type }}</div>
+        </div>
+        <i class="fa-solid fa-route shrink-0" :style="{color:r.color,fontSize:'12px'}"></i>
+      </div>
+      <div class="h-px bg-gray-200 dark:bg-gray-700 mx-3 my-2"></div>
+      <div class="px-3 py-1 flex items-center gap-2">
+        <div class="flex-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Intervenciones Activas</div>
+        <span class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{
+          interventions.length }}</span>
+        <div class="mv-tog" :class="{on:intervVis}" @click="toggleInterv" role="switch" :aria-checked="intervVis"
+          aria-label="Mostrar intervenciones" tabindex="0" @keydown.enter.prevent="toggleInterv"
+          @keydown.space.prevent="toggleInterv"></div>
+      </div>
+      <div v-for="iv in interventions" :key="iv.id"
+        class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-2"
+        style="border-color:var(--mv-gold);" @click="zoomInterv(iv)">
+        <div class="w-2 h-2 rotate-45 rounded-[1px] shrink-0" style="background:var(--mv-gold);"></div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ iv.name }}</div>
+          <div class="text-[10px] mt-0.5" :style="{color:iv.color}">{{ iv.area }} · {{ iv.status }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mv-ptab r max-lg:hidden" :class="{'panel-closed': !rpanelOpen}" @click="rpanelOpen=!rpanelOpen"
+    :title="rpanelOpen ? 'Cerrar panel' : 'Abrir capas'">
+    <i :class="rpanelOpen ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left'"></i>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- BOTTOM SHEET UNIFICADO — Solo en móvil / tablet (max-md)             -->
+  <!-- Conforma un único panel inferior con pestañas: Feed | Capas          -->
+  <!-- =================================================================== -->
+  <div class="lg:hidden absolute top-[72px] bottom-0 left-0 right-0 z-[70] bg-white dark:bg-gray-900
+              rounded-t-2xl border-t border-gray-200 dark:border-gray-700
+              shadow-[0_-4px_24px_rgba(0,0,0,0.15)] flex flex-col
+              transition-transform duration-300 ease-in-out"
+    :style="sidebarsOpen ? 'transform:translateY(0)' : 'transform:translateY(100%)'">
+
+    <!-- Handle de arrastre -->
+    <div class="flex justify-center pt-2.5 pb-1 shrink-0">
+      <div class="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+    </div>
+
+    <!-- Pestañas -->
+    <div class="flex border-b border-gray-200 dark:border-gray-700 shrink-0">
+      <button
+        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors"
+        :class="mobileTab==='feed'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'" @click="mobileTab='feed'">
+        <span class="relative">
+          <i class="fa-solid fa-rss"></i>
+          <span v-if="hasNewFeed" class="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-emerald-500"
+            style="animation:pulseRing 1.6s ease-out infinite;"></span>
+        </span>
+        Feed
+        <span
+          class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold rounded-full px-1.5 py-0.5">{{
+          feedItems.length }}</span>
+      </button>
+      <button
+        class="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors"
+        :class="mobileTab==='capas'
+                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'" @click="mobileTab='capas'">
+        <i class="fa-solid fa-layer-group"></i>
+        Capas
+      </button>
+    </div>
+
+    <!-- Contenido de la pestaña FEED -->
+    <div v-show="mobileTab==='feed'" class="overflow-y-auto flex-1">
+      <div v-for="item in feedItems" :key="'mf-'+item.id"
+        class="flex gap-2 p-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer transition hover:bg-gray-50 dark:hover:bg-gray-700/50"
+        :class="{'bg-amber-50/60 dark:bg-amber-900/20': item.isNew}" @click="flyToFeed(item); sidebarsOpen=false">
+        <div class="w-2 h-2 rounded-full mt-1.5 shrink-0" :style="{background:item.color}"></div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 mb-1 flex-wrap">
+            <span class="text-[10px] font-bold tracking-wide" :style="{color:item.color}">{{ item.catShort }}</span>
+            <span :class="badgeEstado(item.estado)">{{ etiquetaEstado(item.estado) }}</span>
+            <span class="text-[9px] ml-auto shrink-0 font-mono text-gray-400">{{ item.time }}</span>
+          </div>
+          <div class="text-xs font-medium text-gray-800 dark:text-gray-100 leading-snug truncate">{{ item.title }}</div>
+          <div class="text-[10px] mt-0.5 truncate text-gray-500">
+            <i class="fa-solid fa-location-dot" style="width:11px;margin-right:2px;"></i>{{ item.address }}
+          </div>
+        </div>
+      </div>
+      <div v-if="feedItems.length===0" class="p-8 text-center text-gray-400">
+        <i class="fas fa-inbox text-2xl mb-2"></i>
+        <p class="text-xs">Sin incidencias registradas</p>
+      </div>
+    </div>
+
+    <!-- Contenido de la pestaña CAPAS -->
+    <div v-show="mobileTab==='capas'" class="overflow-y-auto flex-1">
+      <div class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipos de Denuncia</div>
+      <div v-for="cat in categories" :key="'mc-'+cat.id"
+        class="flex items-center gap-2.5 px-3 py-2 cursor-pointer border-l-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+        :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--brand)] dark:border-blue-400' : 'border-transparent'"
+        @click="selectAndZoom(cat.id); sidebarsOpen=false">
+        <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{background:cat.color}"></div>
+        <i :class="['fa-solid', cat.icon]" class="text-[13px] w-4 text-center shrink-0" :style="{color:cat.color}"></i>
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{{ cat.name }}</div>
+          <div class="text-[10px] truncate text-gray-500 dark:text-gray-400">{{ cat.area }}</div>
+        </div>
+        <span
+          class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{
+          cat.points.length }}</span>
+        <div class="mv-tog" :class="{on:visibilidad[cat.id]}" @click.stop="toggleCat(cat.id)" role="switch"
+          :aria-checked="visibilidad[cat.id]" :aria-label="'Mostrar '+cat.name" tabindex="0"></div>
+      </div>
+      <div class="h-px bg-gray-200 dark:bg-gray-700 mx-3 my-2"></div>
+      <div class="px-3 py-1 flex items-center gap-2">
+        <div class="flex-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tramos</div>
+        <span
+          class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{
+          routes.length }}</span>
+        <div class="mv-tog" :class="{on:routesVis}" @click="toggleRoutes" role="switch" :aria-checked="routesVis"
+          aria-label="Mostrar tramos" tabindex="0"></div>
+      </div>
+      <div v-for="r in routes" :key="'mr-'+r.id"
+        class="flex items-center gap-2.5 px-3 py-2 border-l-2 border-transparent transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+        <div class="flex-1 min-w-0">
+          <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ r.name }}</div>
+          <div class="text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">{{ r.type }}</div>
+        </div>
+        <i class="fa-solid fa-route shrink-0" :style="{color:r.color,fontSize:'12px'}"></i>
+      </div>
+      <div class="h-px bg-gray-200 dark:bg-gray-700 mx-3 my-2"></div>
+      <div class="px-3 py-1 flex items-center gap-2">
+        <div class="flex-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Intervenciones</div>
+        <span class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{
+          interventions.length }}</span>
+        <div class="mv-tog" :class="{on:intervVis}" @click="toggleInterv" role="switch" :aria-checked="intervVis"
+          aria-label="Mostrar intervenciones" tabindex="0"></div>
+      </div>
+      <div v-for="iv in interventions" :key="'mi-'+iv.id" class="flex items-center gap-2.5 px-3 py-2 border-l-2"
+        style="border-color:var(--mv-gold);">
+        <div class="w-2 h-2 rotate-45 rounded-[1px] shrink-0" style="background:var(--mv-gold);"></div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ iv.name }}</div>
+          <div class="text-[10px] mt-0.5" :style="{color:iv.color}">{{ iv.area }} · {{ iv.status }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- LEYENDA -->
+  <div
+    class="absolute bottom-[52px] left-1/2 -translate-x-1/2 z-38 rounded-lg shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 px-3 py-1.5 flex gap-3 flex-wrap items-center transition-colors">
+    <div v-for="cat in categories" :key="'l'+cat.id" class="flex items-center gap-1.5">
+      <div class="w-[7px] h-[7px] rounded-full shrink-0" :style="{background:cat.color}"></div>
+      <span class="text-[10px] text-gray-600 dark:text-gray-300">{{ cat.shortName }}</span>
+    </div>
+    <div class="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
+    <div class="flex items-center gap-1.5">
+      <div class="w-[7px] h-[7px] rotate-45 rounded-[1px]" style="background:var(--mv-gold);"></div>
+      <span class="text-[10px] text-gray-600 dark:text-gray-300">Intervención</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <div class="w-4 h-0.5 rounded-sm" style="background:#b06a20;"></div>
+      <span class="text-[10px] text-gray-600 dark:text-gray-300">Tramo</span>
+    </div>
+  </div>
+
+  <!-- FLOTANTE DE HERRAMIENTAS DE MEDICIÓN (deshacer / eliminar) -->
+  <div v-if="herramientasActivas.medicion || medicionTerminada"
+    class="absolute bottom-20 left-1/2 -translate-x-1/2 z-50 flex gap-2">
+    <div
+      class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-1.5 flex items-center gap-1">
+      <button v-if="medicionPuntosCount > 0 && !medicionTerminada" @click="deshacerPuntoMedicion"
+        class="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-rotate-left"></i> Deshacer Punto
+      </button>
+      <button v-if="medicionPuntosCount > 0 || medicionTerminada" @click="limpiarMedicion"
+        class="px-3 py-1.5 rounded-lg text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-trash-can"></i> Eliminar Línea
+      </button>
+    </div>
+  </div>
+
+  <!-- PANEL INFERIOR DE CONTROLES (Footer) -->
+  <div
+    class="mv-footer absolute bottom-0 left-0 right-0 h-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t border-gray-200/80 dark:border-gray-700 bg-white/95 backdrop-blur-md dark:bg-gray-800/95 flex items-center px-2 lg:px-4 gap-2 z-[60] transition-colors">
+    <div class="font-mono text-[11px] text-gray-500 dark:text-gray-400 shrink-0 lg:min-w-[150px] flex items-center">
+      <i class="fa-solid fa-crosshairs max-lg:mr-0 lg:mr-1.5" style="color:var(--brand);"></i>
+      <span class="max-lg:hidden">{{ coords.lat.toFixed(5) }}, {{ coords.lng.toFixed(5) }}</span>
+    </div>
+    <div class="flex-1 flex items-center max-lg:justify-end lg:justify-center gap-1.5 overflow-x-auto no-scrollbar">
+      <button class="mv-btn !w-7 !h-7 !text-xs" @click="doZoomOut" title="Alejar"><i
+          class="fa-solid fa-minus"></i></button>
+      <div class="font-mono text-[10px] font-semibold min-w-[50px] text-center text-gray-700 dark:text-gray-300">{{
+        altitudStr }}</div>
+      <button class="mv-btn !w-7 !h-7 !text-xs" @click="doZoomIn" title="Acercar"><i
+          class="fa-solid fa-plus"></i></button>
+      <div class="mv-sep !h-4"></div>
+      <button class="mv-btn !w-7 !h-7 !text-xs" @click="resetView" title="Vista inicial"><i
+          class="fa-solid fa-house"></i></button>
+      <button class="mv-btn !w-7 !h-7 !text-xs" @click="fitAll" title="Ver todo"><i
+          class="fa-solid fa-expand"></i></button>
+      <div class="mv-sep !h-4"></div>
+      <button class="mv-btn !h-7 px-2" @click="simularDenuncia" title="Simular nueva denuncia"
+        style="color:#dc2626;border-color:#fecaca;">
+        <i class="fa-solid fa-bell mr-1"></i><span class="text-[10px]">Simular</span>
+      </button>
+    </div>
+    <div class="shrink-0 flex items-center gap-2 text-[10px] font-mono text-gray-400">
+      <span class="w-2 h-2 rounded-full bg-emerald-500"></span> En línea
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div class="mv-toast-wrap">
+    <div v-for="t in toasts" :key="t.id" class="mv-toast" :class="{exit:t.exiting}" :style="{borderLeftColor:t.color}">
+      <div class="w-2 h-2 rounded-full mt-1 shrink-0" :style="{background:t.color}"></div>
+      <div class="flex-1">
+        <div class="text-[9px] font-bold tracking-widest mb-1" :style="{color:t.color}">{{ t.label }}</div>
+        <div class="text-xs leading-snug" style="color:var(--mv-text)">{{ t.text }}</div>
+      </div>
+      <button @click="dismissToast(t.id)"
+        class="bg-none border-none cursor-pointer ml-2 shrink-0 hover:opacity-70 transition-opacity"
+        style="color:var(--mv-text-sec)">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- MODAL DE DETALLE DE INCIDENTE / INTERVENCIÓN / TRAMO / ZONA  -->
+  <!-- Activado por abrirDetalle({tipo, ...datos}) desde el mapa.   -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <transition name="modal-detalle">
+    <div v-if="modalDetalle"
+      class="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+      @click.self="cerrarDetalle">
+
+      <div class="modal-card bg-white dark:bg-gray-900 w-[calc(100%-2rem)] sm:max-w-md rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700 overflow-hidden">
+
+        <!-- Cabecera coloreada según tipo -->
+        <div class="px-5 pt-5 pb-4 flex items-start gap-3"
+          :style="modalDetalle.tipo === 'denuncia'
+            ? `background: ${modalDetalle.cat.color}18;`
+            : modalDetalle.tipo === 'tramo'
+              ? `background: ${modalDetalle.r.color}18;`
+              : modalDetalle.tipo === 'intervencion'
+                ? 'background: #c8a20018;'
+                : modalDetalle.tipo === 'poligono'
+                  ? `background: ${modalDetalle.p.color}18;`
+                  : ''">
+
+          <!-- Ícono -->
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white text-base shadow-md"
+            :style="modalDetalle.tipo === 'denuncia'
+              ? `background: ${modalDetalle.cat.color}`
+              : modalDetalle.tipo === 'tramo'
+                ? `background: ${modalDetalle.r.color}`
+                : modalDetalle.tipo === 'intervencion'
+                  ? 'background: #c8a200'
+                  : `background: ${modalDetalle.p?.color || '#3b82f6'}`">
+            <i v-if="modalDetalle.tipo === 'denuncia'"
+              :class="['fa-solid', modalDetalle.cat.icon || 'fa-location-dot']"></i>
+            <i v-else-if="modalDetalle.tipo === 'intervencion'" class="fa-solid fa-hard-hat"></i>
+            <i v-else-if="modalDetalle.tipo === 'tramo'" class="fa-solid fa-route"></i>
+            <i v-else class="fa-solid fa-vector-square"></i>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <!-- Tipo badge -->
+            <div class="text-[9px] font-black uppercase tracking-widest mb-0.5"
+              :style="modalDetalle.tipo === 'denuncia'
+                ? `color: ${modalDetalle.cat.color}`
+                : modalDetalle.tipo === 'tramo'
+                  ? `color: ${modalDetalle.r.color}`
+                  : modalDetalle.tipo === 'intervencion'
+                    ? 'color: #c8a200'
+                    : `color: ${modalDetalle.p?.color || '#3b82f6'}`">
+              {{ modalDetalle.tipo === 'denuncia' ? (modalDetalle.cat.shortName || 'Denuncia')
+                : modalDetalle.tipo === 'intervencion' ? 'Intervención Activa'
+                : modalDetalle.tipo === 'tramo' ? (modalDetalle.r.type || 'Tramo')
+                : 'Polígono Registrado' }}
+            </div>
+            <h3 class="text-sm font-black text-gray-900 dark:text-white leading-tight">{{ modalTitulo }}</h3>
+            <p v-if="modalSubtitulo" class="text-[10px] text-gray-400 mt-0.5">{{ modalSubtitulo }}</p>
+          </div>
+
+          <button @click="cerrarDetalle"
+            class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 ml-1">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="px-5 pb-2 space-y-4">
+
+          <!-- ── TIPO: DENUNCIA ── -->
+          <template v-if="modalDetalle.tipo === 'denuncia'">
+            <!-- Estado -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span :class="['text-[10px] font-bold px-2.5 py-1 rounded-full', estadoClase(modalDetalle.pt.estado)]">
+                <i class="fa-solid fa-circle-dot mr-1 text-[8px]"></i>
+                {{ etiquetaEstado(modalDetalle.pt.estado) }}
+              </span>
+              <span v-if="modalDetalle.pt.isNew"
+                class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
+                <i class="fa-solid fa-bolt mr-1 text-[8px]"></i>Nueva
+              </span>
+            </div>
+
+            <!-- Dirección -->
+            <div v-if="modalDetalle.pt.address" class="flex items-start gap-2">
+              <i class="fa-solid fa-location-dot text-gray-400 text-xs mt-0.5 flex-shrink-0"></i>
+              <span class="text-xs text-gray-700 dark:text-gray-300">{{ modalDetalle.pt.address }}</span>
+            </div>
+
+            <!-- Hora -->
+            <div v-if="modalDetalle.pt.time" class="flex items-center gap-2">
+              <i class="fa-solid fa-clock text-gray-400 text-xs flex-shrink-0"></i>
+              <span class="text-xs text-gray-500 font-mono">{{ modalDetalle.pt.time }}</span>
+            </div>
+
+            <!-- Coordenadas -->
+            <div class="grid grid-cols-2 gap-2">
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Latitud</div>
+                <div class="text-[11px] font-mono font-bold text-gray-800 dark:text-gray-200">{{ modalLatitud }}</div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Longitud</div>
+                <div class="text-[11px] font-mono font-bold text-gray-800 dark:text-gray-200">{{ modalLongitud }}</div>
+              </div>
+            </div>
+          </template>
+
+          <!-- ── TIPO: INTERVENCIÓN ── -->
+          <template v-else-if="modalDetalle.tipo === 'intervencion'">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-700">
+                <i class="fa-solid fa-wrench mr-1 text-[8px]"></i>{{ modalDetalle.iv.status }}
+              </span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i class="fa-solid fa-shield-halved text-gray-400 text-xs mt-0.5 flex-shrink-0"></i>
+              <span class="text-xs text-gray-700 dark:text-gray-300">{{ modalDetalle.iv.area }}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Latitud</div>
+                <div class="text-[11px] font-mono font-bold text-gray-800 dark:text-gray-200">{{ modalLatitud }}</div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Longitud</div>
+                <div class="text-[11px] font-mono font-bold text-gray-800 dark:text-gray-200">{{ modalLongitud }}</div>
+              </div>
+            </div>
+          </template>
+
+          <!-- ── TIPO: TRAMO ── -->
+          <template v-else-if="modalDetalle.tipo === 'tramo'">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                :style="`background:${modalDetalle.r.color}18; color:${modalDetalle.r.color}; border:1px solid ${modalDetalle.r.color}40`">
+                <i class="fa-solid fa-road mr-1 text-[8px]"></i>{{ modalDetalle.r.type }}
+              </span>
+            </div>
+            <div class="flex items-start gap-2">
+              <i class="fa-solid fa-map-pin text-gray-400 text-xs mt-0.5 flex-shrink-0"></i>
+              <span class="text-xs text-gray-700 dark:text-gray-300">Inicio del tramo:
+                {{ modalDetalle.r.coords[0][0].toFixed(5) }}, {{ modalDetalle.r.coords[0][1].toFixed(5) }}
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-ruler text-gray-400 text-xs flex-shrink-0"></i>
+              <span class="text-xs text-gray-500">{{ modalDetalle.r.coords.length }} puntos de trayecto registrados</span>
+            </div>
+          </template>
+
+          <!-- ── TIPO: POLÍGONO ── -->
+          <template v-else-if="modalDetalle.tipo === 'poligono'">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                :style="`background:${modalDetalle.p.color}18; color:${modalDetalle.p.color}; border:1px solid ${modalDetalle.p.color}40`">
+                <i class="fa-solid fa-vector-square mr-1 text-[8px]"></i>{{ modalDetalle.p.tipo?.replace('_', ' ') || 'Zona' }}
+              </span>
+            </div>
+            <div v-if="modalDetalle.p.descripcion" class="flex items-start gap-2">
+              <i class="fa-solid fa-align-left text-gray-400 text-xs mt-0.5 flex-shrink-0"></i>
+              <span class="text-xs text-gray-700 dark:text-gray-300">{{ modalDetalle.p.descripcion }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-draw-polygon text-gray-400 text-xs flex-shrink-0"></i>
+              <span class="text-xs text-gray-500">{{ modalDetalle.p.coordenadas?.length || 0 }} vértices</span>
+            </div>
+          </template>
+
+        </div>
+
+        <!-- Acciones -->
+        <div class="px-5 py-4 flex gap-2 border-t border-gray-100 dark:border-gray-800 mt-2">
+          <button @click="verDetalleEnMapa"
+            class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm">
+            <i class="fa-solid fa-crosshairs text-[10px]"></i>Ver en mapa
+          </button>
+          <button @click="cerrarDetalle"
+            class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
+
+  <!-- Modal de Captura de Información de Polígono -->
+  <div v-if="mostrarModalPoligono"
+    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
+    <div
+      class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-gray-200 dark:border-gray-700">
+      <div
+        class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 flex justify-between items-center">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Guardar Polígono</h3>
+        <button @click="cerrarModalPoligono"
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6 flex flex-col gap-4">
+        <div>
+          <label
+            class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Nombre
+            de la Zona</label>
+          <input type="text" v-model="formPoligono.nombre" placeholder="Ej: Zona Verde Sector A"
+            class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400">
+        </div>
+        <div>
+          <label
+            class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Tipo de
+            Área</label>
+          <select v-model="formPoligono.tipo"
+            class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white">
+            <option value="area_verde">Área Verde</option>
+            <option value="zona_riesgo">Zona de Riesgo</option>
+            <option value="zona_comercial">Zona Comercial</option>
+            <option value="proyecto_obra">Proyecto / Obra</option>
+            <option value="restriccion">Área Restringida</option>
+          </select>
+        </div>
+        <div class="flex gap-4 items-center">
+          <div class="flex-1">
+            <label
+              class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Color
+              del Polígono</label>
+            <div class="flex gap-2">
+              <button v-for="color in ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b']" :key="color"
+                @click="formPoligono.color = color" class="w-8 h-8 rounded-full border-2 transition-all cursor-pointer"
+                :class="formPoligono.color === color ? 'border-gray-900 dark:border-white scale-110 shadow-sm' : 'border-transparent hover:scale-110'"
+                :style="{ backgroundColor: color }"></button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label
+            class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Descripción
+            (Opcional)</label>
+          <textarea v-model="formPoligono.descripcion" rows="2"
+            placeholder="Detalles adicionales sobre este polígono..."
+            class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white resize-none placeholder-gray-400"></textarea>
+        </div>
+      </div>
+      <div
+        class="px-6 py-4 bg-gray-50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+        <button @click="cerrarModalPoligono"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">Cancelar</button>
+        <button @click="guardarPoligono" :disabled="!formPoligono.nombre"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+          <i class="fa-solid fa-save mr-1.5"></i> Guardar
+        </button>
+      </div>
+    </div>
+</div>

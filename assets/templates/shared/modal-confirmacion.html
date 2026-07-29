@@ -1,0 +1,22 @@
+<!-- Modal de Confirmación -->
+<div v-if="mostrar" class="modal-overlay" @click.self="cerrar">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-icon warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="modal-title">{{ titulo }}</h3>
+    </div>
+    <div class="modal-body">
+      <p class="modal-message">{{ mensaje }}</p>
+    </div>
+    <div class="modal-footer">
+      <button @click="cerrar" class="modal-button secondary">
+        Cancelar
+      </button>
+      <button @click="confirmar" class="modal-button primary">
+        {{ textoConfirmar }}
+      </button>
+    </div>
+  </div>
+</div>

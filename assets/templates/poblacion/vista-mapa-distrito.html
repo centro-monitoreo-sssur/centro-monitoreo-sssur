@@ -1,0 +1,118 @@
+<!-- ============================================================
+     VISTA: Mapa del Distrito (Mobile PWA - Población)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="h-screen w-full relative bg-gray-100 flex flex-col overflow-hidden">
+  <!-- Header Flotante (Topbar) -->
+  <div class="absolute top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-lg">
+    <div class="px-4 py-3 flex items-center justify-between pt-safe">
+      <div class="flex items-center space-x-3">
+        <button @click="irA('pwa-poblacion')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+          <i class="fa-solid fa-arrow-left text-gray-600"></i>
+        </button>
+        <div>
+          <h1 class="text-lg font-bold text-gray-900">Mapa del Distrito</h1>
+          <div class="flex items-center gap-1.5 mt-0.5">
+            <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+            <p class="text-[11px] text-blue-600 font-bold uppercase tracking-wider">Reportes Cercanos</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button @click="obtenerUbicacion" class="relative w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95">
+          <i class="fa-solid fa-location-crosshairs"></i>
+        </button>
+        <button @click="mostrarMenuCapas = !mostrarMenuCapas" class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95">
+          <i class="fa-solid fa-layer-group"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor del Mapa -->
+  <div id="mapa-vivo" class="absolute inset-0 z-0 w-full h-full"></div>
+
+  <!-- Menu de Capas -->
+  <div v-if="mostrarMenuCapas" class="absolute top-20 left-4 right-4 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-gray-900/20 p-5 z-30 border border-gray-100/50">
+    <h3 class="font-bold text-gray-900 mb-4 text-base">Tipo de Mapa</h3>
+    <div class="grid grid-cols-3 gap-3">
+      <button 
+        @click="cambiarTile('cartomap'); mostrarMenuCapas = false"
+        class="py-4 px-4 rounded-2xl text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
+        :class="estiloTile === 'cartomap' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'">
+        <i class="fa-solid fa-sun mb-2 text-2xl block"></i>
+        Claro
+      </button>
+      <button 
+        @click="cambiarTile('google'); mostrarMenuCapas = false"
+        class="py-4 px-4 rounded-2xl text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
+        :class="estiloTile === 'google' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'">
+        <i class="fa-solid fa-map-location-dot mb-2 text-2xl block"></i>
+        Maps
+      </button>
+      <button 
+        @click="cambiarTile('satellite'); mostrarMenuCapas = false"
+        class="py-4 px-4 rounded-2xl text-sm font-semibold transition-all duration-300 hover:scale-105 active:scale-95"
+        :class="estiloTile === 'satellite' ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'">
+        <i class="fa-solid fa-earth-americas mb-2 text-2xl block"></i>
+        Satélite
+      </button>
+    </div>
+  </div>
+
+  <!-- Botón Toggle del Panel de Radio -->
+  <button 
+    @click="mostrarPanelRadio = !mostrarPanelRadio"
+    class="absolute top-20 right-4 bg-white/95 backdrop-blur-xl rounded-full shadow-xl shadow-gray-900/20 p-3 z-20 border border-gray-100/50 hover:bg-white transition-colors"
+    :class="{ 'ring-2 ring-blue-500': mostrarPanelRadio }">
+    <i class="fa-solid fa-sliders text-gray-600"></i>
+  </button>
+
+  <!-- Panel de Filtro de Radio (colapsable) -->
+  <div v-if="mostrarPanelRadio" class="absolute top-20 right-4 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl shadow-gray-900/20 p-4 z-20 border border-gray-100/50 w-64 mt-12">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-bold text-gray-900 text-sm">Radio de Búsqueda</h3>
+      <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{{ radioSeleccionado }} km</span>
+    </div>
+    <input 
+      type="range" 
+      min="0.5" 
+      max="5" 
+      step="0.5" 
+      v-model="radioSeleccionado"
+      @input="actualizarRadio"
+      class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+    >
+    <div class="flex justify-between mt-2 text-[10px] text-gray-500 font-medium">
+      <span>0.5 km</span>
+      <span>5 km</span>
+    </div>
+    <div v-if="incidentesEnRadio !== null" class="mt-3 pt-3 border-t border-gray-100">
+      <div class="flex items-center justify-between">
+        <span class="text-xs text-gray-600">Incidentes en radio:</span>
+        <span class="text-sm font-bold text-blue-600">{{ incidentesEnRadio }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Inferior de Información Flotante -->
+  <div class="absolute bottom-0 left-0 w-full z-[1000] px-4 pointer-events-none pb-[calc(env(safe-area-inset-bottom)+88px)]">
+    <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-xl border border-gray-100 p-4 pointer-events-auto flex items-center justify-between mx-auto max-w-sm mb-2 transition-all">
+      <div class="flex items-center space-x-4">
+        <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-map text-blue-600 text-xl"></i>
+        </div>
+        <div class="min-w-0">
+          <h3 class="font-bold text-gray-900 text-[13px] leading-tight line-clamp-1">Reportes Activos</h3>
+          <p class="text-[11px] text-gray-500 font-medium mt-0.5 leading-tight">Denuncias en tu zona</p>
+        </div>
+      </div>
+      <button @click="irA('crear-denuncia')" class="bg-blue-600 text-white rounded-xl px-4 py-2 text-sm font-bold shadow-md shadow-blue-500/30 active:scale-95 transition-transform shrink-0 ml-2">
+        Reportar
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar -->
+  <bottom-tab-bar tipo="poblacion"></bottom-tab-bar>
+</div>

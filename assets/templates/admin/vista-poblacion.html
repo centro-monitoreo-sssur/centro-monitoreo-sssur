@@ -1,0 +1,453 @@
+<!-- ============================================================
+     VISTA: Población Registrada
+     ============================================================ -->
+<div class="h-full flex flex-col">
+  <!-- KPIs de alto nivel -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Ciudadanos</h3>
+        <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+          <i class="fas fa-users"></i>
+        </div>
+      </div>
+      <div class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ totalPoblacion }}</div>
+      <div class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Ciudadanos registrados</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activos</h3>
+        <div class="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+          <i class="fas fa-check-circle"></i>
+        </div>
+      </div>
+      <div class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ poblacionActiva }}</div>
+      <div class="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Cuenta verificada</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pendientes</h3>
+        <div class="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+      <div class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ poblacionPendiente }}</div>
+      <div class="mt-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium">Por verificar</div>
+    </div>
+    
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Distritos</h3>
+        <div class="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+          <i class="fas fa-map-marker-alt"></i>
+        </div>
+      </div>
+      <div class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ distritosDisponibles.length }}</div>
+      <div class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Cobertura territorial</div>
+    </div>
+  </div>
+
+  <!-- Tabla principal -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors">
+
+    <!-- Cabecera de la tabla -->
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50">
+      <div class="flex-1">
+        <h3 class="text-sm font-bold text-gray-800 dark:text-white">Lista de Ciudadanos</h3>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+          Mostrando <span class="font-semibold text-gray-700 dark:text-gray-300">{{ poblacionFiltrada.length }}</span> de {{ totalPoblacion }} registros
+        </p>
+      </div>
+
+      <!-- Filtros -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Búsqueda -->
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <input
+            v-model="filtroBusqueda"
+            type="text"
+            placeholder="Buscar..."
+            class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all w-[160px]"
+          >
+        </div>
+
+        <!-- Filtro Distrito -->
+        <select
+          v-model="filtroDistrito"
+          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none"
+        >
+          <option value="">Todos los Distritos</option>
+          <option v-for="distrito in distritosDisponibles" :key="distrito" :value="distrito">{{ distrito }}</option>
+        </select>
+
+        <!-- Filtro Estado -->
+        <select
+          v-model="filtroEstado"
+          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none"
+        >
+          <option value="">Todos los estados</option>
+          <option value="activo">Activo</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
+
+        <!-- Limpiar -->
+        <button
+          @click="limpiarFiltros"
+          title="Limpiar filtros"
+          class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <i class="fas fa-sync-alt text-xs"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Estado vacío -->
+    <div v-if="poblacion.length === 0 && !cargando" class="py-16 text-center">
+      <i class="fas fa-users text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">No hay ciudadanos registrados</p>
+    </div>
+
+    <!-- Loading -->
+    <div v-else-if="cargando" class="py-16 flex items-center justify-center gap-3">
+      <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <span class="text-sm text-gray-500 dark:text-gray-400">Cargando población...</span>
+    </div>
+
+    <!-- Tabla de ciudadanos -->
+    <div v-else class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-gray-50/50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <th class="p-4">Ciudadano</th>
+            <th class="p-4">Distrito</th>
+            <th class="p-4">Estado</th>
+            <th class="p-4">Verificado</th>
+            <th class="p-4">Fecha Registro</th>
+            <th class="p-4 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <tr
+            v-for="ciudadano in poblacionFiltrada"
+            :key="ciudadano.id"
+            class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+          >
+            <td class="p-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+                  <span class="text-white text-xs font-bold">{{ ciudadano.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() }}</span>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ ciudadano.nombre }}</p>
+                  <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ ciudadano.email }} · {{ ciudadano.dui }}</p>
+                </div>
+              </div>
+            </td>
+            <td class="p-4">
+              <span class="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                {{ ciudadano.distrito }}
+              </span>
+            </td>
+            <td class="p-4">
+              <span :class="[
+                'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+                ciudadano.estado === 'activo'
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                  : ciudadano.estado === 'pendiente'
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+              ]">
+                <span :class="[
+                  'w-1.5 h-1.5 rounded-full',
+                  ciudadano.estado === 'activo' ? 'bg-emerald-500' : ciudadano.estado === 'pendiente' ? 'bg-amber-500' : 'bg-red-500'
+                ]"></span>
+                {{ ciudadano.estado === 'activo' ? 'Activo' : ciudadano.estado === 'pendiente' ? 'Pendiente' : 'Inactivo' }}
+              </span>
+            </td>
+            <td class="p-4">
+              <span :class="[
+                'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+                ciudadano.verificado
+                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+              ]">
+                {{ ciudadano.verificado ? 'Sí' : 'No' }}
+              </span>
+            </td>
+            <td class="p-4 text-[11px] text-gray-500 dark:text-gray-400">
+              {{ formatoFecha(ciudadano.fecha_registro) }}
+            </td>
+            <td class="p-4 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button
+                  @click="abrirModalVerDetalles(ciudadano)"
+                  title="Ver detalles"
+                  class="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  <i class="fas fa-eye text-xs"></i>
+                </button>
+                <button
+                  v-if="!ciudadano.verificado"
+                  @click="verificarCiudadano(ciudadano)"
+                  title="Verificar ciudadano"
+                  class="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+                >
+                  <i class="fas fa-check-circle text-xs"></i>
+                </button>
+                <button
+                  @click="abrirModalEditar(ciudadano)"
+                  title="Editar ciudadano"
+                  class="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  <i class="fas fa-edit text-xs"></i>
+                </button>
+                <button
+                  @click="abrirModalEliminar(ciudadano)"
+                  title="Eliminar ciudadano"
+                  class="w-7 h-7 flex items-center justify-center rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                >
+                  <i class="fas fa-trash-alt text-xs"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- Sin resultados de filtro -->
+      <div v-if="poblacionFiltrada.length === 0" class="py-12 text-center">
+        <i class="fas fa-filter text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Sin resultados para los filtros aplicados</p>
+        <button @click="limpiarFiltros" class="mt-3 text-xs font-semibold text-[var(--brand)] hover:underline">Limpiar filtros</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Ver Detalles ─── -->
+<div v-if="modalVerDetalles" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
+
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 flex items-center justify-between">
+      <h2 class="text-base font-bold text-gray-900 dark:text-white">Detalles del Ciudadano</h2>
+      <button @click="cerrarModalVerDetalles" class="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <div class="p-6">
+      <!-- Avatar -->
+      <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
+        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+          <span class="text-white text-lg font-bold">{{ ciudadanoSeleccionado.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() }}</span>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ ciudadanoSeleccionado.nombre }}</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ ciudadanoSeleccionado.email }}</p>
+        </div>
+      </div>
+
+      <!-- Info básica -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">DUI</p>
+          <p class="text-sm text-gray-900 dark:text-white font-mono">{{ ciudadanoSeleccionado.dui }}</p>
+        </div>
+        <div>
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Teléfono</p>
+          <p class="text-sm text-gray-900 dark:text-white">{{ ciudadanoSeleccionado.telefono }}</p>
+        </div>
+        <div>
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Distrito</p>
+          <p class="text-sm text-gray-900 dark:text-white">{{ ciudadanoSeleccionado.distrito }}</p>
+        </div>
+        <div>
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Fecha Registro</p>
+          <p class="text-sm text-gray-900 dark:text-white">{{ formatoFecha(ciudadanoSeleccionado.fecha_registro) }}</p>
+        </div>
+      </div>
+
+      <!-- Dirección -->
+      <div class="mb-6">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Dirección</p>
+        <p class="text-sm text-gray-900 dark:text-white">{{ ciudadanoSeleccionado.direccion }}</p>
+      </div>
+
+      <!-- Estado -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado:</p>
+          <span :class="[
+            'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+            ciudadanoSeleccionado.estado === 'activo'
+              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+              : ciudadanoSeleccionado.estado === 'pendiente'
+              ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+          ]">
+            {{ ciudadanoSeleccionado.estado === 'activo' ? 'Activo' : ciudadanoSeleccionado.estado === 'pendiente' ? 'Pendiente' : 'Inactivo' }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Verificado:</p>
+          <span :class="[
+            'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+            ciudadanoSeleccionado.verificado
+              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+          ]">
+            {{ ciudadanoSeleccionado.verificado ? 'Sí' : 'No' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3">
+      <button
+        v-if="!ciudadanoSeleccionado.verificado"
+        @click="verificarCiudadano(ciudadanoSeleccionado); cerrarModalVerDetalles();"
+        class="px-4 py-2 rounded-lg text-sm font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+      >
+        <i class="fas fa-check-circle mr-1.5"></i> Verificar
+      </button>
+      <button
+        @click="abrirModalEditar(ciudadanoSeleccionado); cerrarModalVerDetalles();"
+        class="px-4 py-2 rounded-lg text-sm font-semibold text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+      >
+        <i class="fas fa-edit mr-1.5"></i> Editar
+      </button>
+      <button
+        @click="cerrarModalVerDetalles"
+        class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+      >
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Editar ─── -->
+<div v-if="modalEditar" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
+
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 flex items-center justify-between">
+      <h2 class="text-base font-bold text-gray-900 dark:text-white">Editar Ciudadano</h2>
+      <button @click="cerrarModalEditar" class="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <form @submit.prevent="guardarCambiosCiudadano" class="p-6 flex flex-col gap-4">
+      <!-- Nombre -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Nombre Completo</label>
+        <input
+          v-model="ciudadanoSeleccionado.nombre"
+          type="text"
+          required
+          placeholder="Ej: Juan Pérez García"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+        >
+      </div>
+
+      <!-- Email -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Correo Electrónico</label>
+        <input
+          v-model="ciudadanoSeleccionado.email"
+          type="email"
+          required
+          placeholder="ej: correo@ejemplo.com"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+        >
+      </div>
+
+      <!-- Teléfono -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Teléfono</label>
+        <input
+          v-model="ciudadanoSeleccionado.telefono"
+          type="text"
+          placeholder="Ej: 7890-1234"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+        >
+      </div>
+
+      <!-- DUI -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">DUI</label>
+        <input
+          v-model="ciudadanoSeleccionado.dui"
+          type="text"
+          placeholder="Ej: 01234567-8"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+        >
+      </div>
+
+      <!-- Estado -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Estado</label>
+        <select
+          v-model="ciudadanoSeleccionado.estado"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+        >
+          <option value="activo">Activo</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
+      </div>
+
+      <!-- Acciones -->
+      <div class="flex justify-end gap-3 pt-2">
+        <button
+          type="button"
+          @click="cerrarModalEditar"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+        >
+          <i class="fas fa-save mr-1.5"></i> Guardar Cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ─── Modal Eliminar ─── -->
+<div v-if="modalEliminar" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div class="p-6 text-center">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+      </div>
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-2">Eliminar Ciudadano</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        ¿Seguro que deseas eliminar a <strong class="text-gray-700 dark:text-gray-200">{{ ciudadanoSeleccionado.nombre }}</strong>?
+        Esta acción no se puede deshacer.
+      </p>
+      <div class="flex justify-center gap-3">
+        <button
+          @click="cerrarModalEliminar"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          @click="eliminarCiudadano"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors"
+        >
+          <i class="fas fa-trash-alt mr-1.5"></i> Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

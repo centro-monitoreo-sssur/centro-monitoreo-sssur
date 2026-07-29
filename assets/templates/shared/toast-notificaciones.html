@@ -1,0 +1,29 @@
+<!-- Componente Toast de Notificaciones -->
+<div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+  <div 
+    v-for="toast in toasts" 
+    :key="toast.id"
+    class="pointer-events-auto transform transition-all duration-300"
+    :class="toast.visible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'"
+  >
+    <div class="bg-white rounded-xl shadow-2xl border border-gray-100 p-4 flex items-start gap-3 min-w-[300px] max-w-sm">
+      <!-- Icono -->
+      <div :class="`${getColorClass(toast.tipo)} rounded-lg flex items-center justify-center flex-shrink-0`">
+        <i :class="`fa-solid ${getIcono(toast.tipo)} text-white text-lg`"></i>
+      </div>
+      
+      <!-- Mensaje -->
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900 leading-tight">{{ toast.mensaje }}</p>
+      </div>
+      
+      <!-- Botón cerrar -->
+      <button 
+        @click="ocultarToast(toast.id)"
+        class="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+      >
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+  </div>
+</div>

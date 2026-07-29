@@ -1,0 +1,288 @@
+<!-- ============================================================
+     VISTA: Mi Perfil (Empleado)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-gray-100 pb-32">
+  <!-- Header -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button @click="irA('pwa-empleado')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        </button>
+        <div>
+          <h1 class="text-lg font-semibold text-gray-900">Mi Perfil</h1>
+          <p class="text-xs text-gray-500">Gestiona tu cuenta</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="px-4 py-6 space-y-4">
+    <!-- Información del Usuario -->
+    <div class="bg-white rounded-3xl shadow-lg shadow-gray-200/50 p-6 border border-gray-100">
+      <div class="flex items-center space-x-4 mb-6">
+        <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+          <span class="text-white text-2xl font-bold">{{ nombreCompleto.charAt(0) }}</span>
+        </div>
+        <div>
+          <h2 class="text-xl font-bold text-gray-900">{{ nombreCompleto }}</h2>
+          <p class="text-sm text-gray-500">Empleado Municipal</p>
+        </div>
+      </div>
+      
+      <div class="space-y-3">
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm text-gray-600">Correo electrónico</span>
+          <span class="text-sm font-semibold text-gray-900">{{ correoUsuario }}</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm text-gray-600">Teléfono</span>
+          <span class="text-sm font-semibold text-gray-900">{{ formulario.telefono || 'No especificado' }}</span>
+        </div>
+        <div class="flex items-center justify-between py-2 border-b border-gray-100">
+          <span class="text-sm text-gray-600">Cargo</span>
+          <span class="text-sm font-semibold text-gray-900">{{ formulario.cargo || 'No especificado' }}</span>
+        </div>
+        <div class="flex items-center justify-between py-2">
+          <span class="text-sm text-gray-600">Departamento</span>
+          <span class="text-sm font-semibold text-gray-900">{{ formulario.departamento || 'No especificado' }}</span>
+        </div>
+      </div>
+      
+      <div class="mt-6 space-y-3">
+        <button 
+          @click="mostrarModalEditarPerfil = true"
+          class="w-full py-3 bg-green-500 text-white font-semibold rounded-xl transition-colors hover:bg-green-600">
+          <i class="fa-solid fa-pen-to-square mr-2"></i>
+          Editar perfil
+        </button>
+        <button 
+          @click="mostrarModalCambiarCorreo = true"
+          class="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors hover:bg-gray-200">
+          <i class="fa-solid fa-envelope mr-2"></i>
+          Cambiar correo
+        </button>
+      </div>
+    </div>
+    
+    <!-- Zona de Peligro -->
+    <div class="bg-white rounded-3xl shadow-lg shadow-gray-200/50 p-6 border border-red-100">
+      <h3 class="text-sm font-bold text-red-600 uppercase tracking-wider mb-4">Zona de Peligro</h3>
+      <button 
+        @click="mostrarModalEliminarCuenta = true"
+        class="w-full py-3 bg-red-50 text-red-600 font-semibold rounded-xl transition-colors hover:bg-red-100 border border-red-200">
+        <i class="fa-solid fa-trash mr-2"></i>
+        Eliminar mi cuenta
+      </button>
+      <p class="text-xs text-gray-500 mt-3 text-center">
+        Esta acción no se puede deshacer. Se eliminarán todos tus datos del sistema.
+      </p>
+    </div>
+  </div>
+
+  <!-- Modal Editar Perfil -->
+  <div v-if="mostrarModalEditarPerfil" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="cancelarEdicion"></div>
+    <div class="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-gray-900">Editar Perfil</h3>
+        <button @click="cancelarEdicion" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-gray-600 text-sm"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Nombres *</label>
+          <input 
+            v-model="formulario.nombres"
+            type="text"
+            class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block w-full p-3"
+            placeholder="Tus nombres">
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Apellidos *</label>
+          <input 
+            v-model="formulario.apellidos"
+            type="text"
+            class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block w-full p-3"
+            placeholder="Tus apellidos">
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Teléfono</label>
+          <input 
+            v-model="formulario.telefono"
+            type="tel"
+            class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block w-full p-3"
+            placeholder="Tu número de teléfono">
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Cargo</label>
+          <input 
+            v-model="formulario.cargo"
+            type="text"
+            class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block w-full p-3"
+            placeholder="Tu cargo">
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Departamento</label>
+          <input 
+            v-model="formulario.departamento"
+            type="text"
+            class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block w-full p-3"
+            placeholder="Tu departamento">
+        </div>
+      </div>
+      
+      <div class="flex gap-3 mt-6">
+        <button 
+          @click="cancelarEdicion"
+          class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors hover:bg-gray-200">
+          Cancelar
+        </button>
+        <button 
+          @click="guardarPerfil"
+          :disabled="guardandoPerfil"
+          class="flex-1 py-3 bg-green-500 text-white font-semibold rounded-xl transition-colors hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i v-if="guardandoPerfil" class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+          {{ guardandoPerfil ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Cambiar Correo -->
+  <div v-if="mostrarModalCambiarCorreo" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="cancelarCambioCorreo"></div>
+    <div class="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-gray-900">Cambiar Correo</h3>
+        <button @click="cancelarCambioCorreo" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-gray-600 text-sm"></i>
+        </button>
+      </div>
+      
+      <div class="mb-4 p-3 bg-green-50 rounded-xl">
+        <p class="text-xs text-green-800">
+          <i class="fa-solid fa-info-circle mr-1"></i>
+          Para cambiar tu correo, enviaremos un enlace de confirmación a tu correo actual.
+        </p>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Correo actual</label>
+          <input 
+            :value="formularioCorreo.correoActual"
+            type="email"
+            disabled
+            class="bg-gray-100 border border-gray-200 text-gray-500 text-sm rounded-xl block w-full p-3 cursor-not-allowed">
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Nuevo correo *</label>
+          <input 
+            v-model="formularioCorreo.correoNuevo"
+            type="email"
+            class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block w-full p-3"
+            placeholder="ejemplo@correo.com">
+        </div>
+        <div>
+          <label class="block mb-2 text-sm font-medium text-gray-900">Confirmar nuevo correo *</label>
+          <input 
+            v-model="formularioCorreo.confirmarCorreo"
+            type="email"
+            class="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-green-500 focus:border-green-500 block w-full p-3"
+            placeholder="Confirma tu nuevo correo">
+        </div>
+      </div>
+      
+      <div class="flex gap-3 mt-6">
+        <button 
+          @click="cancelarCambioCorreo"
+          class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors hover:bg-gray-200">
+          Cancelar
+        </button>
+        <button 
+          @click="enviarSolicitudCorreo"
+          :disabled="enviandoCorreo"
+          class="flex-1 py-3 bg-green-500 text-white font-semibold rounded-xl transition-colors hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i v-if="enviandoCorreo" class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+          {{ enviandoCorreo ? 'Enviando...' : 'Enviar solicitud' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Eliminar Cuenta (Confirmación) -->
+  <div v-if="mostrarModalEliminarCuenta" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="mostrarModalEliminarCuenta = false"></div>
+    <div class="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fa-solid fa-trash text-red-500 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">¿Eliminar tu cuenta?</h3>
+        <p class="text-sm text-gray-600">Esta acción eliminará permanentemente todos tus datos del sistema. No podrás recuperar tu cuenta ni tus intervenciones.</p>
+      </div>
+      <div class="flex gap-3">
+        <button 
+          @click="mostrarModalEliminarCuenta = false"
+          class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors hover:bg-gray-200">
+          Cancelar
+        </button>
+        <button 
+          @click="mostrarModalEliminarCuenta = false; mostrarModalConfirmacionEliminar = true"
+          class="flex-1 py-3 bg-red-500 text-white font-semibold rounded-xl transition-colors hover:bg-red-600">
+          Continuar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación Final -->
+  <div v-if="mostrarModalConfirmacionEliminar" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fa-solid fa-exclamation-triangle text-red-500 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">¿Estás seguro?</h3>
+        <p class="text-sm text-gray-600">Esta es tu última oportunidad. Si continúas, tu cuenta será eliminada permanentemente.</p>
+      </div>
+      <div class="flex gap-3">
+        <button 
+          @click="mostrarModalConfirmacionEliminar = false"
+          class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl transition-colors hover:bg-gray-200">
+          Cancelar
+        </button>
+        <button 
+          @click="eliminarCuenta"
+          :disabled="eliminandoCuenta"
+          class="flex-1 py-3 bg-red-500 text-white font-semibold rounded-xl transition-colors hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i v-if="eliminandoCuenta" class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+          {{ eliminandoCuenta ? 'Eliminando...' : 'Eliminar cuenta' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+</div>
+
+<style>
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+</style>

@@ -1,0 +1,85 @@
+<!-- ============================================================
+     VISTA: Cierre de Incidente (Empleado)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-gray-50 flex flex-col relative pb-20">
+  
+  <!-- Header / Topbar -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between pt-safe">
+      <div class="flex items-center space-x-3">
+        <button @click="irA('detalle-intervencion')" class="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors active:scale-95">
+          <i class="fa-solid fa-arrow-left text-gray-600"></i>
+        </button>
+        <div>
+          <h1 class="text-lg font-bold text-gray-900">Cierre de Incidente</h1>
+          <p class="text-xs text-gray-500 font-medium">Reporte de finalización</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="!incidenteSeleccionado" class="flex-1 flex flex-col items-center justify-center">
+    <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-4xl mb-4"></i>
+    <p class="text-gray-500 font-medium animate-pulse">Preparando cierre...</p>
+  </div>
+
+  <div v-else class="flex-1 px-5 py-6 space-y-6 overflow-y-auto">
+    
+    <!-- Info Resumen -->
+    <div class="bg-emerald-50 border border-emerald-100 rounded-3xl p-4 flex items-center gap-4 shadow-sm">
+      <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600 shrink-0">
+        <i class="fa-solid fa-clipboard-check text-xl"></i>
+      </div>
+      <div>
+        <h3 class="font-bold text-emerald-900 text-sm leading-tight">Intervención #{{ incidenteActivo?.id }}</h3>
+        <p class="text-xs text-emerald-700 font-medium leading-tight mt-1 line-clamp-1">{{ incidenteActivo?.titulo }}</p>
+      </div>
+    </div>
+
+    <!-- Formulario de Cierre -->
+    <form @submit.prevent="guardarCierre" class="space-y-6">
+      
+      <!-- Descripción de Resolución -->
+      <div class="space-y-2">
+        <label class="block text-sm font-bold text-gray-700">Resolución aplicada <span class="text-red-500">*</span></label>
+        <p class="text-[11px] text-gray-500 mb-2">Describe detalladamente las acciones tomadas para resolver la incidencia.</p>
+        <textarea v-model="observaciones" rows="4" required placeholder="Ej: Se reemplazó el poste dañado y se restableció el cableado principal..." class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-shadow resize-none shadow-sm"></textarea>
+      </div>
+
+      <!-- Evidencia Fotográfica -->
+      <div class="space-y-2">
+        <label class="block text-sm font-bold text-gray-700">Evidencia Fotográfica (Opcional)</label>
+        <p class="text-[11px] text-gray-500 mb-2">Adjunta fotos del trabajo finalizado.</p>
+        
+        <div class="grid grid-cols-3 gap-3">
+          <!-- Botón de subir -->
+          <label class="bg-white border-2 border-dashed border-gray-300 rounded-2xl h-24 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-colors active:scale-95 shadow-sm">
+            <i class="fa-solid fa-camera text-gray-400 text-xl mb-1"></i>
+            <span class="text-[10px] font-bold text-gray-500">Añadir foto</span>
+            <input type="file" class="hidden" accept="image/*" multiple>
+          </label>
+        </div>
+      </div>
+
+      <!-- Materiales y Recursos -->
+      <div class="space-y-2">
+        <label class="block text-sm font-bold text-gray-700">Materiales y Recursos Utilizados</label>
+        <p class="text-[11px] text-gray-500 mb-2">Si aplica, enlista brevemente los recursos.</p>
+        <textarea rows="2" placeholder="Ej: 2 sacos de cemento, 1 lámpara LED..." class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-shadow resize-none shadow-sm"></textarea>
+      </div>
+
+    </form>
+  </div>
+  
+  <!-- Footer de Acciones -->
+  <div v-if="incidenteSeleccionado" class="bg-white border-t border-gray-100 p-4 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <button @click="guardarCierre" :disabled="!observaciones.trim()" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
+      <i class="fa-solid fa-check-double text-lg"></i>
+      Confirmar Cierre de Incidente
+    </button>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+</div>

@@ -1,0 +1,144 @@
+<!-- ============================================================
+     VISTA: Mis Denuncias (Estilo iOS Mobile)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-gray-100 pb-20">
+  <!-- iOS Status Bar Simulation -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button @click="irA('pwa-poblacion')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        </button>
+        <div>
+          <h1 class="text-lg font-semibold text-gray-900">Mis Denuncias</h1>
+          <p class="text-xs text-gray-500">Historial de reportes</p>
+        </div>
+      </div>
+      <button class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+        <i class="fa-solid fa-filter text-white text-sm"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="px-4 py-6 space-y-6">
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-white rounded-3xl p-4 text-center shadow-lg shadow-gray-200/50 border border-gray-100">
+        <p class="text-3xl font-bold text-gray-900">{{ estadisticas.total }}</p>
+        <p class="text-xs font-semibold text-gray-500 mt-1">Total</p>
+      </div>
+      <div class="bg-white rounded-3xl p-4 text-center shadow-lg shadow-gray-200/50 border border-gray-100">
+        <p class="text-3xl font-bold text-yellow-600">{{ estadisticas.pendientes }}</p>
+        <p class="text-xs font-semibold text-gray-500 mt-1">Pendientes</p>
+      </div>
+      <div class="bg-white rounded-3xl p-4 text-center shadow-lg shadow-gray-200/50 border border-gray-100">
+        <p class="text-3xl font-bold text-green-600">{{ estadisticas.resueltas }}</p>
+        <p class="text-xs font-semibold text-gray-500 mt-1">Resueltas</p>
+      </div>
+    </div>
+
+    <!-- Lista de Denuncias -->
+    <div v-if="denuncias.length > 0" class="space-y-4">
+      <div v-for="denuncia in denunciasPaginadas" :key="denuncia.id" 
+        @click="verDetalles(denuncia.id)"
+        class="bg-white rounded-3xl p-5 shadow-lg shadow-gray-200/50 border border-gray-100 active:scale-95 transition-all duration-300 cursor-pointer">
+        <div class="flex items-start justify-between mb-4">
+          <div class="flex items-center space-x-4">
+            <div v-if="getCategoria(denuncia.categoriaId)" class="w-14 h-14 rounded-2xl flex items-center justify-center"
+              :class="getColorClass(getCategoria(denuncia.categoriaId).color).icon">
+              <i :class="'fa-solid ' + getCategoria(denuncia.categoriaId).icono" class="text-white text-2xl"></i>
+            </div>
+            <div v-else class="w-14 h-14 rounded-2xl flex items-center justify-center bg-gray-200">
+              <i class="fa-solid fa-circle-question text-gray-500 text-2xl"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-gray-900 text-base">
+                {{ getCategoria(denuncia.categoriaId) ? getCategoria(denuncia.categoriaId).nombre : 'Categoría desconocida' }}
+              </h4>
+              <p class="text-xs text-gray-500 mt-1">{{ formatDate(denuncia.fecha) }}</p>
+            </div>
+          </div>
+          <span v-if="getEstadoInfo(denuncia.categoriaId, denuncia.estado)" 
+            class="px-3 py-1.5 rounded-full text-xs font-bold"
+            :class="getColorClassEstado(getEstadoInfo(denuncia.categoriaId, denuncia.estado).color).bg + ' ' + getColorClassEstado(getEstadoInfo(denuncia.categoriaId, denuncia.estado).color).text">
+            {{ getEstadoInfo(denuncia.categoriaId, denuncia.estado).nombre }}
+          </span>
+        </div>
+        <p class="text-sm text-gray-600 mb-4 line-clamp-2">{{ denuncia.descripcion }}</p>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-gray-500"><i class="fa-solid fa-map-marker-alt mr-1"></i>{{ denuncia.coordenadas }}</span>
+          <span class="text-blue-600 font-semibold text-sm">Ver detalles <i class="fa-solid fa-chevron-right ml-1"></i></span>
+        </div>
+      </div>
+
+      <!-- Controles de Paginación -->
+      <div v-if="totalPaginas > 1" class="bg-white rounded-3xl p-4 shadow-lg shadow-gray-200/50 border border-gray-100">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm text-gray-600">
+            Página {{ paginaActual }} de {{ totalPaginas }}
+          </span>
+          <select 
+            v-model="tamanoPagina" 
+            @change="cambiarTamanoPagina(parseInt($event.target.value))"
+            class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-blue-500 focus:border-blue-500">
+            <option :value="10">10 por página</option>
+            <option :value="20">20 por página</option>
+            <option :value="50">50 por página</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-center gap-2">
+          <button 
+            @click="paginaAnterior"
+            :disabled="paginaActual === 1"
+            class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+            :class="paginaActual === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'">
+            <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+          </button>
+          <div class="flex gap-1">
+            <button 
+              v-for="pagina in Math.min(5, totalPaginas)" 
+              :key="pagina"
+              @click="irAPagina(pagina)"
+              class="w-10 h-10 rounded-xl text-sm font-semibold transition-colors"
+              :class="pagina === paginaActual ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+              {{ pagina }}
+            </button>
+            <span v-if="totalPaginas > 5" class="px-2 text-gray-400">...</span>
+            <button 
+              v-if="totalPaginas > 5"
+              @click="irAPagina(totalPaginas)"
+              class="w-10 h-10 rounded-xl text-sm font-semibold transition-colors"
+              :class="totalPaginas === paginaActual ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
+              {{ totalPaginas }}
+            </button>
+          </div>
+          <button 
+            @click="paginaSiguiente"
+            :disabled="paginaActual === totalPaginas"
+            class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+            :class="paginaActual === totalPaginas ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white hover:bg-blue-600'">
+            Siguiente <i class="fa-solid fa-chevron-right ml-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else class="bg-white rounded-3xl p-10 text-center shadow-lg shadow-gray-200/50 border border-gray-100">
+      <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <i class="fa-solid fa-clipboard-list text-gray-400 text-3xl"></i>
+      </div>
+      <h3 class="font-bold text-gray-900 mb-2 text-lg">Sin denuncias</h3>
+      <p class="text-sm text-gray-500 mb-6">Aún no has creado ninguna denuncia</p>
+      <button @click="irA('crear-denuncia')" class="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-sm font-bold px-8 py-3 rounded-2xl shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all duration-300">
+        <i class="fa-solid fa-plus mr-2"></i>
+        Crear Primera Denuncia
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="poblacion"></bottom-tab-bar>
+</div>

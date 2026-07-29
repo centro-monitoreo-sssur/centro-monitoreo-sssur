@@ -1,0 +1,23 @@
+<header class="sticky top-0 z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+  <div class="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <button @click="toggleSidebar" class="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xl transition-colors" :title="sidebarColapsado ? 'Mostrar menú' : 'Ocultar menú'">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="min-w-0">
+        <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ tituloVista }}</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ fechaHoraActual }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <button @click="toggleDarkMode" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
+        <i class="fa-solid fa-sun text-lg" v-if="isDarkMode"></i>
+        <i class="fa-solid fa-moon text-lg" v-else></i>
+      </button>
+      <span class="hidden sm:inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> En línea
+      </span>
+      <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background:var(--brand)">SA</div>
+    </div>
+  </div>
+</header>

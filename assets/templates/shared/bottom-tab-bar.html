@@ -1,0 +1,233 @@
+<!-- ============================================================
+     COMPONENTE: Bottom Tab Bar · Estilo "Pill" flotante
+     Acento único: #001ba0 (aplica a ambos modos: poblacion/empleado)
+     Se oculta automáticamente en vistas de formulario
+     ============================================================ -->
+
+<transition name="tab-bar">
+<div v-if="menuVisible"
+  class="fixed bottom-0 left-0 right-0 z-[60]">
+
+  <div class="relative w-full bg-white/95 backdrop-blur-xl rounded-t-[28px] shadow-[0_-10px_35px_rgba(0,0,0,0.18)] border-t border-gray-100 px-3 pt-4 pb-[calc(env(safe-area-inset-bottom)+12px)]">
+
+        <!-- ── MODO POBLACIÓN ── -->
+        <template v-if="tipo === 'poblacion'">
+          <div class="flex items-end justify-around">
+
+            <!-- Inicio -->
+            <button @click="irA('pwa-poblacion')"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="vistaActual === 'pwa-poblacion' ? 'text-[#001ba0]' : 'text-gray-400 hover:text-gray-600'">
+              <!-- Indicador (línea) sobre el ícono activo -->
+              <div v-if="vistaActual === 'pwa-poblacion'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <i class="fa-solid fa-house text-[20px] transition-all duration-250"></i>
+              <span class="text-[11px] font-medium leading-none transition-colors duration-250"
+                :class="vistaActual === 'pwa-poblacion' ? 'font-bold' : ''">
+                Inicio
+              </span>
+            </button>
+
+            <!-- Mapa -->
+            <button @click="irA('mapa-distrito')"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="vistaActual === 'mapa-distrito' ? 'text-[#001ba0]' : 'text-gray-400 hover:text-gray-600'">
+              <div v-if="vistaActual === 'mapa-distrito'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <i class="fa-solid fa-map-location-dot text-[20px]"></i>
+              <span class="text-[11px] font-medium leading-none"
+                :class="vistaActual === 'mapa-distrito' ? 'font-bold' : ''">Mapa</span>
+            </button>
+
+            <!-- Crear denuncia (botón central elevado tipo FAB) -->
+            <button @click="irA('crear-denuncia')"
+              class="relative flex flex-col items-center justify-center -mt-8 active:scale-95 transition-transform duration-200">
+              <div class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-[#001ba0]/40 ring-4 ring-white transition-all duration-300"
+                :class="vistaActual === 'crear-denuncia' ? 'bg-[#00147a]' : 'bg-[#001ba0] hover:bg-[#00147a]'">
+                <i class="fa-solid fa-plus text-white text-lg"></i>
+              </div>
+              <span class="text-[11px] font-medium mt-2 leading-none transition-colors duration-250"
+                :class="vistaActual === 'crear-denuncia' ? 'text-[#001ba0] font-bold' : 'text-gray-400'">
+                Crear
+              </span>
+            </button>
+
+            <!-- Noticias (con badge si hay no leídas) -->
+            <button @click="irA('noticias')"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="vistaActual === 'noticias' ? 'text-[#001ba0]' : 'text-gray-400 hover:text-gray-600'">
+              <div v-if="vistaActual === 'noticias'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <div class="relative">
+                <i class="fa-solid fa-newspaper text-[20px] transition-all duration-250"></i>
+                <!-- Badge de no leídas -->
+                <div v-if="noLeidasNoticias > 0"
+                  class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
+                  {{ noLeidasNoticias > 9 ? '9+' : noLeidasNoticias }}
+                </div>
+              </div>
+              <span class="text-[11px] font-medium leading-none"
+                :class="vistaActual === 'noticias' ? 'font-bold' : ''">Noticias</span>
+            </button>
+
+            <!-- Menú hamburguesa (Más: Historial, Perfil) -->
+            <button @click="toggleMenuMas"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="menuMasAbierto || vistaActual === 'mis-denuncias' || vistaActual === 'mi-perfil-poblacion'
+                ? 'text-[#001ba0]'
+                : 'text-gray-400 hover:text-gray-600'">
+              <div v-if="menuMasAbierto || vistaActual === 'mis-denuncias' || vistaActual === 'mi-perfil-poblacion'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <i class="fa-solid fa-bars text-[20px] transition-all duration-250"></i>
+              <span class="text-[11px] font-medium leading-none"
+                :class="menuMasAbierto ? 'font-bold' : ''">Más</span>
+            </button>
+
+          </div>
+
+          <!-- Menú desplegable "Más" (poblacion) -->
+          <transition name="menu-mas">
+            <div v-if="menuMasAbierto"
+              class="absolute bottom-[calc(100%+10px)] right-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-gray-100 p-2 flex flex-col gap-1 min-w-[160px] origin-bottom-right">
+              <button @click="irA('mis-denuncias'); toggleMenuMas()"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-95"
+                :class="vistaActual === 'mis-denuncias' ? 'bg-[#001ba0]/10 text-[#001ba0]' : 'text-gray-600 hover:bg-gray-50'">
+                <i class="fa-solid fa-list-check text-sm"></i>
+                <span class="text-[13px] font-semibold">Mis Denuncias</span>
+              </button>
+              <button @click="irA('mi-perfil-poblacion'); toggleMenuMas()"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-95"
+                :class="vistaActual === 'mi-perfil-poblacion' ? 'bg-[#001ba0]/10 text-[#001ba0]' : 'text-gray-600 hover:bg-gray-50'">
+                <i class="fa-solid fa-circle-user text-sm"></i>
+                <span class="text-[13px] font-semibold">Mi Perfil</span>
+              </button>
+            </div>
+          </transition>
+        </template>
+
+        <!-- ── MODO EMPLEADO ── -->
+        <template v-if="tipo === 'empleado'">
+          <div class="flex items-end justify-around">
+
+            <!-- Inicio -->
+            <button @click="irA('pwa-empleado')"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="vistaActual === 'pwa-empleado' ? 'text-[#001ba0]' : 'text-gray-400 hover:text-gray-600'">
+              <div v-if="vistaActual === 'pwa-empleado'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <i class="fa-solid fa-house text-[20px]"></i>
+              <span class="text-[11px] font-medium leading-none"
+                :class="vistaActual === 'pwa-empleado' ? 'font-bold' : ''">Inicio</span>
+            </button>
+
+            <!-- Mapa -->
+            <button @click="irA('mapa-vivo')"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="vistaActual === 'mapa-vivo' ? 'text-[#001ba0]' : 'text-gray-400 hover:text-gray-600'">
+              <div v-if="vistaActual === 'mapa-vivo'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <i class="fa-solid fa-map-location-dot text-[20px]"></i>
+              <span class="text-[11px] font-medium leading-none"
+                :class="vistaActual === 'mapa-vivo' ? 'font-bold' : ''">Mapa</span>
+            </button>
+
+            <!-- Levantar (botón central elevado) -->
+            <button @click="irA('levantar-denuncia')"
+              class="relative flex flex-col items-center justify-center -mt-8 active:scale-95 transition-transform duration-200">
+              <div class="w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-[#001ba0]/40 ring-4 ring-white transition-all duration-300"
+                :class="vistaActual === 'levantar-denuncia' ? 'bg-[#00147a]' : 'bg-[#001ba0] hover:bg-[#00147a]'">
+                <i class="fa-solid fa-plus text-white text-lg"></i>
+              </div>
+              <span class="text-[11px] font-medium mt-2 leading-none transition-colors duration-250"
+                :class="vistaActual === 'crear-denuncia' ? 'text-[#001ba0] font-bold' : 'text-gray-400'">
+                Levantar
+              </span>
+            </button>
+
+            <!-- Tareas / Intervenciones -->
+            <button @click="irA('mis-intervenciones')"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="vistaActual === 'mis-intervenciones' ? 'text-[#001ba0]' : 'text-gray-400 hover:text-gray-600'">
+              <div v-if="vistaActual === 'mis-intervenciones'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <i class="fa-solid fa-clipboard-check text-[20px]"></i>
+              <span class="text-[11px] font-medium leading-none"
+                :class="vistaActual === 'mis-intervenciones' ? 'font-bold' : ''">Tareas</span>
+            </button>
+
+            <!-- Menú hamburguesa (Más: Perfil, Bitácora, Buzón Offline) -->
+            <button @click="toggleMenuMas"
+              class="relative flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all duration-250"
+              :class="menuMasAbierto || vistaActual === 'mi-perfil-empleado' || vistaActual === 'bitacora-empleado' || vistaActual === 'buzon-offline'
+                ? 'text-[#001ba0]'
+                : 'text-gray-400 hover:text-gray-600'">
+              <div v-if="menuMasAbierto || vistaActual === 'mi-perfil-empleado' || vistaActual === 'bitacora-empleado' || vistaActual === 'buzon-offline'"
+                class="absolute -top-1 left-1/2 -translate-x-1/2 w-5 h-[3px] rounded-full bg-[#001ba0]"></div>
+              <i class="fa-solid fa-bars text-[20px] transition-all duration-250"></i>
+              <span class="text-[11px] font-medium leading-none"
+                :class="menuMasAbierto ? 'font-bold' : ''">Más</span>
+            </button>
+
+          </div>
+
+          <!-- Menú desplegable "Más" (empleado) -->
+          <transition name="menu-mas">
+            <div v-if="menuMasAbierto"
+              class="absolute bottom-[calc(100%+10px)] right-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-gray-100 p-2 flex flex-col gap-1 min-w-[160px] origin-bottom-right">
+              <button @click="irA('mi-perfil-empleado'); toggleMenuMas()"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-95"
+                :class="vistaActual === 'mi-perfil-empleado' ? 'bg-[#001ba0]/10 text-[#001ba0]' : 'text-gray-600 hover:bg-gray-50'">
+                <i class="fa-solid fa-circle-user text-sm"></i>
+                <span class="text-[13px] font-semibold">Mi Perfil</span>
+              </button>
+              <button @click="irA('bitacora-empleado'); toggleMenuMas()"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-95"
+                :class="vistaActual === 'bitacora-empleado' ? 'bg-[#001ba0]/10 text-[#001ba0]' : 'text-gray-600 hover:bg-gray-50'">
+                <i class="fa-solid fa-book-open text-sm"></i>
+                <span class="text-[13px] font-semibold">Mi Bitácora</span>
+              </button>
+              <button @click="irA('buzon-offline'); toggleMenuMas()"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-95"
+                :class="vistaActual === 'buzon-offline' ? 'bg-[#001ba0]/10 text-[#001ba0]' : 'text-gray-600 hover:bg-gray-50'">
+                <i class="fa-solid fa-wifi text-sm"></i>
+                <span class="text-[13px] font-semibold">Buzón Offline</span>
+              </button>
+            </div>
+          </transition>
+        </template>
+
+    </div>
+  </div>
+</transition>
+
+<style>
+/* Transición suave de entrada/salida del menú */
+.tab-bar-enter-active,
+.tab-bar-leave-active {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+.tab-bar-enter-from,
+.tab-bar-leave-to {
+  transform: translateY(140%);
+  opacity: 0;
+}
+/* Transición del submenú "Más" (Popup flotante) */
+.menu-mas-enter-active,
+.menu-mas-leave-active {
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.menu-mas-enter-from,
+.menu-mas-leave-to {
+  opacity: 0;
+  transform: scale(0.9) translateY(8px);
+}
+.menu-mas-enter-to,
+.menu-mas-leave-from {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+/* Safe area para iPhones con notch inferior */
+.pb-safe {
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+</style>

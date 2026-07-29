@@ -1,0 +1,366 @@
+<!-- ============================================================
+     VISTA: Cartograma Analítico — Panel Ejecutivo Territorial
+     San Salvador Sur · 5 Distritos · Análisis Comparativo
+     ============================================================ -->
+<div class="mapa-vista">
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- BARRA DE KPIs GLOBALES (SUPERIOR)                  -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div v-if="!cargando"
+    class="absolute top-0 left-0 right-0 z-40 flex items-center gap-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm px-4"
+    style="height:48px;">
+    <!-- Título -->
+    <div class="flex items-center gap-2 pr-5 border-r border-gray-200 dark:border-gray-700 h-full">
+      <i class="fa-solid fa-map-location-dot text-blue-600 dark:text-blue-400 text-base"></i>
+      <div>
+        <div class="text-[11px] font-black text-gray-800 dark:text-white leading-none">Cartograma Analítico</div>
+        <div class="text-[9px] text-gray-400 leading-none mt-0.5">San Salvador Sur · 5 Distritos</div>
+      </div>
+    </div>
+
+    <!-- KPIs globales -->
+    <div class="flex items-center gap-0 flex-1 h-full">
+      <div
+        class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <i class="fa-solid fa-users text-blue-500 text-xs"></i>
+        <div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{
+            kpisGlobales.poblacion.toLocaleString() }}</div>
+          <div class="text-[9px] text-gray-400 leading-none">Habitantes</div>
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <i class="fa-solid fa-ruler-combined text-emerald-500 text-xs"></i>
+        <div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">198.75 km²</div>
+          <div class="text-[9px] text-gray-400 leading-none">Extensión</div>
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <i class="fa-solid fa-clipboard-list text-red-500 text-xs"></i>
+        <div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{ kpisGlobales.denunciasActivas
+            }}</div>
+          <div class="text-[9px] text-gray-400 leading-none">Denuncias activas</div>
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <i class="fa-solid fa-hard-hat text-amber-500 text-xs"></i>
+        <div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{ kpisGlobales.intervenciones
+            }}</div>
+          <div class="text-[9px] text-gray-400 leading-none">Intervenciones</div>
+        </div>
+      </div>
+      <div
+        class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <i class="fa-solid fa-bolt text-blue-500 text-xs"></i>
+        <div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{ Math.round((kpisGlobales.resueltas / ((kpisGlobales.denunciasActivas || 0) + (kpisGlobales.resueltas || 1))) * 100) }}%</div>
+          <div class="text-[9px] text-gray-400 leading-none">Eficiencia de Respuesta</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Selector de modo -->
+    <div class="flex items-center gap-1 pl-3 border-l border-gray-200 dark:border-gray-700 h-full">
+      <button v-for="modo in MODOS" :key="modo.id" @click="animarHaciaModo(modo.id)" :disabled="cargandoAnimacion"
+        :title="modo.desc" :class="['flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200',
+                 modoActivo === modo.id
+                   ? 'text-white shadow-md'
+                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700']"
+        :style="modoActivo === modo.id ? `background:${modo.color}` : ''">
+        <i :class="'fa-solid ' + modo.icono + ' text-[10px]'"></i>
+        <span class="hidden lg:inline">{{ modo.label }}</span>
+        <i v-if="cargandoAnimacion && modoActivo === modo.id" class="fa-solid fa-circle-notch fa-spin text-[9px]"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- BARRA DE FILTRO DE FECHAS                          -->
+  <!-- Aplica sobre KPIs de Denuncias Activas,            -->
+  <!-- Intervenciones y Eficiencia de Respuesta           -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div v-if="!cargando"
+    class="absolute left-0 right-0 z-30 flex items-center gap-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-4 py-1.5"
+    style="top:48px;">
+
+    <!-- Ícono + etiqueta -->
+    <div class="flex items-center gap-1.5 flex-shrink-0">
+      <i class="fa-solid fa-calendar-days text-indigo-500 text-xs"></i>
+      <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Período</span>
+      <span v-if="filtroActivo"
+        class="text-[9px] font-black bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded-full">Activo</span>
+    </div>
+
+    <!-- Inputs de fecha -->
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1">
+        <label class="text-[9px] text-gray-400 font-semibold">Desde</label>
+        <input type="date" v-model="filtroFecha.desde" :max="filtroFecha.hasta || hoy"
+          class="text-[10px] px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-indigo-500 outline-none transition-all">
+      </div>
+      <span class="text-gray-300 dark:text-gray-600 text-xs">—</span>
+      <div class="flex items-center gap-1">
+        <label class="text-[9px] text-gray-400 font-semibold">Hasta</label>
+        <input type="date" v-model="filtroFecha.hasta" :min="filtroFecha.desde" :max="hoy"
+          class="text-[10px] px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:ring-1 focus:ring-indigo-500 outline-none transition-all">
+      </div>
+    </div>
+
+    <!-- Limpiar -->
+    <button v-if="filtroActivo" @click="limpiarFiltroFecha"
+      class="flex items-center gap-1 text-[9px] font-bold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors ml-1">
+      <i class="fa-solid fa-xmark"></i> Limpiar
+    </button>
+
+    <div class="flex-1"></div>
+
+    <!-- Nota DEMO -->
+    <p class="text-[9px] text-gray-400 italic hidden sm:block">
+      <!-- DEMO: proporcional a 365 días base -->
+      <i class="fa-solid fa-circle-info mr-0.5 text-indigo-400"></i>
+      Afecta: Denuncias Activas, Intervenciones, Eficiencia de Respuesta
+    </p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- MAPA LEAFLET                                        -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="carto-map" style="position:absolute;inset:0;top:82px;width:100%;z-index:0;"></div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- SPINNER INICIAL                                     -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div v-if="cargando"
+    class="absolute inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
+    <div class="flex flex-col items-center gap-4">
+      <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      <p class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Cargando territorio...</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- PANEL LATERAL RANKING (IZQUIERDA)                  -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div v-if="!cargando && !panelAbierto" class="absolute left-3 bottom-6 z-40 flex flex-col gap-2"
+    style="top:95px; max-height: calc(100% - 115px); overflow-y:auto;">
+
+    <!-- Tarjeta leyenda del modo -->
+    <div
+      class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-[200px]">
+      <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-2">Modo activo</div>
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[10px]"
+          :style="`background:${MODOS.find(m=>m.id===modoActivo)?.color}`">
+          <i :class="'fa-solid ' + MODOS.find(m=>m.id===modoActivo)?.icono"></i>
+        </div>
+        <div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white">{{ MODOS.find(m=>m.id===modoActivo)?.label }}
+          </div>
+          <div class="text-[9px] text-gray-400">{{ MODOS.find(m=>m.id===modoActivo)?.desc }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ranking de distritos -->
+    <div
+      class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-[200px]">
+      <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1">
+        <i class="fa-solid fa-ranking-star text-amber-500"></i> Ranking Poblacional
+      </div>
+      <div class="space-y-1.5">
+        <div v-for="(z, idx) in rankingZonas" :key="z.id" @click="seleccionarDistrito(z)"
+          class="flex items-center gap-2 p-1.5 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group">
+          <!-- Posición -->
+          <div class="w-4 text-[9px] font-black text-gray-400 text-center flex-shrink-0">
+            {{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx+1) }}
+          </div>
+          <!-- Color + nombre -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <div class="w-2 h-2 rounded-full flex-shrink-0" :style="{backgroundColor: z.colorOriginal}"></div>
+              <span
+                class="text-[10px] font-semibold text-gray-700 dark:text-gray-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                {{ z.nombre }}
+              </span>
+            </div>
+            <div class="text-[9px] text-gray-400 font-mono mt-0.5 pl-3.5">
+              {{ getMetricaLabel(z, modoActivo) }}
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-[8px] text-gray-300 group-hover:text-blue-400 flex-shrink-0"></i>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[8px] text-gray-400 text-center">
+        Haz clic en un distrito para ver su detalle
+      </div>
+    </div>
+
+    <!-- Nota futura -->
+    <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-3 w-[200px]">
+      <div class="flex items-start gap-2">
+        <i class="fa-solid fa-lightbulb text-blue-500 text-xs mt-0.5"></i>
+        <div class="text-[9px] text-blue-700 dark:text-blue-300 leading-relaxed">
+          Próximamente: polígonos de centros poblacionales por distrito, con zoom-in interactivo.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- PANEL LATERAL DETALLE DE DISTRITO (DERECHA)        -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <transition name="slide-panel">
+    <div v-if="panelAbierto && distritoSeleccionado"
+      class="absolute right-0 top-[48px] bottom-0 z-40 w-[300px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+
+      <!-- Encabezado del panel -->
+      <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800"
+        :style="`background: ${distritoSeleccionado.color}18;`">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl flex items-center justify-center text-lg"
+            :style="`background:${distritoSeleccionado.color}22;`">
+            {{ distritoSeleccionado.icono }}
+          </div>
+          <div>
+            <div class="text-sm font-black text-gray-900 dark:text-white">{{ distritoSeleccionado.nombre }}</div>
+            <div class="text-[9px] text-gray-400">Distrito · San Salvador Sur</div>
+          </div>
+        </div>
+        <button @click="cerrarPanel"
+          class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Cuerpo scrollable -->
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+
+        <!-- KPIs del distrito (ajustados por filtro de fecha) -->
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <div class="text-lg font-black text-gray-900 dark:text-white">{{
+              (distritoConFiltro.poblacion||0).toLocaleString() }}</div>
+            <div class="text-[9px] text-gray-400 uppercase tracking-wide">Habitantes</div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <div class="text-lg font-black text-gray-900 dark:text-white">{{ distritoConFiltro.extensionKm2 }} km²
+            </div>
+            <div class="text-[9px] text-gray-400 uppercase tracking-wide">Extensión</div>
+          </div>
+          <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3">
+            <div class="text-lg font-black text-red-600 dark:text-red-400">{{ distritoConFiltro.denunciasActivas }}
+            </div>
+            <div class="text-[9px] text-gray-400 uppercase tracking-wide">Denuncias activas</div>
+          </div>
+          <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+            <div class="text-lg font-black text-amber-600 dark:text-amber-400">{{
+              distritoConFiltro.intervencionesActivas }}</div>
+            <div class="text-[9px] text-gray-400 uppercase tracking-wide">Intervenciones</div>
+          </div>
+          <div class="col-span-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+            <div class="flex justify-between items-center">
+              <div class="text-[9px] text-gray-400 uppercase tracking-wide">Eficiencia de Respuesta</div>
+              <div class="text-[9px] font-bold text-blue-600">
+                {{ Math.round(((distritoConFiltro.denunciasResueltas||0) / (((distritoConFiltro.denunciasActivas||0) + (distritoConFiltro.denunciasResueltas||0))||1)) * 100) }}% resueltas
+              </div>
+            </div>
+            <div class="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+              <div class="bg-blue-600 h-1.5 rounded-full" :style="`width: ${Math.round(((distritoConFiltro.denunciasResueltas||0) / (((distritoConFiltro.denunciasActivas||0) + (distritoConFiltro.denunciasResueltas||0))||1)) * 100)}%`"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Densidad visual -->
+        <div>
+          <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Densidad Poblacional</div>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2.5">
+              <div class="h-2.5 rounded-full transition-all duration-700"
+                :style="`width:${Math.min(((distritoConFiltro.poblacion||0)/(distritoConFiltro.extensionKm2||1))/40,1)*100}%; background:${distritoConFiltro.color}`">
+              </div>
+            </div>
+            <span class="text-[10px] font-mono font-bold text-gray-600 dark:text-gray-300 flex-shrink-0">
+              {{ Math.round((distritoConFiltro.poblacion||0)/(distritoConFiltro.extensionKm2||1)).toLocaleString()
+              }} hab/km²
+            </span>
+          </div>
+        </div>
+
+        <!-- Datos territoriales -->
+        <div class="space-y-1.5">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Datos Territoriales</div>
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Altitud</span>
+            <span class="font-semibold text-gray-800 dark:text-gray-200">{{ distritoConFiltro.altitud }}</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Denuncias resueltas</span>
+            <span class="font-semibold text-emerald-600">{{ distritoConFiltro.denunciasResueltas }}</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Teléfono</span>
+            <span class="font-semibold text-gray-800 dark:text-gray-200">{{ distritoConFiltro.telefono }}</span>
+          </div>
+        </div>
+
+        <!-- Descripción -->
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Perfil</div>
+          <p class="text-[10px] text-gray-600 dark:text-gray-300 leading-relaxed">{{ distritoConFiltro.descripcion }}
+          </p>
+        </div>
+
+        <!-- Puntos destacados -->
+        <div>
+          <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Puntos Destacados</div>
+          <div class="space-y-1">
+            <div v-for="dest in (distritoSeleccionado.destacados||[])" :key="dest"
+              class="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-300">
+              <i class="fa-solid fa-star text-amber-400 text-[8px] flex-shrink-0"></i>
+              {{ dest }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Economía -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">
+            <i class="fa-solid fa-briefcase mr-1"></i>Economía Local
+          </div>
+          <p class="text-[10px] text-blue-800 dark:text-blue-300">{{ distritoSeleccionado.economia }}</p>
+        </div>
+      </div>
+
+      <!-- Acciones del panel -->
+      <div class="p-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+        <button @click="irAMapaDistrito"
+          class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
+          <i class="fa-solid fa-map-marked-alt"></i>
+          Ver en Mapa en Vivo
+        </button>
+        <button @click="cerrarPanel"
+          class="w-full flex items-center justify-center gap-2 py-1.5 px-4 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <i class="fa-solid fa-arrow-left text-xs"></i>
+          Volver al mapa
+        </button>
+      </div>
+    </div>
+  </transition>
+
+  <!-- Indicador de modo (esquina inferior derecha) -->
+  <div v-if="!cargando && !panelAbierto"
+    class="absolute bottom-6 right-16 z-40 flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg text-white text-[10px] font-bold uppercase tracking-wider transition-all duration-300 pointer-events-none"
+    :style="`background: ${MODOS.find(m=>m.id===modoActivo)?.color || '#3b82f6'}`">
+    <i :class="'fa-solid ' + MODOS.find(m=>m.id===modoActivo)?.icono + ' text-[10px]'"></i>
+    {{ MODOS.find(m=>m.id===modoActivo)?.label }}
+  </div>
+
+</div>

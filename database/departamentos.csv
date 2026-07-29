@@ -1,0 +1,83 @@
+﻿id,cod_dpto,nombre_dpto,codigo_direccion,nombre_direccion,estado
+1,0101-01,Concejo Municipal,101,Dirección De Gabinetes e Innovacion Municipal,activo
+2,0101-10,Unidad De Auditoría Interna,101,Dirección De Gabinetes e Innovacion Municipal,activo
+3,0101-11,Despacho Municipal,101,Dirección De Gabinetes e Innovacion Municipal,activo
+4,0101-12,Gerencia De Compras,101,Dirección De Gabinetes e Innovacion Municipal,activo
+5,0101-13,Unidad De Gestión De Riesgos,101,Dirección De Gabinetes e Innovacion Municipal,activo
+6,0101-14,Unidad De Medio Ambiente,101,Dirección De Gabinetes e Innovacion Municipal,activo
+7,0101-15,Gerencia De Asuntos Estratégicos Municipales,101,Dirección De Gabinetes e Innovacion Municipal,activo
+8,0101-16,Gerencia Legal,101,Dirección De Gabinetes e Innovacion Municipal,activo
+9,0101-17,Dirección De Gabinetes e Innovacion Municipal,101,Dirección De Gabinetes e Innovacion Municipal,activo
+10,0101-18,Cuerpo De Agentes Municipales,101,Dirección De Gabinetes e Innovacion Municipal,activo
+11,0101-19,Gerencia De Comunicaciones,101,Dirección De Gabinetes e Innovacion Municipal,activo
+12,0101-02,Sindicatura Municipal,101,Dirección De Gabinetes e Innovacion Municipal,activo
+13,0101-20,Unidad De Protocolo,101,Dirección De Gabinetes e Innovacion Municipal,activo
+14,0102-01,Direccion Ejecutiva,102,Direccion Ejecutiva,activo
+15,0102-02,Gerencia De Planificación,102,Direccion Ejecutiva,activo
+16,0102-03,Gerencia De Cooperación Y Relaciones Externas,102,Direccion Ejecutiva,activo
+17,0102-04,Gerencia De Tecnologia De La Informacion,102,Direccion Ejecutiva,activo
+18,0103-01,Direccion Distrital,103,Direccion Distrital,activo
+19,0103-02,Unidad De Control De Bienes,103,Direccion Distrital,activo
+20,0103-03,Coordinacion Distrital,103,Direccion Distrital,activo
+21,0103-04,Unidad De Mantenimiento Interno,103,Direccion Distrital,activo
+22,0103-05,Administracion De Cementerios,103,Direccion Distrital,activo
+23,0103-01/05,Jefatura Distrito Santo Tomás,103,Direccion Distrital,activo
+24,0101-03,Unidad De Mediación Municipal,101,Dirección De Gabinetes e Innovacion Municipal,activo
+25,0103-06,Unidad De Enlace Social Comunitario,103,Direccion Distrital,activo
+26,0103-07,Unidad De Dinamizacion De Espacios Publicos Municipales,103,Direccion Distrital,activo
+27,0103-08,Unidad De Alumbrado Publico,103,Direccion Distrital,activo
+28,0103-09,Unidad De Mantenimiento De Parques Y Jardines,103,Direccion Distrital,activo
+29,0104-01,Direccion De Finanzas Y Gestion Tributaria,104,Dirección De Finanzas Y Gestion Tributaria,activo
+30,0104-02,Gerencia Financiera Institucional,104,Dirección De Finanzas Y Gestion Tributaria,activo
+31,0104-03,Tesoreria,104,Dirección De Finanzas Y Gestion Tributaria,activo
+32,0104-04,Unidad De Presupuesto Municipal,104,Dirección De Finanzas Y Gestion Tributaria,activo
+33,0104-05,Unidad De Contabilidad Municipal,104,Dirección De Finanzas Y Gestion Tributaria,activo
+34,0104-06,Gerencia De Administración Tributaria Municipal,104,Dirección De Finanzas Y Gestion Tributaria,activo
+35,0101-04,Unidad Contravencional,101,Dirección De Gabinetes e Innovacion Municipal,activo
+36,0104-07,Registro Y Control Tributario,104,Dirección De Finanzas Y Gestion Tributaria,activo
+37,0104-08,Unidad De Atencion Al Contribuyente,104,Dirección De Finanzas Y Gestion Tributaria,activo
+38,0104-09,Unidad De Gestion Tributaria Corriente,104,Dirección De Finanzas Y Gestion Tributaria,activo
+39,0104-10,Unidad De Recuperacion De Mora,104,Dirección De Finanzas Y Gestion Tributaria,activo
+40,0105-01,Dirección Administrativa,105,Dirección Administrativa,activo
+41,0105-02,Gerencia De Talento Humano,105,Dirección Administrativa,activo
+42,0105-03,Unidad De Recursos Humanos,105,Dirección Administrativa,activo
+43,0105-04,Unidad De Bienestar Laboral,105,Dirección Administrativa,activo
+44,0105-05,Registro De La Carrera Administrativa Municipal,105,Dirección Administrativa,activo
+45,0105-06,Gerencia De Registro Civil,105,Dirección Administrativa,activo
+46,0101-05,Unidad De Proteccion De Animales De Compañía,101,Dirección De Gabinetes e Innovacion Municipal,activo
+47,0105-07,Registro Del Estado Familiar,105,Dirección Administrativa,activo
+48,0301-01,Dirección De Desarrollo Social,301,Dirección De Desarrollo Social,activo
+49,0301-02,Gerencia De Arte Y Cultura,301,Dirección De Desarrollo Social,activo
+50,0301-03,Formación Y Administracion De Elencos Artisticos,301,Dirección De Desarrollo Social,activo
+51,0301-04,Unidad De Festejos Municipales,301,Dirección De Desarrollo Social,activo
+52,0301-05,Unidad De Reconstruccion Del Tejido Social,301,Dirección De Desarrollo Social,activo
+53,0301-06,Gerencia De Desarrollo Humano,301,Dirección De Desarrollo Social,activo
+54,0301-07,Unidad Del Adulto Mayor,301,Dirección De Desarrollo Social,activo
+55,0301-08,Unidad De Niñez Y Adolescencia,301,Dirección De Desarrollo Social,activo
+56,0301-09,Unidad De La Mujer Y Desarrollo Integral,301,Dirección De Desarrollo Social,activo
+57,0103-01/03,Jefatura Distrito San Marcos,103,Direccion Distrital,activo
+58,0101-06,Secretaria Municipal,101,Dirección De Gabinetes e Innovacion Municipal,activo
+59,0301-10,Unidad De Desarrollo Juvenil,301,Dirección De Desarrollo Social,activo
+60,0301-11,Unidad De Deportes,301,Dirección De Desarrollo Social,activo
+61,0401-01,Direccion De Servicios Y Obras Municipales,401,Dirección De Servicios Y Obras Municipales,activo
+62,0401-02,Gerencia De Gestion Integral De Residuos Solidos,401,Dirección De Servicios Y Obras Municipales,activo
+63,0401-03,Unidad De Recolección De Residuos Solidos,401,Dirección De Servicios Y Obras Municipales,activo
+64,0401-04,Unidad De Barrido De Calles,401,Dirección De Servicios Y Obras Municipales,activo
+65,0401-05,Unidad De Taller Municipal,401,Dirección De Servicios Y Obras Municipales,activo
+66,0401-06,Centro De Monitoreo Para La Gestion De Los Residuos Solidos,401,Dirección De Servicios Y Obras Municipales,activo
+67,0401-07,Gerencia De Obras Municipales,401,Dirección De Servicios Y Obras Municipales,activo
+68,0401-08,Unidad De Planificacion De Obras Municipales,401,Dirección De Servicios Y Obras Municipales,activo
+69,0103-01/01,Jefatura Distrito Panchimalco,103,Direccion Distrital,activo
+70,0101-07,Unidad De Gestión Documental Y Archivo,101,Dirección De Gabinetes e Innovacion Municipal,activo
+71,0401-09,Unidad Operativa De Obras Municipales,401,Dirección De Servicios Y Obras Municipales,activo
+72,0402-01,Dirección De Desarrollo Economico Local,402,Dirección De Desarrollo Economico Local,activo
+73,0402-02,Gerencia De Desarrollo Economico,402,Dirección De Desarrollo Economico Local,activo
+74,0402-03,Unidad De Turismo Municipal,402,Dirección De Desarrollo Economico Local,activo
+75,0402-04,"Unidad De Fomento Al Emprendimiento, Industria Y Agricultura",402,Dirección De Desarrollo Economico Local,activo
+76,0402-05,Gerencia De Mercados Y Ordenamiento Comercial,402,Dirección De Desarrollo Economico Local,activo
+77,0402-06,Administracion De Mercados Municipales,402,Dirección De Desarrollo Economico Local,activo
+78,0402-07,Unidad De Ordenamiento Comercial,402,Dirección De Desarrollo Economico Local,activo
+79,0101-08,Oficialía De Cumplimiento,101,Dirección De Gabinetes e Innovacion Municipal,activo
+80,0103-01/02,Jefatura Distrito Rosario de Mora,103,Direccion Distrital,activo
+81,0101-09,Unidad De Acceso A La Informacion Publica,101,Dirección De Gabinetes e Innovacion Municipal,activo
+82,0103-01/04,Jefatura Distrito Santiago Texacuangos,103,Direccion Distrital,activo

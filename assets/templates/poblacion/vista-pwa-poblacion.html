@@ -1,0 +1,88 @@
+<!-- ============================================================
+     VISTA: PWA Principal para Población (Estilo iOS Mobile)
+     Portal de Denuncias Ciudadanas · San Salvador Sur
+     ============================================================ -->
+<div class="min-h-screen bg-gray-100 pb-20">
+  <!-- iOS Status Bar Simulation -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <img src="https://sansalvadorsur.gob.sv/images/logo-azul-horizontal.png" alt="Logo Municipalidad"
+          class="h-8 w-auto">
+        <div>
+          <h1 class="text-lg font-semibold text-gray-900">Sistema Municipal</h1>
+          <p class="text-xs text-gray-500">Reportes y Denuncias Ciudadanas</p>
+        </div>
+      </div>
+      <button @click="mostrarModalLogout = true"
+        class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+        <i class="fa-solid fa-sign-out-alt text-gray-600 text-sm"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="px-4 py-6 space-y-6">
+    <!-- Welcome Card -->
+    <div class="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-3xl p-6 shadow-2xl shadow-blue-500/30">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h2 class="text-white text-2xl font-bold">Hola, {{ usuarioNombre }}</h2>
+          <p class="text-blue-100 text-sm mt-1">Ciudadano registrado</p>
+        </div>
+        <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+          <i class="fa-solid fa-user text-white text-2xl"></i>
+        </div>
+      </div>
+      <div class="bg-white/20 rounded-2xl p-4 backdrop-blur-sm">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-white/30 rounded-xl flex items-center justify-center">
+            <i class="fa-solid fa-map-marker-alt text-white text-lg"></i>
+          </div>
+          <span class="text-white text-base font-medium">{{ distritoUsuario }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="space-y-4">
+      <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Acciones Rápidas</h3>
+
+      <!-- Mis Denuncias -->
+      <button @click="irA('mis-denuncias')"
+        class="w-full bg-white rounded-3xl p-5 shadow-lg shadow-gray-200/50 border border-gray-100 flex items-center space-x-4 active:scale-95 transition-all duration-300 hover:shadow-xl">
+        <div class="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center">
+          <i class="fa-solid fa-clipboard-list text-purple-600 text-2xl"></i>
+        </div>
+        <div class="flex-1 text-left">
+          <h4 class="font-bold text-gray-900 text-base">Mis Denuncias</h4>
+          <p class="text-sm text-gray-500">Ver estado y seguimiento</p>
+        </div>
+        <i class="fa-solid fa-chevron-right text-gray-400 text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Info Section -->
+    <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+      <div class="flex items-start space-x-3">
+        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-info text-white text-sm"></i>
+        </div>
+        <div>
+          <h4 class="font-semibold text-gray-900 text-sm">Información</h4>
+          <p class="text-xs text-gray-600 mt-1">Tu distrito seleccionado es {{ distritoUsuario }}. Todas tus denuncias
+            serán georreferenciadas en esta zona.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación para Cerrar Sesión -->
+  <modal-confirmacion v-if="mostrarModalLogout" :mostrar="mostrarModalLogout" titulo="Cerrar Sesión"
+    mensaje="¿Estás seguro de que deseas cerrar tu sesión? Tendrás que volver a ingresar tus credenciales."
+    textoConfirmar="Cerrar Sesión" @cerrar="mostrarModalLogout = false" @confirmar="confirmarLogout">
+  </modal-confirmacion>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="poblacion"></bottom-tab-bar>
+</div>

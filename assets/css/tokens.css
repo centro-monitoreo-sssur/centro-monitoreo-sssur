@@ -1,0 +1,10 @@
+/* Tokens de color institucionales (identidad municipal, no negociable).
+   No hardcodear hex sueltos en los componentes: usar estas variables. */
+:root{
+  --navy-950:#0a1240;   /* fondo del sidebar */
+  --navy-900:#0d1a5c;
+  --brand:#001ba0;      /* azul institucional San Salvador Sur */
+  --brand-light:#274bd6;
+  --gold:#ffcc00;       /* acento institucional (Protección Civil) */
+  --surface:#f3f4f8;    /* fondo general */
+}

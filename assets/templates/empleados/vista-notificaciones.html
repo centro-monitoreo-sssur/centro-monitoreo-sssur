@@ -1,0 +1,146 @@
+<!-- ============================================================
+     VISTA: Notificaciones (Empleados)
+     Centro de Monitoreo SSSur · App de Campo
+     ============================================================ -->
+<div class="min-h-screen bg-gray-100 pb-20">
+  <!-- iOS Status Bar Simulation -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button @click="irA('pwa-empleado')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        </button>
+        <div>
+          <h1 class="text-lg font-semibold text-gray-900">Notificaciones</h1>
+          <p class="text-xs text-gray-500">{{ contadorNoLeidas }} {{ contadorNoLeidas === 1 ? 'no leída' : 'no leídas' }}</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button @click="handleMarcarTodas" v-if="contadorNoLeidas > 0" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-check-double text-white text-sm"></i>
+        </button>
+        <button @click="mostrarFiltros = !mostrarFiltros" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-filter text-gray-600 text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div v-if="mostrarFiltros" class="bg-white border-b border-gray-200 px-4 py-3">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-semibold text-gray-700">Filtros</h3>
+      <button @click="handleLimpiarFiltros" class="text-xs text-blue-600 font-medium">Limpiar</button>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Tipo</label>
+        <select v-model="filtroTipo" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+          <option value="todas">Todas</option>
+          <option value="alerta">Alerta</option>
+          <option value="informacion">Información</option>
+          <option value="exito">Éxito</option>
+          <option value="advertencia">Advertencia</option>
+          <option value="emergencia">Emergencia</option>
+          <option value="sistema">Sistema</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Prioridad</label>
+        <select v-model="filtroPrioridad" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2">
+          <option value="todas">Todas</option>
+          <option value="baja">Baja</option>
+          <option value="normal">Normal</option>
+          <option value="alta">Alta</option>
+          <option value="critica">Crítica</option>
+          <option value="emergencia">Emergencia</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="px-4 py-4">
+    <!-- Acciones rápidas -->
+    <div v-if="contadorNoLeidas > 0" class="bg-blue-50 rounded-2xl p-4 mb-4 border border-blue-100">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <i class="fa-solid fa-bell text-blue-600"></i>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-900">Tienes {{ contadorNoLeidas }} notificaciones sin leer</p>
+            <p class="text-xs text-gray-500">Mantente al día con tus actualizaciones</p>
+          </div>
+        </div>
+        <button @click="handleMarcarTodas" class="text-sm text-blue-600 font-medium">
+          Marcar todas
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de notificaciones -->
+    <div v-if="Object.keys(notificacionesPorFecha).length > 0" class="space-y-4">
+      <div v-for="(notifs, fecha) in notificacionesPorFecha" :key="fecha">
+        <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{{ fecha }}</h3>
+        <div class="space-y-2">
+          <div v-for="notif in notifs" :key="notif.id" 
+               @click="handleNotificacionClick(notif)"
+               class="bg-white rounded-2xl p-4 shadow-sm border transition-all cursor-pointer"
+               :class="[
+                 notif.leida ? 'border-gray-100' : 'border-blue-200 bg-blue-50/50',
+                 'hover:shadow-md'
+               ]">
+            <div class="flex items-start space-x-3">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                   :class="getColorPrioridad(notif.prioridad)">
+                <i :class="[getIconoTipo(notif.tipo), 'text-lg']"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between mb-1">
+                  <div class="flex-1">
+                    <h4 class="text-sm font-medium text-gray-900" :class="{ 'font-semibold': !notif.leida }">
+                      {{ notif.titulo }}
+                    </h4>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ getFechaRelativa(notif.fecha_creacion) }}</p>
+                  </div>
+                  <div class="flex items-center space-x-1 ml-2">
+                    <span v-if="!notif.leida" class="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    <button @click.stop="handleEliminar(notif.id)" class="text-gray-400 hover:text-red-500 transition-colors">
+                      <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-600 line-clamp-2">{{ notif.mensaje }}</p>
+                <div v-if="notif.prioridad !== 'normal'" class="mt-2">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="getColorPrioridad(notif.prioridad)">
+                    {{ getEtiquetaPrioridad(notif.prioridad) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else class="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa-solid fa-bell-slash text-gray-400 text-2xl"></i>
+      </div>
+      <h3 class="font-semibold text-gray-900 mb-2">Sin notificaciones</h3>
+      <p class="text-sm text-gray-500">No tienes notificaciones por el momento</p>
+    </div>
+
+    <!-- Acción de limpieza -->
+    <div v-if="notificaciones.length > 0" class="mt-6">
+      <button @click="handleEliminarTodasLeidas" class="w-full text-center text-sm text-red-600 font-medium py-2">
+        Eliminar notificaciones leídas
+      </button>
+    </div>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+</div>

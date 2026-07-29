@@ -1,0 +1,8 @@
+/* Skeleton loading — requerido por UX: nunca una pantalla en blanco ni un
+   spinner genérico. Mismo tamaño que el contenido real que reemplaza. */
+.skeleton{
+  background:linear-gradient(90deg,#e5e7eb 25%,#f0f1f4 37%,#e5e7eb 63%);
+  background-size:400% 100%;
+  animation:skeleton-wave 1.4s ease infinite;
+}
+@keyframes skeleton-wave{0%{background-position:100% 50%}100%{background-position:0 50%}}

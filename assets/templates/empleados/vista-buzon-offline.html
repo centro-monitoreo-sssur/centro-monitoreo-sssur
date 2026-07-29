@@ -1,0 +1,154 @@
+<!-- ============================================================
+     VISTA: Buzón Offline (Estilo iOS Mobile)
+     Centro de Monitoreo SSSur · App de Campo
+     ============================================================ -->
+<div class="min-h-screen bg-gray-100 pb-20">
+  <!-- iOS Status Bar Simulation -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
+    <div class="px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <button @click="irA('pwa-empleado')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        </button>
+        <div>
+          <h1 class="text-lg font-semibold text-gray-900">Buzón Offline</h1>
+          <p class="text-xs text-gray-500">Sincronización</p>
+        </div>
+      </div>
+      <button @click="handleSincronizar" class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center" :disabled="!estaOnline || estaSincronizando" :class="{ 'opacity-50 cursor-not-allowed': !estaOnline || estaSincronizando }">
+        <i class="fa-solid fa-sync text-white text-sm" :class="{ 'fa-spin': estaSincronizando }"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="px-4 py-6 space-y-6">
+    <!-- Connection Status -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="estaOnline ? 'bg-green-100' : 'bg-red-100'">
+            <i class="fa-solid fa-wifi" :class="estaOnline ? 'text-green-600' : 'text-red-600'"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 text-sm">Estado de Conexión</h3>
+            <p class="text-xs text-gray-500">{{ estaOnline ? 'Conectado' : 'Sin conexión' }}</p>
+          </div>
+        </div>
+        <span class="px-2 py-1 rounded-full text-xs font-medium" :class="estaOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+          {{ estaOnline ? 'En línea' : 'Offline' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Sync Stats -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-100">
+            <i class="fa-solid fa-clock text-orange-600"></i>
+          </div>
+          <div>
+            <p class="text-2xl font-bold text-gray-900">{{ contadorPendientes }}</p>
+            <p class="text-xs text-gray-500">Pendientes</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-100">
+            <i class="fa-solid fa-spinner text-blue-600"></i>
+          </div>
+          <div>
+            <p class="text-2xl font-bold text-gray-900">{{ operacionesEnProceso.length }}</p>
+            <p class="text-xs text-gray-500">Procesando</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Operations -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Operaciones Pendientes</h3>
+        <button v-if="contadorPendientes > 0" @click="handleLimpiar" class="text-xs text-red-600 font-medium">
+          Limpiar cola
+        </button>
+      </div>
+      
+      <div v-if="contadorPendientes > 0" class="space-y-3">
+        <div v-for="(ops, tipo) in operacionesPorTipo" :key="tipo" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-medium text-gray-900 text-sm">{{ getTipoLabel(tipo) }}</h4>
+            <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+              {{ ops.length }} {{ ops.length === 1 ? 'operación' : 'operaciones' }}
+            </span>
+          </div>
+          <div class="space-y-2">
+            <div v-for="op in ops" :key="op.id" class="flex items-start justify-between p-2 bg-gray-50 rounded-lg">
+              <div class="flex-1">
+                <p class="text-xs text-gray-600 mb-1">{{ formatDate(op.fechaCreacion) }}</p>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="getEstadoClass(op.estado)">
+                  {{ getEstadoLabel(op.estado) }}
+                </span>
+                <span v-if="op.intentos > 0" class="text-xs text-gray-500 ml-2">
+                  ({{ op.intentos }} intentos)
+                </span>
+              </div>
+              <button v-if="op.estado === ESTADO_OPERACION.FALLIDA" @click="handleReintentar(op.id)" class="text-xs text-blue-600 font-medium">
+                Reintentar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else class="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fa-solid fa-check-circle text-green-400 text-2xl"></i>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-2">Todo sincronizado</h3>
+        <p class="text-sm text-gray-500">No hay operaciones pendientes</p>
+      </div>
+    </div>
+
+    <!-- Errors Section -->
+    <div v-if="erroresSincronizacion.length > 0" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Errores de Sincronización</h3>
+        <button @click="limpiarErrores" class="text-xs text-red-600 font-medium">
+          Limpiar errores
+        </button>
+      </div>
+      <div class="bg-red-50 rounded-2xl p-4 border border-red-100">
+        <div v-for="error in erroresSincronizacion" :key="error.operacionId" class="text-sm text-red-700 mb-2 last:mb-0">
+          <p class="font-medium">{{ error.error }}</p>
+          <p class="text-xs text-red-600">{{ formatDate(error.fecha) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Last Sync -->
+    <div v-if="ultimaSincronizacion" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-green-100">
+          <i class="fa-solid fa-check text-green-600 text-sm"></i>
+        </div>
+        <div>
+          <p class="text-xs text-gray-500">Última sincronización</p>
+          <p class="text-sm font-medium text-gray-900">{{ formatDate(ultimaSincronizacion) }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sync Button -->
+    <button @click="handleSincronizar" class="w-full bg-green-500 text-white font-medium py-3 rounded-xl flex items-center justify-center space-x-2" :disabled="!estaOnline || estaSincronizando" :class="{ 'opacity-50 cursor-not-allowed': !estaOnline || estaSincronizando }">
+      <i class="fa-solid fa-sync" :class="{ 'fa-spin': estaSincronizando }"></i>
+      <span>{{ estaSincronizando ? 'Sincronizando...' : 'Sincronizar Operaciones' }}</span>
+    </button>
+  </div>
+
+  <!-- Bottom Tab Bar Reutilizable -->
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+</div>

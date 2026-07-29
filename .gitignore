@@ -1,0 +1,58 @@
+# Dependencias
+node_modules/
+
+# Archivos de entorno y configuraciones secretas
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Archivos de SO
+.DS_Store
+Thumbs.db
+
+# Configuración de IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Archivos temporales y logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Compilados (si en el futuro usas algún bundler)
+dist/
+build/
+out/
+.nuxt/
+.output/
+.vuepress/dist/
+.serverless/
+
+# Graphify (si lo llegas a usar localmente para documentar)
+graphify-out/
+
+# Archivos skills o de contexto (markdown)
+ANALISIS_PROFUNDO_LIMITANTES_VIABILIDAD_REAL.md
+caveman.md
+DOCUMENTACION_TECNICA.md
+ESQUEMA_BD_CONSOLIDADO.md
+ESTADO_ACTUAL.md
+estructura_proyecto.md
+FUNCIONALIDADES_ADICIONALES.md
+GUIA_DESPLIEGUE_PROTOTIPO.md
+indexacion-proyecto.md
+plan-implementacion-mejoras-dbd5f3.md
+PROPUESTA_HIBRIDA_CPANEL_SUPABASE.md
+recomendacion_de_mejoras.md
+RECOMENDACIONES_ARQUITECTURA_BACKEND.md

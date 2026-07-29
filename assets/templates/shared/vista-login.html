@@ -1,0 +1,156 @@
+<!-- ============================================================
+     VISTA: Login de Acceso al Sistema
+     Centro de Monitoreo SSSur · Autenticación de Usuarios
+     ============================================================ -->
+<div class="login-container">
+  <!-- Lado Izquierdo: Branding Institucional -->
+  <div class="login-left">
+    <div class="login-left-content">
+      <!-- Logo -->
+      <div class="brand-logo">
+        <img 
+          src="https://sansalvadorsur.gob.sv/images/logo-blanco-vertical.png" 
+          alt="Municipalidad de San Salvador Sur"
+          class="brand-logo-image"
+          @error="logoError=true">
+        <div v-if="logoError" class="brand-logo-fallback">
+          <i class="fa-solid fa-shield-halved text-5xl"></i>
+        </div>
+      </div>
+
+      <!-- Título y Subtítulo según contexto -->
+      <div class="brand-text">
+        <h1 class="brand-title">{{ tituloLogin }}</h1>
+        <p class="brand-subtitle">{{ subtituloLogin }}</p>
+        <p class="brand-description">{{ descripcionLogin }}</p>
+      </div>
+
+      <!-- Copyright -->
+      <div class="brand-footer">
+        <p class="copyright-text">© 2024 Municipalidad de San Salvador Sur</p>
+        <p class="copyright-subtext">Todos los derechos reservados</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lado Derecho: Formulario de Login -->
+  <div class="login-right">
+    <div class="login-card">
+      <!-- Encabezado del Card -->
+      <div class="login-header">
+        <h1 class="login-title">{{ tituloCard }}</h1>
+        <p class="login-subtitle">{{ subtituloCard }}</p>
+      </div>
+
+      <!-- Formulario -->
+      <form @submit.prevent="iniciarSesion" class="login-form">
+        <!-- Campo Usuario -->
+        <div class="form-group">
+          <label class="form-label">{{ labelUsuario }}</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <i :class="iconoUsuario" class="text-gray-400"></i>
+            </div>
+            <input 
+              type="text" 
+              v-model="formulario.usuario" 
+              :placeholder="placeholderUsuario"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5"
+              :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errores.usuario }"
+              @input="limpiarError('usuario')"
+              :autocomplete="autocompleteUsuario">
+          </div>
+          <p v-if="errores.usuario" class="mt-2 text-sm text-red-600">{{ errores.usuario }}</p>
+        </div>
+
+        <!-- Campo Password -->
+        <div class="form-group">
+          <label class="form-label">{{ labelPassword }}</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <i :class="iconoPassword" class="text-gray-400"></i>
+            </div>
+            <input 
+              :type="mostrarPassword ? 'text' : 'password'"
+              v-model="formulario.password" 
+              :placeholder="placeholderPassword"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-10 p-2.5"
+              :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errores.password }"
+              @input="limpiarError('password')"
+              autocomplete="current-password">
+            <button 
+              type="button" 
+              @click="mostrarPassword = !mostrarPassword"
+              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+              <i :class="mostrarPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+            </button>
+          </div>
+          <p v-if="errores.password" class="mt-2 text-sm text-red-600">{{ errores.password }}</p>
+        </div>
+
+        <!-- Mensaje de error general -->
+        <div v-if="errorGeneral" class="error-general">
+          <i class="fa-solid fa-circle-exclamation mr-2"></i>
+          {{ errorGeneral }}
+        </div>
+
+        <!-- Botón de Login -->
+        <button 
+          type="submit" 
+          class="login-button"
+          :disabled="cargando"
+          :class="{ 'loading': cargando }">
+          <span v-if="cargando">
+            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+            {{ textoCargando }}
+          </span>
+          <span v-else>
+            {{ textoBoton }}
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+          </span>
+        </button>
+      </form>
+
+      <!-- Footer del Card -->
+      <div class="login-footer">
+        <p class="footer-text mb-4">
+          <i class="fa-solid fa-lock mr-1"></i>
+          {{ textoFooter }}
+        </p>
+        
+        <!-- Opción de registro para la población (solo en contexto población) -->
+        <div v-if="contexto === 'poblacion'" class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">¿Eres ciudadano y no tienes cuenta?</p>
+          <button 
+            @click="irARegistro"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-blue-500 text-blue-500 rounded-xl text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+            <i class="fa-solid fa-user-plus"></i>
+            Registrarme como ciudadano
+          </button>
+        </div>
+
+        <!-- Enlace para empleados (solo en contexto población) -->
+        <div v-if="contexto === 'poblacion'" class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">¿Eres empleado municipal?</p>
+          <button 
+            @click="irAEmpleados"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-amber-500 text-amber-500 rounded-xl text-sm font-semibold hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+            <i class="fa-solid fa-hard-hat"></i>
+            Acceso empleados
+          </button>
+        </div>
+
+        <!-- Enlace para poblacion (solo en contexto empleados) -->
+        <div v-if="contexto === 'empleados'" class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">¿No eres empleado municipal?</p>
+          <button 
+            @click="irACiudadanos"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-amber-500 text-amber-500 rounded-xl text-sm font-semibold hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+            <i class="fa-solid fa-hard-hat"></i>
+            Acceso a ciudadanos
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
