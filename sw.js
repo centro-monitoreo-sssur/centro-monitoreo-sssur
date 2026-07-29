@@ -5,9 +5,7 @@ const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json',
-  './assets/css/styles.css',
-  // Se pueden añadir más recursos según se necesite
+  './manifest.json'
 ];
 
 // Instalación del Service Worker
