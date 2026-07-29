@@ -1,0 +1,22 @@
+{
+  "name": "Centro de Monitoreo San Salvador Sur",
+  "short_name": "CM SSSur",
+  "description": "Plataforma de gestión de incidencias y denuncias de San Salvador Sur",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#001ba0",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

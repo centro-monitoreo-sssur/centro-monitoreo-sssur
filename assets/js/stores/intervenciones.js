@@ -47,7 +47,8 @@ async function cargarIntervenciones() {
           fecha_cierre,
           categorias_caso ( nombre ),
           departamentos ( nombre ),
-          usuarios!casos_usuario_responsable_id_fkey ( nombres, apellidos )
+          usuarios!casos_usuario_responsable_id_fkey ( nombres, apellidos ),
+          distrito_id
         `)
         .is('deleted_at', null)
         .not('usuario_responsable_id', 'is', null)
@@ -69,6 +70,8 @@ async function cargarIntervenciones() {
           area: c.categorias_caso?.nombre || 'General',
           fecha: c.created_at?.slice(0, 10),
           personal: c.usuarios ? `${c.usuarios.nombres} ${c.usuarios.apellidos}` : null,
+          distrito_id: c.distrito_id,
+          estado_codigo: c.estado_codigo,
         }));
       } else {
         // Sin intervenciones reales, usar demo

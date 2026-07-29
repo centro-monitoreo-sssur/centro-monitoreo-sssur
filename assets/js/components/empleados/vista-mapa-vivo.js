@@ -1,10 +1,10 @@
-﻿// Vista: Mapa en Vivo (Mobile PWA - Empleados)
+// Vista: Mapa en Vivo (Mobile PWA - Empleados)
 import { ref, onMounted, onUnmounted, nextTick } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { marcadorDenuncia } from '../../services/marcadores.js';
-import { getCategoriasPorDepartamento } from '../../utils/categorias-denuncias.js';
+import { useCatalogos } from '../../stores/catalogos.js';
 
 export default {
   setup() {
@@ -21,11 +21,12 @@ export default {
     let capaLimitesRef = null;
     let capaDistritosRef = null;
 
-    const categoriasPorDepartamento = getCategoriasPorDepartamento();
+    const { tiposDenuncia } = useCatalogos();
+
     // Mapa plano de id -> color_hex
     const colorMap = {};
-    Object.values(categoriasPorDepartamento).forEach(cats => {
-      cats.forEach(c => colorMap[c.id] = c.color_hex);
+    (tiposDenuncia.value || []).forEach(c => {
+      colorMap[c.id] = c.color_hex;
     });
 
     function initMap() {

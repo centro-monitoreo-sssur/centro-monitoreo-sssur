@@ -1,14 +1,20 @@
-﻿// Vista: Levantar Denuncia (Empleado) - Diseño Stepper Material 3
+// Vista: Levantar Denuncia (Empleado) - Diseño Stepper Material 3
 // DEMO: Funcionalidad simulada - reemplazar con API real
 import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
-import { categoriasDenuncias, getCategoriasPorTab, getColorClass } from '../../utils/categorias-denuncias.js';
+import { useCatalogos } from '../../stores/catalogos.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
+import { db } from '../../services/supabase-api.js';
+import { useOfflineQueue } from '../../stores/offline-queue.js';
+import { useConexion } from '../../services/conexion.js';
 
 export default {
   setup() {
     const { irA } = useNavegacion();
+    const { agregarOperacion, TIPOS_OPERACION } = useOfflineQueue();
+    const { estaOnline } = useConexion();
+    const { tiposDenuncia } = useCatalogos();
 
     const formulario = ref({
       categoriaId: localStorage.getItem('tipo_denuncia_seleccionado') || '',
@@ -22,9 +28,21 @@ export default {
     const pasoActual = ref(1);
     const totalPasos = 3;
 
-    // Categorías de denuncias divididas en pestañas
-    const categoriasTabs = ref(getCategoriasPorTab());
-    const tabActivo = ref('Seguridad y Emergencias');
+    // Categorías de denuncias desde catálogos reales (fallback: array vacío)
+    const categoriasTabs = ref({});
+    const tabActivo = ref('');
+
+    // Cargar categorías agrupadas por departamento
+    const cargarCategorias = () => {
+      const agrupadas = {};
+      (tiposDenuncia.value || []).forEach(t => {
+        const area = t.area || 'General';
+        if (!agrupadas[area]) agrupadas[area] = [];
+        agrupadas[area].push({ id: t.id, nombre: t.nombre, icono: t.icono, color: t.color_hex });
+      });
+      categoriasTabs.value = agrupadas;
+      if (!tabActivo.value) tabActivo.value = Object.keys(agrupadas)[0] || '';
+    };
 
     // Estado del mapa
     const mapa = ref(null);
@@ -339,7 +357,7 @@ export default {
       irA('pwa-empleado');
     };
 
-    const guardarDenuncia = () => {
+    const guardarDenuncia = async () => {
       if (!formulario.value.categoriaId || formulario.value.descripcion.length < 10) {
         alert('Por favor completa todos los campos requeridos (descripción mínimo 10 caracteres).');
         return;
@@ -349,29 +367,52 @@ export default {
         return;
       }
 
-      const categoria = categoriasDenuncias.find(cat => cat.id === parseInt(formulario.value.categoriaId));
+      const categoria = (tiposDenuncia.value || []).find(cat => cat.id == formulario.value.categoriaId);
 
-      // DEMO: Guardar en localStorage - reemplazar con API real
       const denuncia = {
-        id: Date.now(),
-        categoriaId: formulario.value.categoriaId,
-        categoriaNombre: categoria ? categoria.nombre : 'Otro',
-        departamento: categoria ? categoria.departamento : 'No especificado',
+        titulo: categoria ? categoria.nombre : 'Denuncia',
+        categoria_id: formulario.value.categoriaId,
         descripcion: formulario.value.descripcion,
         coordenadas: coordenadasSeleccionadas.value,
-        anonima: formulario.value.anonima,
+        es_anonima: formulario.value.anonima,
         fotos: formulario.value.fotos,
-        fecha: new Date().toISOString(),
-        estado: 'pendiente',
-        origen: 'empleado'
+        origen: 'empleado',
+        estado_codigo: 'recibida',
+        fecha: new Date().toISOString()
       };
 
-      const denuncias = JSON.parse(localStorage.getItem('denuncias_empleado') || '[]');
-      denuncias.push(denuncia);
-      localStorage.setItem('denuncias_empleado', JSON.stringify(denuncias));
-      localStorage.removeItem('tipo_denuncia_seleccionado');
+      // --- Offline-first ---
+      if (estaOnline.value && db) {
+        try {
+          const { error } = await db.from('casos').insert([{
+            titulo: denuncia.titulo,
+            descripcion: denuncia.descripcion,
+            categoria_id: denuncia.categoria_id,
+            coordenadas: denuncia.coordenadas,
+            es_anonima: denuncia.es_anonima,
+            origen: denuncia.origen,
+            estado_codigo: denuncia.estado_codigo
+          }]);
+          if (error) throw error;
 
-      alert('Denuncia levantada exitosamente');
+          localStorage.removeItem('tipo_denuncia_seleccionado');
+          alert('✅ Denuncia registrada exitosamente.');
+          irA('pwa-empleado');
+          return;
+        } catch(e) {
+          console.warn('[LevanterDenuncia] Falla al guardar en DB, encolando...', e.message);
+        }
+      }
+
+      // Sin conexión o fallo DB → encolar para sincronizar después
+      agregarOperacion({
+        tipo: TIPOS_OPERACION.LEVANTAR_DENUNCIA,
+        datos: denuncia,
+        prioridad: 'alta'
+      });
+
+      localStorage.removeItem('tipo_denuncia_seleccionado');
+      alert('📥 Sin conexión. La denuncia fue guardada en el buzón offline y se enviará automáticamente al recuperar señal.');
       irA('pwa-empleado');
     };
 
@@ -415,6 +456,7 @@ export default {
     };
 
     onMounted(() => {
+      cargarCategorias();
       if (formulario.value.categoriaId) {
         pasoActual.value = 2;
         setTimeout(() => {
@@ -463,7 +505,7 @@ export default {
       cerrarModalFueraJurisdiccion,
       validacionJurisdiccion,
       mostrarAdvertenciaJurisdiccion,
-      getColorClass,
+      estaOnline,
       procesarFotografia,
       removerFotografia
     };

@@ -1,7 +1,8 @@
-﻿// Componente: Bottom Tab Bar Reutilizable
+// Componente: Bottom Tab Bar Reutilizable
 import { ref, computed } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { noticiasDemo } from '../../utils/noticias-demo.js';
+import { useOfflineQueue } from '../../stores/offline-queue.js';
 
 // Vistas donde el menú inferior NO debe mostrarse (formularios / registro)
 const VISTAS_SIN_MENU = new Set([
@@ -37,11 +38,14 @@ export default {
       noticiasDemo.filter(n => !n.leida).length
     );
 
+    const { contadorPendientes } = useOfflineQueue();
+
     return {
       vistaActual,
       menuVisible,
       menuMasAbierto,
       noLeidasNoticias,
+      contadorPendientes,
       toggleMenuMas,
       irA
     };

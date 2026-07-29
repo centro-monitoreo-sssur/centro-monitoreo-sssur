@@ -4,6 +4,7 @@
 import { ref, computed } from '../core/vue.js';
 import eventBus from '../core/event-bus.js';
 import { EVENTOS_OFFLINE } from '../core/eventos-offline.js';
+import { db } from '../services/supabase-api.js';
 
 // Estado del store
 const colaOperaciones = ref([]);
@@ -144,23 +145,68 @@ const contadorPendientes = computed(() => {
   return operacionesPendientes.value.length;
 });
 
-// Procesar una operación (simulado - reemplazar con API real)
+// Despachar operación real a Supabase según tipo
+const despacharOperacion = async (operacion) => {
+  const { tipo, datos } = operacion;
+
+  if (!db) throw new Error('Sin conexión a Supabase');
+
+  switch (tipo) {
+    case TIPOS_OPERACION.CREAR_DENUNCIA:
+    case TIPOS_OPERACION.LEVANTAR_DENUNCIA: {
+      // Insertar caso en la tabla 'casos'
+      const payload = {
+        titulo: datos.titulo || datos.categoriaNombre || 'Denuncia',
+        descripcion: datos.descripcion,
+        categoria_id: datos.categoriaId || datos.categoria_id,
+        coordenadas: datos.coordenadas,
+        es_anonima: datos.anonima || false,
+        origen: datos.origen || 'empleado',
+        estado_codigo: 'recibida',
+        created_at: datos.fecha || new Date().toISOString()
+      };
+      const { error } = await db.from('casos').insert([payload]);
+      if (error) throw error;
+      break;
+    }
+    case TIPOS_OPERACION.ACTUALIZAR_INTERVENCION: {
+      const { id, ...cambios } = datos;
+      const { error } = await db.from('casos').update(cambios).eq('id', id);
+      if (error) throw error;
+      break;
+    }
+    case TIPOS_OPERACION.CERRAR_INCIDENTE: {
+      const { id, resolucion, estado_codigo } = datos;
+      const { error } = await db.from('casos')
+        .update({ estado_codigo: estado_codigo || 'resuelta', resolucion, fecha_cierre: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      break;
+    }
+    case TIPOS_OPERACION.SUBIR_FOTO: {
+      // Las fotos se guardan como base64 en datos_extra (sin Storage por ahora)
+      const { caso_id, dataUrl, nombre } = datos;
+      const { data: caso, error: errGet } = await db.from('casos').select('datos_extra').eq('id', caso_id).single();
+      if (errGet) throw errGet;
+      const extras = caso?.datos_extra || {};
+      if (!extras.fotos) extras.fotos = [];
+      extras.fotos.push({ nombre, dataUrl, fecha: new Date().toISOString() });
+      const { error } = await db.from('casos').update({ datos_extra: extras }).eq('id', caso_id);
+      if (error) throw error;
+      break;
+    }
+    default:
+      // Tipo no implementado — marcar como completada para no bloquear la cola
+      console.warn('[OfflineQueue] Tipo no implementado:', tipo);
+  }
+};
+
+// Procesar una operación con retry y backoff
 const procesarOperacion = async (operacion) => {
   marcarEnProceso(operacion.id);
-  
+
   try {
-    // Simular llamada a API
-    await new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simular éxito 70% de las veces
-        if (Math.random() > 0.3) {
-          resolve({ success: true });
-        } else {
-          reject(new Error('Error de conexión simulado'));
-        }
-      }, 1000 + Math.random() * 2000);
-    });
-    
+    await despacharOperacion(operacion);
     marcarCompletada(operacion.id);
     return { success: true };
   } catch (error) {
@@ -230,6 +276,14 @@ const reintentarOperacion = async (id) => {
 
 // Inicializar
 cargarCola();
+
+// Auto-sincronizar cuando se recupera la conexión
+window.addEventListener('online', () => {
+  if (operacionesPendientes.value.length > 0) {
+    console.info('[OfflineQueue] Conexión restaurada. Sincronizando cola automáticamente...');
+    sincronizar();
+  }
+});
 
 // Exportar store
 export const useOfflineQueue = () => {

@@ -19,7 +19,7 @@ import { popupDenuncia, popupIntervencion } from '../../services/mapa-monitoreo.
 export default {
   setup() {
     const { denuncias, nombreDeTipo } = useDenuncias();
-    const { tiposDenuncia } = useCatalogos();
+    const { tiposDenuncia, buscarDepartamento } = useCatalogos();
     const { mapaFullscreen, toggleMapaFullscreen, isDarkMode, sidebarColapsado } = useNavegacion();
 
     /* ─── Estado de UI (efímero, vive en ref) ─── */
@@ -244,9 +244,13 @@ export default {
         }
 
         if (visibilidad[t.id] === undefined) visibilidad[t.id] = true;
+        
+        const dpto = buscarDepartamento(t.departamento_responsable_id);
+        const areaName = dpto ? dpto.nombre : 'General';
+
         return {
-          id: t.id, name: t.nombre, shortName: t.area || t.nombre,
-          area: t.area, icon: t.icono, color: t.color_hex,
+          id: t.id, name: t.nombre, shortName: areaName,
+          area: areaName, icon: t.icono, color: t.color_hex,
           visible: visibilidad[t.id], points: puntos,
         };
       });

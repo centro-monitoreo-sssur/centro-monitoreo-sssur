@@ -1009,3 +1009,43 @@ create policy "bitacora_select_admin"
 --   - Configuración del sistema: agregar tabla configuracion_sistema para
 --     parámetros del mapa (centro, zoom, colores de pines) actualmente en localStorage.
 -- ============================================================================
+-- ============================================================================
+-- BLOQUE 9: CONFIGURACIONES DEL SISTEMA
+-- ============================================================================
+
+create table public.configuracion (
+    clave                   text primary key,
+    valor                   jsonb not null default '{}'::jsonb,
+    descripcion             text,
+    updated_at              timestamptz not null default now()
+);
+
+create table public.configuracion_smtp (
+    id                      smallint primary key default 1,
+    host                    text not null,
+    port                    integer not null default 587,
+    usuario                 text not null,
+    password_encriptada     text not null,
+    requiere_tls            boolean not null default true,
+    remitente_email         text not null,
+    remitente_nombre        text not null,
+    updated_at              timestamptz not null default now(),
+    check (id = 1) -- Ensure only one row exists
+);
+
+-- ============================================================================
+-- BLOQUE 10: NOTIFICACIONES
+-- ============================================================================
+
+create table public.notificaciones (
+    id                      bigint generated always as identity primary key,
+    titulo                  text not null,
+    mensaje                 text not null,
+    tipo                    text not null default 'info',
+    prioridad               text not null default 'media',
+    leida                   boolean not null default false,
+    datos                   jsonb,
+    origen                  text not null default 'sistema',
+    usuario_id              uuid references public.usuarios(id),
+    created_at              timestamptz not null default now()
+);

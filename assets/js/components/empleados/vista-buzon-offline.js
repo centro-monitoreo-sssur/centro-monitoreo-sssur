@@ -1,9 +1,10 @@
-﻿// Vista: Buzón Offline (Empleados)
+// Vista: Buzón Offline (Empleados)
 import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
 import { EVENTOS_OFFLINE } from '../../core/eventos-offline.js';
+import eventBus from '../../core/event-bus.js';
 
 export default {
   setup() {

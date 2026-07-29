@@ -4,6 +4,7 @@
 import { ref, computed } from '../core/vue.js';
 import eventBus from '../core/event-bus.js';
 import { EVENTOS_NOTIFICACIONES } from '../core/eventos.js';
+import { db } from '../services/supabase-api.js';
 
 // Estado del store
 const notificaciones = ref([]);
@@ -27,8 +28,26 @@ const PRIORIDADES = {
   CRITICA: 'critica'
 };
 
-// Cargar notificaciones desde localStorage (demo)
-const cargarNotificaciones = () => {
+
+// Cargar notificaciones desde DB (con fallback local)
+const cargarNotificaciones = async () => {
+  try {
+    if (db) {
+      const { data, error } = await db.from('notificaciones').select('*').order('created_at', { ascending: false }).limit(50);
+      if (!error && data) {
+        notificaciones.value = data.map(n => ({
+          id: n.id, titulo: n.titulo, mensaje: n.mensaje,
+          tipo: n.tipo, prioridad: n.prioridad, leida: n.leida,
+          datos: n.datos, origen: n.origen,
+          fechaCreacion: n.created_at
+        }));
+        actualizarNoLeidas();
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Usando notificaciones locales:', e.message);
+  }
   const guardadas = localStorage.getItem('notificaciones');
   if (guardadas) {
     notificaciones.value = JSON.parse(guardadas);
@@ -36,7 +55,7 @@ const cargarNotificaciones = () => {
   }
 };
 
-// Guardar notificaciones en localStorage (demo)
+// Guardar notificaciones (solo local, DB se maneja por evento insert)
 const guardarNotificaciones = () => {
   localStorage.setItem('notificaciones', JSON.stringify(notificaciones.value));
 };
@@ -46,25 +65,46 @@ const actualizarNoLeidas = () => {
   notificacionesNoLeidas.value = notificaciones.value.filter(n => !n.leida).length;
 };
 
-// Agregar notificación
-const agregarNotificacion = (notificacion) => {
+const agregarNotificacion = async (notificacion) => {
   const nuevaNotificacion = {
-    id: Date.now(),
     titulo: notificacion.titulo || 'Notificación',
     mensaje: notificacion.mensaje || '',
     tipo: notificacion.tipo || TIPOS_NOTIFICACION.INFO,
     prioridad: notificacion.prioridad || PRIORIDADES.MEDIA,
     leida: false,
-    fechaCreacion: new Date().toISOString(),
     datos: notificacion.datos || null,
-    origen: notificacion.origen || 'sistema',
-    distrito: notificacion.distrito || null,
-    expiracion: notificacion.expiracion || null
+    origen: notificacion.origen || 'sistema'
+  };
+
+  try {
+    if (db) {
+      const { data, error } = await db.from('notificaciones').insert([nuevaNotificacion]).select().single();
+      if (!error && data) {
+        notificaciones.value.unshift({
+          id: data.id, titulo: data.titulo, mensaje: data.mensaje,
+          tipo: data.tipo, prioridad: data.prioridad, leida: data.leida,
+          datos: data.datos, origen: data.origen, fechaCreacion: data.created_at,
+          distrito: data.distrito, expiracion: data.expiracion
+        });
+        actualizarNoLeidas();
+        guardarNotificaciones();
+        eventBus.emit(EVENTOS_NOTIFICACIONES.NOTIFICACION_ENVIADA, notificaciones.value[0]);
+        return notificaciones.value[0];
+      }
+    }
+  } catch (e) {
+    console.error('Error insertando notificacion en DB', e);
+  }
+
+  // Fallback local
+  const localNotificacion = {
+    ...nuevaNotificacion,
+    id: Date.now(),
+    fechaCreacion: new Date().toISOString()
   };
   
-  notificaciones.value.unshift(nuevaNotificacion);
+  notificaciones.value.unshift(localNotificacion);
   
-  // Limitar a 100 notificaciones
   if (notificaciones.value.length > 100) {
     notificaciones.value = notificaciones.value.slice(0, 100);
   }
@@ -79,13 +119,15 @@ const agregarNotificacion = (notificacion) => {
 };
 
 // Marcar como leída
-const marcarComoLeida = (id) => {
+const marcarComoLeida = async (id) => {
   const notificacion = notificaciones.value.find(n => n.id === id);
   if (notificacion) {
     notificacion.leida = true;
     actualizarNoLeidas();
     guardarNotificaciones();
-    
+    try {
+      if (db) await db.from('notificaciones').update({ leida: true }).eq('id', id);
+    } catch(e) {}
     eventBus.emit(EVENTOS_NOTIFICACIONES.NOTIFICACION_LEIDA, notificacion);
   }
 };
@@ -98,10 +140,11 @@ const marcarTodasComoLeidas = () => {
 };
 
 // Eliminar notificación
-const eliminarNotificacion = (id) => {
+const eliminarNotificacion = async (id) => {
   notificaciones.value = notificaciones.value.filter(n => n.id !== id);
   actualizarNoLeidas();
   guardarNotificaciones();
+  try { if (db) await db.from('notificaciones').delete().eq('id', id); } catch(e) {}
 };
 
 // Limpiar todas las notificaciones

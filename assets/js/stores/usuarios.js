@@ -24,7 +24,7 @@ async function cargarUsuarios() {
             codigo,
             nombre
           ),
-          departamentos (
+          departamentos!usuarios_departamento_id_fkey (
             nombre
           )
         `);

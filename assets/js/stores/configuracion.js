@@ -4,6 +4,7 @@
 // grupos de ajustes reactivos y un helper para guardar/resetear.
 // ============================================================
 import { ref, watch } from '../core/vue.js';
+import { db } from '../services/supabase-api.js';
 
 const LS_KEY = 'cm_config';
 
@@ -45,42 +46,67 @@ const DEFAULTS = {
   },
 };
 
-function cargarDesdeLS() {
+
+const KEY = 'global';
+
+async function cargarDesdeDB() {
+  try {
+    if (db) {
+      const { data, error } = await db.from('configuracion').select('valor').eq('clave', KEY).single();
+      if (!error && data) {
+        return {
+          mapa: { ...DEFAULTS.mapa, ...data.valor.mapa },
+          notificaciones: { ...DEFAULTS.notificaciones, ...data.valor.notificaciones },
+          apariencia: { ...DEFAULTS.apariencia, ...data.valor.apariencia },
+          sistema: { ...DEFAULTS.sistema, ...data.valor.sistema },
+          categorias: data.valor.categorias ?? null,
+          accesoContextos: { ...DEFAULTS.accesoContextos, ...data.valor.accesoContextos },
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('Usando configuración local:', e.message);
+  }
+  // Fallback to local storage if DB fails or is empty
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return structuredClone(DEFAULTS);
-    const stored = JSON.parse(raw);
-    // Merge profundo para no perder nuevas claves de DEFAULTS
-    return {
-      mapa: { ...DEFAULTS.mapa, ...stored.mapa },
-      notificaciones: { ...DEFAULTS.notificaciones, ...stored.notificaciones },
-      apariencia: { ...DEFAULTS.apariencia, ...stored.apariencia },
-      sistema: { ...DEFAULTS.sistema, ...stored.sistema },
-      categorias: stored.categorias ?? null,
-      accesoContextos: { ...DEFAULTS.accesoContextos, ...stored.accesoContextos },
-    };
-  } catch {
-    return structuredClone(DEFAULTS);
-  }
+    if (raw) return { ...structuredClone(DEFAULTS), ...JSON.parse(raw) };
+  } catch {}
+  return structuredClone(DEFAULTS);
 }
 
-const config = ref(cargarDesdeLS());
+const config = ref(structuredClone(DEFAULTS));
 const guardado = ref(false); // feedback visual de guardado
+
+// Cargar inicial async
+cargarDesdeDB().then(c => { config.value = c; });
 
 // Auto-persistir cuando config cambia
 watch(config, (val) => {
   localStorage.setItem(LS_KEY, JSON.stringify(val));
 }, { deep: true });
 
-function guardar() {
+async function guardar() {
   localStorage.setItem(LS_KEY, JSON.stringify(config.value));
+  try {
+    if (db) {
+      await db.from('configuracion').upsert({ clave: KEY, valor: config.value });
+    }
+  } catch (e) {
+    console.error('Error guardando en BD:', e.message);
+  }
   guardado.value = true;
   setTimeout(() => { guardado.value = false; }, 2000);
 }
 
-function resetear() {
+async function resetear() {
   config.value = structuredClone(DEFAULTS);
   localStorage.removeItem(LS_KEY);
+  try {
+    if (db) {
+      await db.from('configuracion').upsert({ clave: KEY, valor: config.value });
+    }
+  } catch(e) {}
   guardado.value = true;
   setTimeout(() => { guardado.value = false; }, 2000);
 }
@@ -96,11 +122,11 @@ function exportarJSON() {
 function importarJSON(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const parsed = JSON.parse(e.target.result);
         config.value = { ...structuredClone(DEFAULTS), ...parsed };
-        guardar();
+        await guardar();
         resolve();
       } catch {
         reject(new Error('Archivo JSON inválido'));

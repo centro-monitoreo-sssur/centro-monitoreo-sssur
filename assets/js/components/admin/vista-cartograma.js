@@ -1,14 +1,20 @@
-﻿// ============================================================
+// ============================================================
 // VISTA: Cartograma Analítico — Panel Ejecutivo Territorial
 // Herramienta de análisis comparativo entre los 5 distritos
 // de San Salvador Sur para apoyo en toma de decisiones.
 // ============================================================
 import { ref, computed, onMounted, onUnmounted, nextTick } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { useDenuncias } from '../../stores/denuncias.js';
+import { useIntervenciones } from '../../stores/intervenciones.js';
+import { useCatalogos } from '../../stores/catalogos.js';
 
 export default {
   setup() {
     const { irA } = useNavegacion();
+    const { denuncias, cargarDenuncias } = useDenuncias();
+    const { intervenciones, cargarIntervenciones } = useIntervenciones();
+    const { distritos, cargarDistritos: cargarCatalogos } = useCatalogos();
 
     const cargando = ref(true);
     const cargandoAnimacion = ref(false);
@@ -105,6 +111,28 @@ export default {
       },
     };
 
+    // Función para obtener KPIs reales dinámicos para un distrito
+    const getKPIDistrito = (nombreDistrito) => {
+      const dId = distritos.value.find(d => d.nombre === nombreDistrito)?.id;
+      
+      let dActivas = DATOS_DISTRITO[nombreDistrito].denunciasActivas;
+      let dResueltas = DATOS_DISTRITO[nombreDistrito].denunciasResueltas;
+      let iActivas = DATOS_DISTRITO[nombreDistrito].intervencionesActivas;
+
+      if (dId) {
+        // Conteo real de denuncias
+        const d_distrito = denuncias.value.filter(d => d.distrito_id === dId || d.distrito === dId);
+        dActivas = d_distrito.filter(d => ['pendiente', 'en_revision'].includes(d.estado)).length;
+        dResueltas = d_distrito.filter(d => d.estado === 'resuelta').length;
+        
+        // Conteo real de intervenciones
+        const i_distrito = intervenciones.value.filter(i => i.distrito_id === dId);
+        iActivas = i_distrito.filter(i => ['pendiente', 'en_progreso'].includes(i.estado)).length;
+      }
+      
+      return { denunciasActivas: dActivas, denunciasResueltas: dResueltas, intervencionesActivas: iActivas };
+    };
+
     // ── KPIs globales del municipio ────────────────────────────────────────────
     // DEMO: los contadores se escalan por factorFecha cuando hay un filtro activo.
     const kpisGlobales = computed(() => {
@@ -112,9 +140,9 @@ export default {
       const f = factorFecha.value;
       return {
         poblacion: total.reduce((s, d) => s + d.poblacion, 0),
-        denunciasActivas: Math.round(total.reduce((s, d) => s + d.denunciasActivas, 0) * f),
-        resueltas: Math.round(total.reduce((s, d) => s + (d.denunciasResueltas || 0), 0) * f),
-        intervenciones: Math.round(total.reduce((s, d) => s + d.intervencionesActivas, 0) * f),
+        denunciasActivas: Math.round(Object.keys(DATOS_DISTRITO).reduce((s, name) => s + getKPIDistrito(name).denunciasActivas, 0) * f),
+        resueltas: Math.round(Object.keys(DATOS_DISTRITO).reduce((s, name) => s + getKPIDistrito(name).denunciasResueltas, 0) * f),
+        intervenciones: Math.round(Object.keys(DATOS_DISTRITO).reduce((s, name) => s + getKPIDistrito(name).intervencionesActivas, 0) * f),
       };
     });
 
@@ -122,11 +150,14 @@ export default {
     const distritoConFiltro = computed(() => {
       if (!distritoSeleccionado.value) return null;
       const f = factorFecha.value;
+      const dName = distritoSeleccionado.value.nombre;
+      const kpis = getKPIDistrito(dName);
+      
       return {
         ...distritoSeleccionado.value,
-        denunciasActivas: Math.round((distritoSeleccionado.value.denunciasActivas || 0) * f),
-        denunciasResueltas: Math.round((distritoSeleccionado.value.denunciasResueltas || 0) * f),
-        intervencionesActivas: Math.round((distritoSeleccionado.value.intervencionesActivas || 0) * f),
+        denunciasActivas: Math.round(kpis.denunciasActivas * f),
+        denunciasResueltas: Math.round(kpis.denunciasResueltas * f),
+        intervencionesActivas: Math.round(kpis.intervencionesActivas * f),
       };
     });
 
@@ -142,10 +173,11 @@ export default {
 
     function getMetricaValor(zona, modo) {
       const d = DATOS_DISTRITO[zona.nombre] || {};
+      const kpis = getKPIDistrito(zona.nombre);
       switch (modo) {
         case 'densidad': return d.poblacion / (d.extensionKm2 || 1);
-        case 'denuncias': return d.denunciasActivas || 0;
-        case 'eficiencia': return (d.denunciasResueltas / ((d.denunciasActivas || 0) + (d.denunciasResueltas || 1))) * 100;
+        case 'denuncias': return kpis.denunciasActivas || 0;
+        case 'eficiencia': return (kpis.denunciasResueltas / ((kpis.denunciasActivas || 0) + (kpis.denunciasResueltas || 1))) * 100;
         default: return d.poblacion || 0;
       }
     }
@@ -281,6 +313,10 @@ export default {
 
     // ── Ciclo de vida ──────────────────────────────────────────────────────────
     onMounted(() => {
+      // Cargar datos reales en paralelo
+      if (typeof cargarDenuncias === 'function') cargarDenuncias();
+      if (typeof cargarIntervenciones === 'function') cargarIntervenciones();
+
       nextTick(() => {
         try {
           mapa = L.map('carto-map', {

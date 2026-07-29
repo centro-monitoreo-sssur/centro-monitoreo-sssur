@@ -8,6 +8,7 @@ import { usePoblacion } from '../../stores/poblacion.js';
 import { useConfiguracion } from '../../stores/configuracion.js';
 import { useIntervenciones } from '../../stores/intervenciones.js';
 import { useDashboard } from '../../stores/dashboard.js';
+import { usePwa } from '../../stores/pwa.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
@@ -19,6 +20,7 @@ export default {
     const { config } = useConfiguracion();
     const { cargarIntervenciones } = useIntervenciones();
     const { cargarKpis } = useDashboard();
+    const { registrarSW, mostrarModalInstalacion, instalarPWA } = usePwa();
 
     // Estado del modal de logout
     const mostrarModalLogout = ref(false);
@@ -120,6 +122,9 @@ export default {
 
     // Verificar autenticación al montar
     onMounted(async () => {
+      // PWA Setup
+      registrarSW();
+
       // Detectar contexto de URL primero
       const contexto = detectarContextoURL();
       const contextoGuardado = localStorage.getItem('contexto_acceso');

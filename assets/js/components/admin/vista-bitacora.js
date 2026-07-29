@@ -1,21 +1,18 @@
-﻿// ============================================================
+// ============================================================
 // COMPONENTE: Bitácora de Auditoría
 // Registro inmutable de eventos del sistema (lectura, escritura, borrado).
 // ============================================================
-import { ref, computed } from '../../core/vue.js';
+import { ref, computed, onMounted } from '../../core/vue.js';
+import { useAuditoria } from '../../stores/auditoria.js';
 
 export default {
   name: 'vista-bitacora',
   setup() {
-    const logs = ref([
-      { id: 10045, fecha: '2026-07-15T14:30:00Z', usuario: 'amartinez@sssur.gob.sv', accion: 'LOGIN', modulo: 'Auth', detalle: 'Inicio de sesión exitoso', ip: '192.168.1.12' },
-      { id: 10046, fecha: '2026-07-15T14:35:12Z', usuario: 'cruiz@sssur.gob.sv', accion: 'UPDATE', modulo: 'Denuncias', detalle: 'Cambio de estado Denuncia #00012 a "En curso"', ip: '10.0.0.5' },
-      { id: 10047, fecha: '2026-07-15T14:40:05Z', usuario: 'msantos@sssur.gob.sv', accion: 'CREATE', modulo: 'Intervenciones', detalle: 'Nueva orden de trabajo #INV-106 generada', ip: '192.168.1.45' },
-      { id: 10048, fecha: '2026-07-15T14:45:30Z', usuario: 'amartinez@sssur.gob.sv', accion: 'UPDATE', modulo: 'Config', detalle: 'Modificación de colores de categorías de denuncia', ip: '192.168.1.12' },
-      { id: 10049, fecha: '2026-07-15T15:00:22Z', usuario: 'lgomez@sssur.gob.sv', accion: 'FAILED_LOGIN', modulo: 'Auth', detalle: 'Intento de acceso fallido (contraseña incorrecta)', ip: '192.168.1.50' },
-      { id: 10050, fecha: '2026-07-15T15:10:00Z', usuario: 'Sistema', accion: 'SYSTEM', modulo: 'Sincronización', detalle: 'Sincronización periódica con Supabase completada', ip: 'localhost' },
-      { id: 10051, fecha: '2026-07-15T15:15:45Z', usuario: 'amartinez@sssur.gob.sv', accion: 'DELETE', modulo: 'Usuarios', detalle: 'Bloqueo de usuario "ecastro@sssur.gob.sv"', ip: '192.168.1.12' },
-    ]);
+    const { logs, cargarLogs, cargando } = useAuditoria();
+    
+    onMounted(() => {
+      cargarLogs();
+    });
 
     const busqueda = ref('');
     const filtroAccion = ref('todas');
@@ -62,7 +59,7 @@ export default {
 
     return {
       busqueda, filtroAccion, accionesUnicas, logsFiltrados,
-      getAccionBadge, formatearFecha
+      getAccionBadge, formatearFecha, cargando
     };
   }
 };

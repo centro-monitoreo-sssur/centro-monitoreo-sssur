@@ -19,6 +19,12 @@
     </div>
   </div>
 
+  <!-- Badge Offline -->
+  <div v-if="!estaOnline" class="mx-4 mt-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2 flex items-center gap-2">
+    <i class="fa-solid fa-wifi-slash text-amber-600 text-sm"></i>
+    <p class="text-xs text-amber-700 font-semibold">Sin conexión — El cierre se guardará en el buzón offline</p>
+  </div>
+
   <div v-if="!incidenteSeleccionado" class="flex-1 flex flex-col items-center justify-center">
     <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-4xl mb-4"></i>
     <p class="text-gray-500 font-medium animate-pulse">Preparando cierre...</p>
@@ -44,7 +50,7 @@
       <div class="space-y-2">
         <label class="block text-sm font-bold text-gray-700">Resolución aplicada <span class="text-red-500">*</span></label>
         <p class="text-[11px] text-gray-500 mb-2">Describe detalladamente las acciones tomadas para resolver la incidencia.</p>
-        <textarea v-model="observaciones" rows="4" required placeholder="Ej: Se reemplazó el poste dañado y se restableció el cableado principal..." class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-shadow resize-none shadow-sm"></textarea>
+        <textarea v-model="resolucion" rows="4" required placeholder="Ej: Se reemplazó el poste dañado y se restableció el cableado principal..." class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-shadow resize-none shadow-sm"></textarea>
       </div>
 
       <!-- Evidencia Fotográfica -->
@@ -74,9 +80,10 @@
   
   <!-- Footer de Acciones -->
   <div v-if="incidenteSeleccionado" class="bg-white border-t border-gray-100 p-4 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-    <button @click="guardarCierre" :disabled="!observaciones.trim()" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
-      <i class="fa-solid fa-check-double text-lg"></i>
-      Confirmar Cierre de Incidente
+    <button @click="guardarCierre" :disabled="!resolucion.trim() || guardando" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
+      <i v-if="guardando" class="fa-solid fa-circle-notch fa-spin text-lg"></i>
+      <i v-else class="fa-solid fa-check-double text-lg"></i>
+      {{ guardando ? 'Registrando...' : (estaOnline ? 'Confirmar Cierre de Incidente' : 'Guardar en Buzón Offline') }}
     </button>
   </div>
 

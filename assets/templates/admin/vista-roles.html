@@ -19,11 +19,11 @@
       <div v-for="rol in roles" :key="rol.id" 
            @click="seleccionarRol(rol)"
            class="p-4 rounded-2xl border-2 cursor-pointer transition-all relative overflow-hidden group"
-           :class="rolSeleccionado.id === rol.id ? 'border-blue-500 bg-white dark:bg-gray-800 shadow-md' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'">
+           :class="rolSeleccionado?.id === rol.id ? 'border-blue-500 bg-white dark:bg-gray-800 shadow-md' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'">
         
         <div class="flex justify-between items-start mb-1">
           <div class="flex items-center gap-2">
-            <i class="fa-solid fa-shield text-sm" :class="rolSeleccionado.id === rol.id ? 'text-blue-500' : 'text-gray-400'"></i>
+            <i class="fa-solid fa-shield text-sm" :class="rolSeleccionado?.id === rol.id ? 'text-blue-500' : 'text-gray-400'"></i>
             <h3 class="font-bold text-gray-900 dark:text-white">{{ rol.nombre }}</h3>
           </div>
           <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
@@ -35,7 +35,7 @@
     </div>
 
     <!-- MATRIZ DE PERMISOS (Panel principal) -->
-    <div class="flex-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden">
+    <div v-if="rolSeleccionado" class="flex-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden">
       
       <!-- Header del rol seleccionado -->
       <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
