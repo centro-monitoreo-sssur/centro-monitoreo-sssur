@@ -1,6 +1,7 @@
 // ============================================================
-// STORE: catálogo de tipos de denuncia y departamentos
-// Estado compartido (singleton de módulo) con fallback local.
+// STORE: catálogo de categorías de caso y departamentos
+// Schema v4: categorias_caso (no tipos_denuncia), departamentos.
+// Fallback local si Supabase no está disponible.
 // ============================================================
 import { ref } from '../core/vue.js';
 import { db } from '../core/supabase.js';
@@ -14,14 +15,19 @@ async function cargarTipos() {
   cargandoCatalogos.value = true;
   try {
     if (db) {
-      const { data, error } = await db.from('tipos_denuncia').select('*');
+      // Schema v4: tabla categorias_caso (heredera de tipos_denuncia en AppSheet)
+      const { data, error } = await db
+        .from('categorias_caso')
+        .select('id, nombre, descripcion, color_hex, icono, sla_horas, activo, departamento_id')
+        .eq('activo', true)
+        .order('nombre');
       if (error) throw error;
       if (data && data.length) tiposDenuncia.value = data;
     } else {
       await new Promise((r) => setTimeout(r, 200)); // latencia simulada
     }
   } catch (e) {
-    console.warn('Usando catálogo local de tipos de denuncia:', e.message);
+    console.warn('Usando catálogo local de categorías:', e.message);
   } finally {
     cargandoCatalogos.value = false;
   }
@@ -31,7 +37,11 @@ async function cargarDepartamentos() {
   cargandoCatalogos.value = true;
   try {
     if (db) {
-      const { data, error } = await db.from('departamentos').select('*');
+      const { data, error } = await db
+        .from('departamentos')
+        .select('id, nombre_dpto, codigo, nombre_direccion, activo')
+        .eq('activo', true)
+        .order('nombre_dpto');
       if (error) throw error;
       if (data && data.length) departamentos.value = data;
     } else {
@@ -49,8 +59,12 @@ export function useCatalogos() {
   const nombreDeTipo = (id) => buscar(id).nombre || id;
   const colorDeTipo  = (id) => buscar(id).color_hex || '#6b7280';
   const iconoDeTipo  = (id) => buscar(id).icono || 'fa-circle';
-  const areaDeTipo   = (id) => buscar(id).area || id;
-  
+  const areaDeTipo   = (id) => {
+    // En schema v4 el área se resuelve via departamento_id de la categoría
+    const cat = buscar(id);
+    return cat.departamento_id ? nombreDepartamento(cat.departamento_id) : (cat.area || id);
+  };
+
   const buscarDepartamento = (id) => departamentos.value.find((d) => d.id === id) || {};
   const nombreDepartamento = (id) => buscarDepartamento(id).nombre_dpto || id;
   const direccionDepartamento = (id) => buscarDepartamento(id).nombre_direccion || '';

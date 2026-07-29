@@ -16,6 +16,7 @@ export let db = null;
 try {
   if (conexionOk) {
     db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__supabaseDbActivo = true; // Flag global para componentes
   }
 } catch (e) {
   console.error('Error inicializando Supabase:', e);

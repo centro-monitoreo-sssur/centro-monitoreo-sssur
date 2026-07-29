@@ -7,7 +7,7 @@ import { useDenuncias } from '../../stores/denuncias.js';
 
 export default {
   setup() {
-    const { setAutenticado, irA } = useNavegacion();
+    const { setAutenticado, iniciarSesion: authIniciarSesion, errorAuth, cargandoAuth, irA } = useNavegacion();
     const { cargarTipos } = useCatalogos();
     const { cargarDenuncias, suscribirRealtime } = useDenuncias();
 
@@ -99,13 +99,7 @@ export default {
       password: ''
     });
 
-    // Credenciales demo (hardcodeadas por diseño actual)
-    // DEMO: Reemplazar con API real cuando se conecte el backend
-    const CREDENCIALES_DEMO = {
-      admin: { usuario: 'soporte.ti', password: 'admin123#' },
-      poblacion: { usuario: 'ciudadano', password: 'ciudadano123' },
-      empleados: { usuario: 'empleado', password: 'empleado123' }
-    };
+    // Credenciales demo solo se usan si Supabase no está configurado (manejado en el store de navegacion).
 
     // Validar formulario
     const validarFormulario = () => {
@@ -138,50 +132,34 @@ export default {
       errorGeneral.value = '';
     };
 
-    // Iniciar sesión
+    // Iniciar sesión — delega a Supabase Auth (o fallback demo si db=null)
     const iniciarSesion = async () => {
-      // Limpiar errores previos
       errorGeneral.value = '';
       errores.usuario = '';
       errores.password = '';
 
-      // Validar formulario
-      if (!validarFormulario()) {
-        return;
-      }
+      if (!validarFormulario()) return;
 
       cargando.value = true;
-
-      // Simular latencia de red (demo)
-      // DEMO: Reemplazar con llamada a API real
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       try {
-        const credenciales = CREDENCIALES_DEMO[contexto.value];
-        
-        // Validar credenciales (demo)
-        if (formulario.usuario === credenciales.usuario && 
-            formulario.password === credenciales.password) {
-          // Login exitoso
-          setAutenticado(true, formulario.usuario, configLogin.value.rolDestino);
-          
-          // Guardar sesión en localStorage (demo)
-          localStorage.setItem('usuario_autenticado', formulario.usuario);
-          localStorage.setItem('sesion_activa', 'true');
-          localStorage.setItem('rol_usuario', configLogin.value.rolDestino);
+        // El store maneja Supabase Auth o demo según disponibilidad de `db`
+        const resultado = await authIniciarSesion(formulario.usuario, formulario.password);
+        if (!resultado.ok) {
+          errorGeneral.value = errorAuth.value || 'Usuario o contraseña incorrectos';
+          return;
+        }
 
-          // Cargar datos demo después del login (solo para admin)
-          if (contexto.value === 'admin') {
-            await cargarTipos();
-            await cargarDenuncias();
-            suscribirRealtime();
-          }
+        // Cargar catálogos y denuncias al ingresar (admin)
+        if (contexto.value === 'admin') {
+          await cargarTipos();
+          await cargarDenuncias();
+          suscribirRealtime();
+        }
 
-          // Redirigir según contexto
+        // El listener onAuthStateChange de navegacion.js maneja la redirección
+        // pero si es modo demo, redirigimos manualmente.
+        if (!window.__supabaseDbActivo) {
           irA(configLogin.value.vistaDestino);
-        } else {
-          // Credenciales inválidas
-          errorGeneral.value = 'Usuario o contraseña incorrectos';
         }
       } catch (error) {
         errorGeneral.value = 'Error al iniciar sesión. Intente nuevamente.';

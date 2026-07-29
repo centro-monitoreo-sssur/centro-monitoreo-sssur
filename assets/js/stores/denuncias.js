@@ -1,8 +1,7 @@
 // ============================================================
-// STORE: denuncias
-// Fuente única de los datos de denuncia. Expone refs, carga con fallback
-// demo y suscripción realtime (Zero Trust: la vista `denuncias_publicas`
-// ya excluye PII en la base de datos).
+// STORE: casos (renombrado de "denuncias" en el frontend)
+// Schema v4: tabla `casos` (equivalente a denuncias en AppSheet).
+// Expone refs, carga con fallback demo y suscripción realtime.
 // ============================================================
 import { ref, computed } from '../core/vue.js';
 import { db } from '../core/supabase.js';
@@ -17,56 +16,102 @@ async function cargarDenuncias() {
   cargandoDenuncias.value = true;
   try {
     if (db) {
-      // `denuncias_publicas` excluye PII — frontera Zero Trust en la BD.
+      // Schema v4: tabla `casos`. Seleccionamos los campos necesarios para UI + mapa.
+      // RLS en Supabase ya filtra lo que el usuario autenticado puede ver.
       const { data, error } = await db
-        .from('denuncias_publicas')
-        .select('*')
+        .from('casos')
+        .select(`
+          id,
+          correlativo,
+          titulo,
+          descripcion,
+          estado_codigo,
+          created_at,
+          updated_at,
+          fecha_recibido,
+          fecha_asignado,
+          fecha_cierre,
+          ubicacion,
+          direccion_referencia,
+          categoria_id,
+          departamento_actual_id,
+          distrito_id,
+          prioridad_id,
+          canal_reporte_id,
+          usuario_responsable_id,
+          cuadrilla_responsable_id,
+          caso_padre_id
+        `)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(200);
       if (error) throw error;
-      denuncias.value = data;
+      // Mapear `casos` al formato esperado por los componentes UI (compatibilidad)
+      denuncias.value = (data || []).map(mapearCasoADenuncia);
     } else {
-      await new Promise((r) => setTimeout(r, 400)); // simula latencia real para el skeleton
+      await new Promise((r) => setTimeout(r, 400)); // simula latencia para el skeleton
       denuncias.value = denunciasDemo;
     }
   } catch (e) {
-    console.error('Error cargando denuncias:', e);
+    console.error('Error cargando casos:', e);
     denuncias.value = denunciasDemo; // degradación controlada, nunca pantalla rota
   } finally {
     cargandoDenuncias.value = false;
   }
 }
 
-// Realtime: requiere habilitar Realtime en Supabase para `denuncias`.
-// Se degrada en silencio si no hay conexión.
+// Mapea el esquema real (casos) al formato legacy del frontend para compatibilidad
+function mapearCasoADenuncia(caso) {
+  return {
+    id: caso.id,
+    correlativo: caso.correlativo,
+    tipo: caso.categoria_id,         // frontend usa `tipo` → apunta a categoria_id
+    titulo: caso.titulo,
+    descripcion: caso.descripcion,
+    estado: caso.estado_codigo,       // frontend usa `estado` → apunta a estado_codigo
+    lat: caso.ubicacion?.coordinates?.[1] ?? null,
+    lng: caso.ubicacion?.coordinates?.[0] ?? null,
+    direccion: caso.direccion_referencia,
+    departamento: caso.departamento_actual_id,
+    distrito: caso.distrito_id,
+    prioridad: caso.prioridad_id,
+    canal: caso.canal_reporte_id,
+    responsable: caso.usuario_responsable_id,
+    cuadrilla: caso.cuadrilla_responsable_id,
+    caso_padre_id: caso.caso_padre_id,
+    created_at: caso.created_at,
+    updated_at: caso.updated_at,
+    fecha_recibido: caso.fecha_recibido,
+    fecha_asignado: caso.fecha_asignado,
+    fecha_cierre: caso.fecha_cierre,
+  };
+}
+
+// Realtime: se activa automáticamente si hay conexión con Supabase.
+// Reemplaza el simularDenuncia() con setInterval que había antes.
 function suscribirRealtime() {
   if (!db) return;
-  db.channel('denuncias-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'denuncias' }, () => cargarDenuncias())
+  db.channel('casos-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'casos' }, () => cargarDenuncias())
     .subscribe();
 }
 
 const { nombreDeTipo, colorDeTipo } = useCatalogos();
 
-const conteoPorTipo = computed(() => {
-  const acc = {};
-  denuncias.value.forEach((d) => { acc[d.tipo_id] = (acc[d.tipo_id] || 0) + 1; });
-  return acc;
+const denunciasFiltradas = computed(() => {
+  if (!filtroTipo.value) return denuncias.value;
+  return denuncias.value.filter((d) => d.tipo === filtroTipo.value);
 });
-
-const denunciasFiltradas = computed(() =>
-  filtroTipo.value ? denuncias.value.filter((d) => d.tipo_id === filtroTipo.value) : denuncias.value
-);
-
-const denunciasPendientesCount = computed(() =>
-  denuncias.value.filter((d) => d.estado === 'pendiente').length
-);
 
 export function useDenuncias() {
   return {
-    denuncias, cargandoDenuncias, filtroTipo,
-    cargarDenuncias, suscribirRealtime,
-    conteoPorTipo, denunciasFiltradas, denunciasPendientesCount,
-    nombreDeTipo, colorDeTipo,
+    denuncias,
+    denunciasFiltradas,
+    filtroTipo,
+    cargandoDenuncias,
+    cargarDenuncias,
+    suscribirRealtime,
+    nombreDeTipo,
+    colorDeTipo,
   };
 }

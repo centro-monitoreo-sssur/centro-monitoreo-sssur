@@ -4,6 +4,7 @@
 // nav de denuncias depende del store de denuncias (sin acoplar vistas).
 // ============================================================
 import { ref, computed } from '../core/vue.js';
+import { db } from '../core/supabase.js';
 import { useDenuncias } from './denuncias.js';
 
 const vistaActual = ref('login'); // Iniciar en login por defecto
@@ -19,31 +20,107 @@ const autenticado = ref(localStorage.getItem('sesion_activa') === 'true');
 const usuarioActual = ref(localStorage.getItem('usuario_autenticado') || '');
 const rolUsuario = ref(localStorage.getItem('rol_usuario') || '');
 
-const setAutenticado = (valor, usuario = '', rol = '') => {
-  autenticado.value = valor;
-  if (valor) {
-    localStorage.setItem('sesion_activa', 'true');
-    if (usuario) {
-      localStorage.setItem('usuario_autenticado', usuario);
-      usuarioActual.value = usuario;
+// Error de autenticación (para mostrarlo en el formulario de login)
+const errorAuth = ref('');
+const cargandoAuth = ref(false);
+
+// Credenciales demo (solo cuando db no está disponible)
+const DEMO_CREDENCIALES = [
+  { usuario: 'soporte.ti',  clave: 'admin123#',   rol: 'admin',    vista: 'dashboard' },
+  { usuario: 'empleado',    clave: 'empleado123', rol: 'empleado', vista: 'pwa-empleado' },
+  { usuario: 'ciudadano',   clave: 'ciudadano123',rol: 'ciudadano',vista: 'pwa-poblacion' },
+];
+
+const setAutenticado = async (valor, usuario = '', rol = '') => {
+  // Modo demo: sin db
+  if (!db) {
+    autenticado.value = valor;
+    if (valor) {
+      localStorage.setItem('sesion_activa', 'true');
+      if (usuario) { localStorage.setItem('usuario_autenticado', usuario); usuarioActual.value = usuario; }
+      if (rol)     { localStorage.setItem('rol_usuario', rol); rolUsuario.value = rol; }
+    } else {
+      localStorage.removeItem('sesion_activa');
+      localStorage.removeItem('usuario_autenticado');
+      localStorage.removeItem('rol_usuario');
+      usuarioActual.value = '';
+      rolUsuario.value = '';
     }
-    if (rol) {
-      localStorage.setItem('rol_usuario', rol);
-      rolUsuario.value = rol;
+    return { ok: true };
+  }
+  return { ok: true };
+};
+
+// Inicio de sesión real via Supabase Auth
+const iniciarSesion = async (email, password) => {
+  errorAuth.value = '';
+  cargandoAuth.value = true;
+  try {
+    if (!db) {
+      // Fallback demo: buscar en credenciales locales
+      const match = DEMO_CREDENCIALES.find((c) => c.usuario === email && c.clave === password);
+      if (!match) throw new Error('Credenciales incorrectas');
+      autenticado.value = true;
+      usuarioActual.value = match.usuario;
+      rolUsuario.value = match.rol;
+      localStorage.setItem('sesion_activa', 'true');
+      localStorage.setItem('usuario_autenticado', match.usuario);
+      localStorage.setItem('rol_usuario', match.rol);
+      vistaActual.value = match.vista;
+      return { ok: true };
     }
-  } else {
-    localStorage.removeItem('sesion_activa');
-    localStorage.removeItem('usuario_autenticado');
-    localStorage.removeItem('rol_usuario');
-    usuarioActual.value = '';
-    rolUsuario.value = '';
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    // El rol y el perfil se leen en el listener onAuthStateChange
+    return { ok: true, data };
+  } catch (e) {
+    errorAuth.value = e.message || 'Error al iniciar sesión';
+    return { ok: false, error: e };
+  } finally {
+    cargandoAuth.value = false;
   }
 };
 
-const cerrarSesion = () => {
-  setAutenticado(false);
+const cerrarSesion = async () => {
+  if (db) await db.auth.signOut();
+  autenticado.value = false;
+  usuarioActual.value = '';
+  rolUsuario.value = '';
+  localStorage.removeItem('sesion_activa');
+  localStorage.removeItem('usuario_autenticado');
+  localStorage.removeItem('rol_usuario');
   vistaActual.value = 'login';
 };
+
+// Listener de cambios de sesión en Supabase (corre una sola vez al cargar la app)
+if (db) {
+  db.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
+      autenticado.value = true;
+      usuarioActual.value = session.user.email;
+      // Leer rol desde la tabla `usuarios` usando el UUID de Supabase Auth
+      const { data: perfil } = await db
+        .from('usuarios')
+        .select('rol_id, nombre_completo, roles(codigo)')
+        .eq('auth_user_id', session.user.id)
+        .single();
+      if (perfil) {
+        rolUsuario.value = perfil.roles?.codigo || 'empleado';
+        localStorage.setItem('rol_usuario', rolUsuario.value);
+      }
+      localStorage.setItem('sesion_activa', 'true');
+      localStorage.setItem('usuario_autenticado', session.user.email);
+    } else {
+      autenticado.value = false;
+      usuarioActual.value = '';
+      rolUsuario.value = '';
+      localStorage.removeItem('sesion_activa');
+      localStorage.removeItem('usuario_autenticado');
+      localStorage.removeItem('rol_usuario');
+      vistaActual.value = 'login';
+    }
+  });
+}
 
 const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
@@ -108,7 +185,9 @@ export function useNavegacion() {
     vistaActual, sidebarAbierto, sidebarColapsado, logoError, toggleSidebar,
     mapaFullscreen, toggleMapaFullscreen,
     isDarkMode, toggleDarkMode,
-    autenticado, usuarioActual, rolUsuario, setAutenticado, cerrarSesion,
+    autenticado, usuarioActual, rolUsuario,
+    errorAuth, cargandoAuth,
+    setAutenticado, iniciarSesion, cerrarSesion,
     navOperacion, navAdmin, titulos, tituloVista, irA,
   };
 }
