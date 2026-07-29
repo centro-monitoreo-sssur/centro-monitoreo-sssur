@@ -4,7 +4,7 @@
 // grupos de ajustes reactivos y un helper para guardar/resetear.
 // ============================================================
 import { ref, watch } from '../core/vue.js';
-import { db } from '../services/supabase-api.js';
+import { db } from '../core/supabase.js';
 
 const LS_KEY = 'cm_config';
 

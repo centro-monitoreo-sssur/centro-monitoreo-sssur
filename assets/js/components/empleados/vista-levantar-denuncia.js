@@ -5,7 +5,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
-import { db } from '../../services/supabase-api.js';
+import { db } from '../../core/supabase.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
 

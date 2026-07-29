@@ -5,7 +5,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { useIntervenciones } from '../../stores/intervenciones.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
-import { db } from '../../services/supabase-api.js';
+import { db } from '../../core/supabase.js';
 
 export default {
   setup() {

@@ -1,5 +1,5 @@
 import { ref } from '../core/vue.js';
-import { db } from '../services/supabase-api.js';
+import { db } from '../core/supabase.js';
 
 const logs = ref([]);
 const cargando = ref(false);

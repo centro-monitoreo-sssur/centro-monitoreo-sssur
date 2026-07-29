@@ -4,7 +4,7 @@
 import { ref, computed } from '../core/vue.js';
 import eventBus from '../core/event-bus.js';
 import { EVENTOS_OFFLINE } from '../core/eventos-offline.js';
-import { db } from '../services/supabase-api.js';
+import { db } from '../core/supabase.js';
 
 // Estado del store
 const colaOperaciones = ref([]);
