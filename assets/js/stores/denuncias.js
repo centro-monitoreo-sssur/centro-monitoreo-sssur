@@ -103,10 +103,16 @@ const denunciasFiltradas = computed(() => {
   return denuncias.value.filter((d) => d.tipo === filtroTipo.value);
 });
 
+// Vue template expects denunciasPendientesCount to render the sidebar badge
+const denunciasPendientesCount = computed(() => {
+  return denuncias.value.filter((d) => d.estado !== 'cerrado' && d.estado !== 'resuelto').length;
+});
+
 export function useDenuncias() {
   return {
     denuncias,
     denunciasFiltradas,
+    denunciasPendientesCount,
     filtroTipo,
     cargandoDenuncias,
     cargarDenuncias,

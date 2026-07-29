@@ -18,7 +18,7 @@ async function cargarTipos() {
       // Schema v4: tabla categorias_caso (heredera de tipos_denuncia en AppSheet)
       const { data, error } = await db
         .from('categorias_caso')
-        .select('id, nombre, descripcion, color_hex, icono, sla_horas, activo, departamento_id')
+        .select('id, nombre, descripcion, color_hex, icono, departamento_responsable_id, activo')
         .eq('activo', true)
         .order('nombre');
       if (error) throw error;
@@ -39,9 +39,9 @@ async function cargarDepartamentos() {
     if (db) {
       const { data, error } = await db
         .from('departamentos')
-        .select('id, nombre_dpto, codigo, nombre_direccion, activo')
+        .select('id, nombre, codigo, activo')
         .eq('activo', true)
-        .order('nombre_dpto');
+        .order('nombre');
       if (error) throw error;
       if (data && data.length) departamentos.value = data;
     } else {
@@ -60,14 +60,14 @@ export function useCatalogos() {
   const colorDeTipo  = (id) => buscar(id).color_hex || '#6b7280';
   const iconoDeTipo  = (id) => buscar(id).icono || 'fa-circle';
   const areaDeTipo   = (id) => {
-    // En schema v4 el área se resuelve via departamento_id de la categoría
+    // En schema v4 el área se resuelve via departamento_responsable_id de la categoría
     const cat = buscar(id);
-    return cat.departamento_id ? nombreDepartamento(cat.departamento_id) : (cat.area || id);
+    return cat.departamento_responsable_id ? nombreDepartamento(cat.departamento_responsable_id) : (cat.area || id);
   };
 
   const buscarDepartamento = (id) => departamentos.value.find((d) => d.id === id) || {};
-  const nombreDepartamento = (id) => buscarDepartamento(id).nombre_dpto || id;
-  const direccionDepartamento = (id) => buscarDepartamento(id).nombre_direccion || '';
+  const nombreDepartamento = (id) => buscarDepartamento(id).nombre || id;
+  const direccionDepartamento = (id) => ''; // Pendiente join con direcciones_administrativas
 
   return {
     tiposDenuncia, departamentos, cargandoCatalogos, cargarTipos, cargarDepartamentos,

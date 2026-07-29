@@ -13,7 +13,7 @@ async function cargarPoblacion() {
   cargandoPoblacion.value = true;
   try {
     if (db) {
-      const { data, error } = await db.from('poblacion').select('*');
+      const { data, error } = await db.from('ciudadanos').select('*');
       if (error) throw error;
       if (data && data.length) poblacion.value = data;
     } else {
