@@ -49,12 +49,12 @@ async function cargarDenuncias() {
       // Mapear `casos` al formato esperado por los componentes UI (compatibilidad)
       denuncias.value = (data || []).map(mapearCasoADenuncia);
     } else {
-      await new Promise((r) => setTimeout(r, 400)); // simula latencia para el skeleton
-      denuncias.value = denunciasDemo;
+      await new Promise((r) => setTimeout(r, 400));
+      denuncias.value = []; // Sin mock si la BD está vacía
     }
   } catch (e) {
     console.error('Error cargando casos:', e);
-    denuncias.value = denunciasDemo; // degradación controlada, nunca pantalla rota
+    denuncias.value = []; // Sin mock, es mejor no mentir en producción
   } finally {
     cargandoDenuncias.value = false;
   }

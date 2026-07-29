@@ -44,8 +44,8 @@ async function cargarDepartamentos() {
           nombre,
           codigo,
           estado,
-          direccion_administrativa_id,
-          direcciones_administrativas (
+          direccion_id,
+          direcciones_administrativas:direccion_id (
             id,
             nombre
           )

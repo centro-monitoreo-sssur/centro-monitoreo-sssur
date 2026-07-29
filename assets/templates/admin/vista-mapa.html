@@ -410,7 +410,7 @@
 
   <!-- PANEL FEED — Desktop: lateral izquierdo | Móvil: oculto (ver Bottom Sheet unificado abajo) -->
   <div class="mv-panel absolute left-0 z-40 bg-white/95 backdrop-blur-md dark:bg-gray-800/95 flex flex-col overflow-hidden shadow-2xl shadow-gray-900/15 transition-transform duration-300 ease-in-out
-           lg:top-0 lg:bottom-0 lg:w-[300px] lg:border-r border-gray-200/80 dark:border-gray-700
+           lg:top-0 lg:bottom-10 lg:w-[300px] lg:border-r border-gray-200/80 dark:border-gray-700
            max-lg:hidden" :class="{'lg:-translate-x-full': !feedOpen, 'lg:translate-x-0': feedOpen}">
     <div class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center">
       <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">
@@ -451,7 +451,7 @@
 
   <!-- PANEL CAPAS — Desktop: lateral derecho | Móvil: oculto (ver Bottom Sheet unificado abajo) -->
   <div class="mv-panel absolute right-0 z-40 bg-white/95 backdrop-blur-md dark:bg-gray-800/95 flex flex-col overflow-hidden shadow-2xl shadow-gray-900/15 transition-transform duration-300 ease-in-out
-           lg:top-0 lg:bottom-0 lg:w-[312px] lg:border-l border-gray-200/80 dark:border-gray-700
+           lg:top-0 lg:bottom-10 lg:w-[312px] lg:border-l border-gray-200/80 dark:border-gray-700
            max-lg:hidden" :class="{'lg:translate-x-full': !rpanelOpen, 'lg:translate-x-0': rpanelOpen}">
     <div class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center">
       <div
@@ -460,59 +460,74 @@
       </div>
     </div>
     <div class="mv-scroll overflow-y-auto flex-1">
-      <div class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tipos de Denuncia</div>
-      <div v-for="cat in categories" :key="cat.id"
-        class="flex items-center gap-2.5 px-3 py-2 cursor-pointer border-l-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
-        :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--brand)] dark:border-blue-400' : 'border-transparent'"
-        @click="selectAndZoom(cat.id)">
-        <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{background:cat.color}"></div>
-        <i :class="['fa-solid', cat.icon]" class="text-[13px] w-4 text-center shrink-0" :style="{color:cat.color}"></i>
-        <div class="flex-1 min-w-0">
-          <div class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{{ cat.name }}</div>
-          <div class="text-[10px] truncate text-gray-500 dark:text-gray-400">{{ cat.area }}</div>
+      <div class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 flex justify-between cursor-pointer items-center" @click="acordeonTipos = !acordeonTipos">
+        <span>Tipos de Denuncia</span>
+        <i class="fa-solid" :class="acordeonTipos ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+      </div>
+      <div v-show="acordeonTipos">
+        <div v-for="cat in categories" :key="cat.id"
+          class="flex items-center gap-2.5 px-3 py-2 cursor-pointer border-l-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+          :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--brand)] dark:border-blue-400' : 'border-transparent'"
+          @click="selectAndZoom(cat.id)">
+          <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{background:cat.color}"></div>
+          <i :class="['fa-solid', cat.icon]" class="text-[13px] w-4 text-center shrink-0" :style="{color:cat.color}"></i>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{{ cat.name }}</div>
+            <div class="text-[10px] truncate text-gray-500 dark:text-gray-400">{{ cat.area }}</div>
+          </div>
+          <span
+            class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{
+            cat.points.length }}</span>
+          <div class="mv-tog" :class="{on:visibilidad[cat.id]}" @click.stop="toggleCat(cat.id)" role="switch"
+            :aria-checked="visibilidad[cat.id]" :aria-label="'Mostrar '+cat.name" tabindex="0"
+            @keydown.enter.prevent="toggleCat(cat.id)" @keydown.space.prevent="toggleCat(cat.id)"></div>
         </div>
-        <span
-          class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{
-          cat.points.length }}</span>
-        <div class="mv-tog" :class="{on:visibilidad[cat.id]}" @click.stop="toggleCat(cat.id)" role="switch"
-          :aria-checked="visibilidad[cat.id]" :aria-label="'Mostrar '+cat.name" tabindex="0"
-          @keydown.enter.prevent="toggleCat(cat.id)" @keydown.space.prevent="toggleCat(cat.id)"></div>
       </div>
       <div class="h-px bg-gray-200 dark:bg-gray-700 mx-3 my-2"></div>
-      <div class="px-3 py-1 flex items-center gap-2">
+      <div class="px-3 py-1 flex items-center gap-2 cursor-pointer" @click="acordeonTramos = !acordeonTramos">
         <div class="flex-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Tramos en Intervención</div>
         <span
-          class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{
+          class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 mr-2">{{
           routes.length }}</span>
+        <i class="fa-solid text-[10px] text-gray-400" :class="acordeonTramos ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+      </div>
+      <div class="px-3 py-1 flex justify-end" v-show="acordeonTramos">
         <div class="mv-tog" :class="{on:routesVis}" @click="toggleRoutes" role="switch" :aria-checked="routesVis"
           aria-label="Mostrar tramos" tabindex="0" @keydown.enter.prevent="toggleRoutes"
           @keydown.space.prevent="toggleRoutes"></div>
       </div>
-      <div v-for="r in routes" :key="r.id"
-        class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-2 border-transparent"
-        @click="zoomRoute(r)">
-        <div class="flex-1 min-w-0">
-          <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ r.name }}</div>
-          <div class="text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">{{ r.type }}</div>
+      <div v-show="acordeonTramos">
+        <div v-for="r in routes" :key="r.id"
+          class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-2 border-transparent"
+          @click="zoomRoute(r)">
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ r.name }}</div>
+            <div class="text-[10px] mt-0.5 text-gray-500 dark:text-gray-400">{{ r.type }}</div>
+          </div>
+          <i class="fa-solid fa-route shrink-0" :style="{color:r.color,fontSize:'12px'}"></i>
         </div>
-        <i class="fa-solid fa-route shrink-0" :style="{color:r.color,fontSize:'12px'}"></i>
       </div>
       <div class="h-px bg-gray-200 dark:bg-gray-700 mx-3 my-2"></div>
-      <div class="px-3 py-1 flex items-center gap-2">
+      <div class="px-3 py-1 flex items-center gap-2 cursor-pointer" @click="acordeonIntervenciones = !acordeonIntervenciones">
         <div class="flex-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">Intervenciones Activas</div>
-        <span class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{
+        <span class="text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 mr-2">{{
           interventions.length }}</span>
+        <i class="fa-solid text-[10px] text-gray-400" :class="acordeonIntervenciones ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+      </div>
+      <div class="px-3 py-1 flex justify-end" v-show="acordeonIntervenciones">
         <div class="mv-tog" :class="{on:intervVis}" @click="toggleInterv" role="switch" :aria-checked="intervVis"
           aria-label="Mostrar intervenciones" tabindex="0" @keydown.enter.prevent="toggleInterv"
           @keydown.space.prevent="toggleInterv"></div>
       </div>
-      <div v-for="iv in interventions" :key="iv.id"
-        class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-2"
-        style="border-color:var(--mv-gold);" @click="zoomInterv(iv)">
-        <div class="w-2 h-2 rotate-45 rounded-[1px] shrink-0" style="background:var(--mv-gold);"></div>
-        <div class="flex-1 min-w-0">
-          <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ iv.name }}</div>
-          <div class="text-[10px] mt-0.5" :style="{color:iv.color}">{{ iv.area }} · {{ iv.status }}</div>
+      <div v-show="acordeonIntervenciones">
+        <div v-for="iv in interventions" :key="iv.id"
+          class="flex items-center gap-2.5 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50 border-l-2"
+          style="border-color:var(--mv-gold);" @click="zoomInterv(iv)">
+          <div class="w-2 h-2 rotate-45 rounded-[1px] shrink-0" style="background:var(--mv-gold);"></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] font-medium text-gray-800 dark:text-gray-200 truncate">{{ iv.name }}</div>
+            <div class="text-[10px] mt-0.5" :style="{color:iv.color}">{{ iv.area }} · {{ iv.status }}</div>
+          </div>
         </div>
       </div>
     </div>

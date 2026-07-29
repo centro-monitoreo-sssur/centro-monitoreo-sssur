@@ -55,13 +55,16 @@ export default {
     const mostrarPanelFiltros = ref(false);
     const filtros = reactive({
       distrito: '',   // nombre del distrito o '' para todos
-      centroPoblacional: '',   // nombre del centro o '' para todos
       tipoIncidencia: '',   // tipo_id o '' para todos
       estadoIncidencia: '',   // 'pendiente' | 'en_revision' | 'en_obra' | 'resuelta' | ''
-      historicoActivo: false,
+      historicoActivo: false, // false = todas o solo las de hoy (depende de lógica de negocio)
       fechaInicio: '',
-      fechaFin: '',
+      fechaFin: ''
     });
+
+    const acordeonTipos = ref(true);
+    const acordeonTramos = ref(true);
+    const acordeonIntervenciones = ref(true);
 
     // Lista fija de distritos (mismos que GeoJSON)
     const DISTRITOS = [
@@ -1080,6 +1083,7 @@ export default {
       mostrarPanelFiltros, filtros, filtrosActivos, DISTRITOS, hoy,
       aplicarFiltros, limpiarFiltros, tiposDenuncia,
       sidebarColapsado,
+      acordeonTipos, acordeonTramos, acordeonIntervenciones
     };
   },
 };
