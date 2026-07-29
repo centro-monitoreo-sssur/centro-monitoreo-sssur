@@ -70,6 +70,11 @@ export default {
 
     // Nuevas variables para el Menú de Capas
     const mostrarMenuCapas = ref(false);
+    const seccionesCapas = reactive({
+      tipoMapa: true,
+      herramientas: true,
+    });
+
     const herramientasActivas = reactive({
       clustering: true,
       heatmap: false,
@@ -97,25 +102,8 @@ export default {
     const _timers = new Set(); // Para controlar los setTimeout/setInterval y limpiarlos en onUnmounted
 
     /* ─── Datos demo de la capa de monitoreo (bbox SSSur) ─── */
-    const routes = reactive([
-      {
-        id: 'r1', name: 'Reparación de carpeta — Calle El Progreso', type: 'Obras Municipales', color: '#b06a20',
-        coords: [[13.6435, -89.1355], [13.6442, -89.1348], [13.6448, -89.1342], [13.6455, -89.1338], [13.6462, -89.1335]]
-      },
-      {
-        id: 'r2', name: 'Mantenimiento alumbrado — Av. J.M. Delgado', type: 'Alumbrado Público', color: '#2098b8',
-        coords: [[13.6105, -89.1810], [13.6112, -89.1807], [13.6120, -89.1805], [13.6128, -89.1802], [13.6145, -89.1796], [13.6155, -89.1793]]
-      },
-      {
-        id: 'r3', name: 'Limpieza de escombros — Calle Santa Lucía', type: 'Recolección de Residuos', color: '#8b6fc4',
-        coords: [[13.5715, -89.2078], [13.5720, -89.2080], [13.5728, -89.2082], [13.5735, -89.2085], [13.5745, -89.2088]]
-      },
-    ]);
-    const interventions = reactive([
-      { id: 'i1', lat: 13.6440, lng: -89.1370, name: 'Reparación de bache en boulevard', area: 'Obras Municipales', status: 'En progreso', color: '#c8a200' },
-      { id: 'i2', lat: 13.6165, lng: -89.1795, name: 'Retiro de árbol caído', area: 'Protección Civil', status: 'En progreso', color: '#27a86e' },
-      { id: 'i3', lat: 13.5720, lng: -89.2105, name: 'Operativo de ordenamiento vial', area: 'CAM', status: 'Desplegado', color: '#e07b3a' },
-    ]);
+    const routes = reactive([]);
+    const interventions = reactive([]);
 
     /* ─── Leaflet (instancia local a la vista) ─── */
     let lmap = null;
@@ -1077,7 +1065,7 @@ export default {
       modalDetalle, abrirDetalle, cerrarDetalle, estadoClase, verDetalleEnMapa,
       modalTitulo, modalSubtitulo, modalLatitud, modalLongitud,
       mapaFullscreen, toggleMapaFullscreen,
-      mostrarMenuCapas, herramientasActivas, toggleHerramienta, medicionModo,
+      mostrarMenuCapas, seccionesCapas, herramientasActivas, toggleHerramienta, medicionModo,
       medicionTerminada, medicionPuntosCount, deshacerPuntoMedicion, limpiarMedicion,
       mostrarModalPoligono, formPoligono, guardarPoligono, cerrarModalPoligono,
       hasNewFeed, pillFlash, toasts, feedItems, categories, visibilidad,

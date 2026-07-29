@@ -18,7 +18,6 @@ async function cargarUsuarios() {
           apellidos,
           puesto_cargo,
           activo,
-          ultimo_acceso,
           created_at,
           roles (
             codigo,

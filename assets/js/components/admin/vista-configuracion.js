@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // COMPONENTE: Vista Configuración
 // Panel de ajustes avanzados del sistema de monitoreo.
 // Tabs: Categorías · Notificaciones · Mapa · Sistema · Seguridad · Exportación
@@ -31,8 +31,11 @@ export default {
     const catLocal = computed(() => {
       if (config.value.categorias) return config.value.categorias;
       return (tiposDenuncia.value || []).map(t => ({
-        id: t.id, nombre: t.nombre, area: t.area,
-        color: t.color_hex, icono: t.icono,
+        id: t.id, 
+        nombre: t.nombre, 
+        area: t.departamento_responsable_id ? t.departamento_responsable_id : (t.area || 'General'),
+        color: t.color_hex, 
+        icono: t.icono,
       }));
     });
 

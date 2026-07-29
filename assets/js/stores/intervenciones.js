@@ -74,10 +74,11 @@ async function cargarIntervenciones() {
           estado_codigo: c.estado_codigo,
         }));
       } else {
-        // Sin intervenciones reales, usar demo
-        intervenciones.value = intervencionesDemo;
+        // Sin datos asignados en BD — estado vacío (no demo)
+        intervenciones.value = [];
       }
     } else {
+      // Sin conexión a DB — usar demo para visualización
       intervenciones.value = intervencionesDemo;
     }
   } catch (e) {

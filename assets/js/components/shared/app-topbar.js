@@ -7,7 +7,7 @@ import { ahoraTexto } from '../../utils/tiempo.js';
 
 export default {
   setup() {
-    const { tituloVista, sidebarAbierto, sidebarColapsado, toggleSidebar, isDarkMode, toggleDarkMode } = useNavegacion();
+    const { tituloVista, sidebarAbierto, sidebarColapsado, toggleSidebar, isDarkMode, toggleDarkMode, irA } = useNavegacion();
     const { versionApp } = usePwa();
     const fechaHoraActual = ref(ahoraTexto());
     let timer = null;
@@ -15,6 +15,6 @@ export default {
     onMounted(() => { timer = setInterval(() => { fechaHoraActual.value = ahoraTexto(); }, 30000); });
     onUnmounted(() => clearInterval(timer));
 
-    return { tituloVista, fechaHoraActual, sidebarAbierto, sidebarColapsado, toggleSidebar, isDarkMode, toggleDarkMode, versionApp };
+    return { tituloVista, fechaHoraActual, sidebarAbierto, sidebarColapsado, toggleSidebar, isDarkMode, toggleDarkMode, versionApp, irA };
   },
 };

@@ -7,14 +7,14 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from '../../core/vue.
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useIntervenciones } from '../../stores/intervenciones.js';
-import { useCatalogos } from '../../stores/catalogos.js';
-
 export default {
   setup() {
     const { irA } = useNavegacion();
     const { denuncias, cargarDenuncias } = useDenuncias();
     const { intervenciones, cargarIntervenciones } = useIntervenciones();
-    const { distritos, cargarDistritos: cargarCatalogos } = useCatalogos();
+
+    // Los 5 municipios de SSSur — no vienen de catálogos, son fijos geográficamente
+    const NOMBRES_DISTRITOS = ['San Marcos', 'Santo Tomás', 'Santiago Texacuangos', 'Panchimalco', 'Rosario de Mora'];
 
     const cargando = ref(true);
     const cargandoAnimacion = ref(false);
@@ -111,25 +111,29 @@ export default {
       },
     };
 
-    // Función para obtener KPIs reales dinámicos para un distrito
+    // Función para obtener KPIs dinámicos para un distrito
     const getKPIDistrito = (nombreDistrito) => {
-      const dId = distritos.value.find(d => d.nombre === nombreDistrito)?.id;
-      
-      let dActivas = DATOS_DISTRITO[nombreDistrito].denunciasActivas;
-      let dResueltas = DATOS_DISTRITO[nombreDistrito].denunciasResueltas;
-      let iActivas = DATOS_DISTRITO[nombreDistrito].intervencionesActivas;
+      // Fallback a datos demo del mapa de DATOS_DISTRITO
+      const demo = DATOS_DISTRITO[nombreDistrito] || {};
+      let dActivas = demo.denunciasActivas || 0;
+      let dResueltas = demo.denunciasResueltas || 0;
+      let iActivas = demo.intervencionesActivas || 0;
 
-      if (dId) {
-        // Conteo real de denuncias
-        const d_distrito = denuncias.value.filter(d => d.distrito_id === dId || d.distrito === dId);
-        dActivas = d_distrito.filter(d => ['pendiente', 'en_revision'].includes(d.estado)).length;
-        dResueltas = d_distrito.filter(d => d.estado === 'resuelta').length;
-        
-        // Conteo real de intervenciones
-        const i_distrito = intervenciones.value.filter(i => i.distrito_id === dId);
-        iActivas = i_distrito.filter(i => ['pendiente', 'en_progreso'].includes(i.estado)).length;
+      // Si hay datos reales de denuncias, contar por nombre de distrito
+      if (denuncias.value && denuncias.value.length > 0) {
+        const d_distrito = denuncias.value.filter(d =>
+          d.distrito === nombreDistrito || d.nombre_distrito === nombreDistrito
+        );
+        if (d_distrito.length > 0) {
+          dActivas = d_distrito.filter(d => ['pendiente', 'en_revision'].includes(d.estado)).length;
+          dResueltas = d_distrito.filter(d => d.estado === 'resuelta').length;
+        }
+        const i_distrito = intervenciones.value.filter(i => i.distrito === nombreDistrito);
+        if (i_distrito.length > 0) {
+          iActivas = i_distrito.filter(i => ['pendiente', 'en_progreso'].includes(i.estado)).length;
+        }
       }
-      
+
       return { denunciasActivas: dActivas, denunciasResueltas: dResueltas, intervencionesActivas: iActivas };
     };
 

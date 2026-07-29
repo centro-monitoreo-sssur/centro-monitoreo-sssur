@@ -40,11 +40,14 @@ async function cargarDepartamentos() {
       const { data, error } = await db
         .from('departamentos')
         .select(`
-          id, 
-          nombre, 
-          codigo, 
+          id,
+          nombre,
+          codigo,
           estado,
+          descripcion,
+          direccion_administrativa_id,
           direcciones_administrativas (
+            id,
             nombre
           )
         `)

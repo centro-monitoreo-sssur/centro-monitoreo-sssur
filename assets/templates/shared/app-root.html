@@ -99,8 +99,9 @@
       <vista-poblacion v-else-if="vistaActual==='poblacion'"></vista-poblacion>
       <vista-departamentos v-else-if="vistaActual==='departamentos'"></vista-departamentos>
       <vista-roles v-else-if="vistaActual==='roles'"></vista-roles>
-      <vista-bitacora v-else-if="vistaActual==='bitacora'"></vista-bitacora>
       <vista-configuracion v-else-if="vistaActual==='config'"></vista-configuracion>
+      <vista-notificaciones v-else-if="vistaActual==='notificaciones'"></vista-notificaciones>
+      <vista-bitacora v-else-if="vistaActual==='bitacora'"></vista-bitacora>
       <vista-placeholder v-else :titulo="tituloVista"></vista-placeholder>
     </main>
 

@@ -20,7 +20,7 @@ export function useAuditoria() {
             valores_nuevos,
             ip_cliente,
             created_at,
-            usuarios ( nombre_completo, email )
+            usuarios!bitacora_auditoria_usuario_id_fkey ( email_institucional, nombres, apellidos )
           `)
           .order('created_at', { ascending: false })
           .limit(100);
@@ -29,10 +29,10 @@ export function useAuditoria() {
         logs.value = (data || []).map(l => ({
           id: l.id,
           fecha: l.created_at,
-          usuario: l.usuarios ? l.usuarios.email : 'Sistema',
+          usuario: l.usuarios ? `${l.usuarios.nombres || ''} ${l.usuarios.apellidos || ''}`.trim() || l.usuarios.email_institucional : 'Sistema',
           accion: l.accion,
           modulo: l.tabla_afectada,
-          detalle: `Registro ${l.registro_id} modificado`, // Simplify for now
+          detalle: `Registro ${l.registro_id} modificado`,
           ip: l.ip_cliente || 'N/A'
         }));
       }

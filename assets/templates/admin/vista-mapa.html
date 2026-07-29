@@ -53,9 +53,11 @@
 
         <!-- Tipo de mapa -->
         <div>
-          <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Tipo de mapa
-          </h4>
-          <div class="grid grid-cols-4 gap-2">
+          <div class="flex justify-between items-center cursor-pointer mb-3 group" @click="seccionesCapas.tipoMapa = !seccionesCapas.tipoMapa">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 group-hover:text-blue-500 transition-colors">Tipo de mapa</h4>
+            <i :class="seccionesCapas.tipoMapa ? 'fa-chevron-up' : 'fa-chevron-down'" class="fa-solid text-xs text-gray-400"></i>
+          </div>
+          <div v-show="seccionesCapas.tipoMapa" class="grid grid-cols-4 gap-2">
             <!-- Claro -->
             <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('cartomap')">
               <div
@@ -99,13 +101,13 @@
           </div>
         </div>
 
-        <div class="h-px bg-gray-200 dark:bg-gray-700 -mx-1"></div>
-
-        <!-- Herramientas -->
+        <div class="h-px bg-gray-200 dark:bg-gray-700 -mx-1"></div><!-- Herramientas -->
         <div>
-          <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Herramientas
-            del mapa</h4>
-          <div class="grid grid-cols-5 gap-2">
+          <div class="flex justify-between items-center cursor-pointer mb-3 group" @click="seccionesCapas.herramientas = !seccionesCapas.herramientas">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 group-hover:text-blue-500 transition-colors">Herramientas del mapa</h4>
+            <i :class="seccionesCapas.herramientas ? 'fa-chevron-up' : 'fa-chevron-down'" class="fa-solid text-xs text-gray-400"></i>
+          </div>
+          <div v-show="seccionesCapas.herramientas" class="grid grid-cols-5 gap-2">
             <!-- Clustering -->
             <div class="flex flex-col items-center gap-1.5 cursor-pointer group"
               @click="toggleHerramienta('clustering')">
@@ -180,6 +182,7 @@
                 :class="herramientasActivas.poligonos?'text-blue-700 font-bold':'text-gray-600 dark:text-gray-400'">Dibujar<br>Polígono</span>
             </div>
           </div>
+        </div>
 
         </div>
 
