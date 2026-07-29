@@ -55,10 +55,27 @@ window.addEventListener('beforeinstallprompt', (e) => {
   
   // Si no está instalada, mostramos el modal (por ejemplo, en móviles)
   if (!esStandalone()) {
-    // Retrasar un poco el modal para que no interrumpa el inicio de inmediato
-    setTimeout(() => {
-      mostrarModalInstalacion.value = true;
-    }, 2000);
+    // Comprobar si el usuario pospuso la instalación recientemente (últimas 24h)
+    const pwaDismissedStr = localStorage.getItem('pwa_dismissed');
+    let debeMostrarModal = true;
+    
+    if (pwaDismissedStr) {
+      const pwaDismissedDate = parseInt(pwaDismissedStr, 10);
+      const ahora = new Date().getTime();
+      const horasTranscurridas = (ahora - pwaDismissedDate) / (1000 * 60 * 60);
+      
+      // Mostrar solo si han pasado más de 24 horas desde la última vez
+      if (horasTranscurridas < 24) {
+        debeMostrarModal = false;
+      }
+    }
+
+    if (debeMostrarModal) {
+      // Retrasar un poco el modal para que no interrumpa el inicio de inmediato
+      setTimeout(() => {
+        mostrarModalInstalacion.value = true;
+      }, 2000);
+    }
   }
 });
 
@@ -67,6 +84,7 @@ window.addEventListener('appinstalled', () => {
   pwaInstalada.value = true;
   mostrarModalInstalacion.value = false;
   deferredPrompt = null;
+  localStorage.removeItem('pwa_dismissed'); // Limpiar el estado
 });
 
 const instalarPWA = async () => {
@@ -83,8 +101,18 @@ const instalarPWA = async () => {
   const { outcome } = await deferredPrompt.userChoice;
   console.log(`[PWA] Resultado de instalación: ${outcome}`);
   
+  if (outcome === 'dismissed') {
+    posponerInstalacion();
+  }
+  
   deferredPrompt = null;
   mostrarModalInstalacion.value = false;
+};
+
+const posponerInstalacion = () => {
+  mostrarModalInstalacion.value = false;
+  // Guardar timestamp actual en milisegundos
+  localStorage.setItem('pwa_dismissed', new Date().getTime().toString());
 };
 
 // Auto-evaluar el estado inicial
@@ -98,6 +126,7 @@ export const usePwa = () => {
     pwaInstalada,
     mostrarModalInstalacion,
     registrarSW,
-    instalarPWA
+    instalarPWA,
+    posponerInstalacion
   };
 };

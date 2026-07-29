@@ -20,7 +20,7 @@ export default {
     const { config } = useConfiguracion();
     const { cargarIntervenciones } = useIntervenciones();
     const { cargarKpis } = useDashboard();
-    const { registrarSW, mostrarModalInstalacion, instalarPWA } = usePwa();
+    const { registrarSW, mostrarModalInstalacion, instalarPWA, posponerInstalacion } = usePwa();
 
     // Estado del modal de logout
     const mostrarModalLogout = ref(false);
@@ -181,7 +181,10 @@ export default {
       autenticado, 
       setAutenticado,
       mostrarModalLogout,
-      confirmarLogout
+      confirmarLogout,
+      mostrarModalInstalacion,
+      instalarPWA,
+      posponerInstalacion
     };
   },
 };

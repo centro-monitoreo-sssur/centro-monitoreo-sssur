@@ -241,6 +241,9 @@ const sincronizar = async () => {
     
     ultimaSincronizacion.value = new Date().toISOString();
     eventBus.emit(EVENTOS_OFFLINE.SINCRONIZACION_COMPLETADA);
+    
+    // Auto-limpiar operaciones completadas para no saturar memoria/localStorage
+    limpiarCola();
   } catch (error) {
     console.error('Error en sincronización:', error);
     eventBus.emit(EVENTOS_OFFLINE.SINCRONIZACION_ERROR, error);

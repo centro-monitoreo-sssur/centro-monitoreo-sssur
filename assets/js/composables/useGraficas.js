@@ -12,7 +12,7 @@ let chartBarrasHorizontales = null;
 let chartDonaDistrito = null;
 let chartLineaTiempo = null;
 
-const DISTRITOS = ['San Marcos', 'Santo Tomás', 'Santiago Texacuangos', 'Panchimalco', 'Rosario de Mora'];
+
 
 export function useGraficas(canvasBarrasHorizontalesRef, canvasDonaDistritoRef, canvasLineaTiempoRef) {
   const { denunciasParaReporte } = useReportes();
@@ -28,11 +28,21 @@ export function useGraficas(canvasBarrasHorizontalesRef, canvasDonaDistritoRef, 
       color: t.color_hex
     })).sort((a, b) => b.cantidad - a.cantidad).slice(0, 8); // Top 8
 
-    // Datos para dona por distrito
-    const datosPorDistrito = DISTRITOS.map(d => lista.filter(den => 
-      den.direccion && den.direccion.includes(d)
-    ).length);
-    const coloresDistrito = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+    // Datos para dona por distrito (agrupados dinámicamente por la propiedad direccion_distrito o direccion)
+    const distritosMap = {};
+    lista.forEach(den => {
+      // Intentar usar direccion_distrito o extraer de direccion. Para el mock asume que direccion tiene el nombre.
+      const dist = den.direccion_distrito || (den.direccion ? den.direccion.split(',')[0] : 'Desconocido');
+      if (!distritosMap[dist]) distritosMap[dist] = 0;
+      distritosMap[dist]++;
+    });
+    
+    // Obtener array ordenado de distritos por cantidad (opcional) o alfabético
+    const nombresDistritos = Object.keys(distritosMap).sort();
+    const datosPorDistrito = nombresDistritos.map(d => distritosMap[d]);
+    // Colores dinámicos generados
+    const coloresBase = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6', '#f43f5e'];
+    const coloresDistrito = nombresDistritos.map((_, i) => coloresBase[i % coloresBase.length]);
 
     // Datos para línea de tiempo (últimos 7 días)
     const datosTiempo = [];
@@ -62,9 +72,9 @@ export function useGraficas(canvasBarrasHorizontalesRef, canvasDonaDistritoRef, 
       if (chartDonaDistrito) chartDonaDistrito.destroy();
       chartDonaDistrito = graficarDistribucion(
         canvasDonaDistritoRef.value,
-        DISTRITOS,
-        datosPorDistrito,
-        coloresDistrito
+        nombresDistritos.length > 0 ? nombresDistritos : ['Sin datos'],
+        datosPorDistrito.length > 0 ? datosPorDistrito : [1],
+        nombresDistritos.length > 0 ? coloresDistrito : ['#e5e7eb']
       );
 
       // Línea de tiempo
