@@ -1,0 +1,158 @@
+-- ============================================================================
+-- MIGRACIÓN v7 — Seed del catálogo organizacional
+-- Centro de Monitoreo SSSur · Municipalidad de San Salvador Sur
+-- ----------------------------------------------------------------------------
+-- Base: database/schema.sql, que NO trae ningún insert: todos los catálogos
+-- nacen vacíos y por eso el frontend caía a los datos de demo-data.js.
+--
+-- FUENTE DE VERDAD: database/direcciones.csv y database/departamentos.csv.
+-- Bloques de valores generados automáticamente desde esos archivos; no los
+-- edites a mano. Si cambia el organigrama, actualiza los CSV y vuelve a
+-- correr esta migración.
+--
+-- IDEMPOTENTE Y RE-EJECUTABLE: hace upsert por "codigo", la llave natural
+-- estable de la municipalidad. Volver a correrlo aplica renombramientos y
+-- cambios de dirección padre SIN tocar los ids internos, así que los casos
+-- históricos que referencian un departamento nunca se rompen.
+--
+-- Cubre dos de los escenarios de mutabilidad: renombrar un departamento y
+-- renombrar una dirección. Supresión y unificación se manejan en la v8,
+-- porque requieren reasignar trabajo abierto y no solo actualizar texto.
+--
+-- 8 direcciones · 82 departamentos
+-- ============================================================================
+
+begin;
+
+-- ----------------------------------------------------------------------------
+-- 1. Direcciones administrativas (nivel gerencial superior)
+-- ----------------------------------------------------------------------------
+insert into public.direcciones_administrativas (codigo, nombre, activo) values
+    ('0105', 'Dirección Administrativa', true),
+    ('0402', 'Dirección De Desarrollo Economico Local', true),
+    ('0301', 'Dirección De Desarrollo Social', true),
+    ('0104', 'Dirección De Finanzas Y Gestion Tributaria', true),
+    ('0101', 'Dirección De Gabinetes e Innovacion Municipal', true),
+    ('0401', 'Dirección De Servicios Y Obras Municipales', true),
+    ('0103', 'Direccion Distrital', true),
+    ('0102', 'Direccion Ejecutiva', true)
+on conflict (codigo) do update
+    set nombre = excluded.nombre,
+        activo = excluded.activo;
+
+-- ----------------------------------------------------------------------------
+-- 2. Departamentos (líneas y sublíneas de trabajo)
+--    La dirección padre se resuelve por su código, no por id, para que el
+--    seed sea independiente de los identificadores internos generados.
+-- ----------------------------------------------------------------------------
+insert into public.departamentos (direccion_id, codigo, nombre, estado)
+select da.id, v.codigo, v.nombre, v.estado
+from (values
+    ('0101-01', 'Concejo Municipal', '0101', 'activo'),
+    ('0101-10', 'Unidad De Auditoría Interna', '0101', 'activo'),
+    ('0101-11', 'Despacho Municipal', '0101', 'activo'),
+    ('0101-12', 'Gerencia De Compras', '0101', 'activo'),
+    ('0101-13', 'Unidad De Gestión De Riesgos', '0101', 'activo'),
+    ('0101-14', 'Unidad De Medio Ambiente', '0101', 'activo'),
+    ('0101-15', 'Gerencia De Asuntos Estratégicos Municipales', '0101', 'activo'),
+    ('0101-16', 'Gerencia Legal', '0101', 'activo'),
+    ('0101-17', 'Dirección De Gabinetes e Innovacion Municipal', '0101', 'activo'),
+    ('0101-18', 'Cuerpo De Agentes Municipales', '0101', 'activo'),
+    ('0101-19', 'Gerencia De Comunicaciones', '0101', 'activo'),
+    ('0101-02', 'Sindicatura Municipal', '0101', 'activo'),
+    ('0101-20', 'Unidad De Protocolo', '0101', 'activo'),
+    ('0102-01', 'Direccion Ejecutiva', '0102', 'activo'),
+    ('0102-02', 'Gerencia De Planificación', '0102', 'activo'),
+    ('0102-03', 'Gerencia De Cooperación Y Relaciones Externas', '0102', 'activo'),
+    ('0102-04', 'Gerencia De Tecnologia De La Informacion', '0102', 'activo'),
+    ('0103-01', 'Direccion Distrital', '0103', 'activo'),
+    ('0103-02', 'Unidad De Control De Bienes', '0103', 'activo'),
+    ('0103-03', 'Coordinacion Distrital', '0103', 'activo'),
+    ('0103-04', 'Unidad De Mantenimiento Interno', '0103', 'activo'),
+    ('0103-05', 'Administracion De Cementerios', '0103', 'activo'),
+    ('0103-01/05', 'Jefatura Distrito Santo Tomás', '0103', 'activo'),
+    ('0101-03', 'Unidad De Mediación Municipal', '0101', 'activo'),
+    ('0103-06', 'Unidad De Enlace Social Comunitario', '0103', 'activo'),
+    ('0103-07', 'Unidad De Dinamizacion De Espacios Publicos Municipales', '0103', 'activo'),
+    ('0103-08', 'Unidad De Alumbrado Publico', '0103', 'activo'),
+    ('0103-09', 'Unidad De Mantenimiento De Parques Y Jardines', '0103', 'activo'),
+    ('0104-01', 'Direccion De Finanzas Y Gestion Tributaria', '0104', 'activo'),
+    ('0104-02', 'Gerencia Financiera Institucional', '0104', 'activo'),
+    ('0104-03', 'Tesoreria', '0104', 'activo'),
+    ('0104-04', 'Unidad De Presupuesto Municipal', '0104', 'activo'),
+    ('0104-05', 'Unidad De Contabilidad Municipal', '0104', 'activo'),
+    ('0104-06', 'Gerencia De Administración Tributaria Municipal', '0104', 'activo'),
+    ('0101-04', 'Unidad Contravencional', '0101', 'activo'),
+    ('0104-07', 'Registro Y Control Tributario', '0104', 'activo'),
+    ('0104-08', 'Unidad De Atencion Al Contribuyente', '0104', 'activo'),
+    ('0104-09', 'Unidad De Gestion Tributaria Corriente', '0104', 'activo'),
+    ('0104-10', 'Unidad De Recuperacion De Mora', '0104', 'activo'),
+    ('0105-01', 'Dirección Administrativa', '0105', 'activo'),
+    ('0105-02', 'Gerencia De Talento Humano', '0105', 'activo'),
+    ('0105-03', 'Unidad De Recursos Humanos', '0105', 'activo'),
+    ('0105-04', 'Unidad De Bienestar Laboral', '0105', 'activo'),
+    ('0105-05', 'Registro De La Carrera Administrativa Municipal', '0105', 'activo'),
+    ('0105-06', 'Gerencia De Registro Civil', '0105', 'activo'),
+    ('0101-05', 'Unidad De Proteccion De Animales De Compañía', '0101', 'activo'),
+    ('0105-07', 'Registro Del Estado Familiar', '0105', 'activo'),
+    ('0301-01', 'Dirección De Desarrollo Social', '0301', 'activo'),
+    ('0301-02', 'Gerencia De Arte Y Cultura', '0301', 'activo'),
+    ('0301-03', 'Formación Y Administracion De Elencos Artisticos', '0301', 'activo'),
+    ('0301-04', 'Unidad De Festejos Municipales', '0301', 'activo'),
+    ('0301-05', 'Unidad De Reconstruccion Del Tejido Social', '0301', 'activo'),
+    ('0301-06', 'Gerencia De Desarrollo Humano', '0301', 'activo'),
+    ('0301-07', 'Unidad Del Adulto Mayor', '0301', 'activo'),
+    ('0301-08', 'Unidad De Niñez Y Adolescencia', '0301', 'activo'),
+    ('0301-09', 'Unidad De La Mujer Y Desarrollo Integral', '0301', 'activo'),
+    ('0103-01/03', 'Jefatura Distrito San Marcos', '0103', 'activo'),
+    ('0101-06', 'Secretaria Municipal', '0101', 'activo'),
+    ('0301-10', 'Unidad De Desarrollo Juvenil', '0301', 'activo'),
+    ('0301-11', 'Unidad De Deportes', '0301', 'activo'),
+    ('0401-01', 'Direccion De Servicios Y Obras Municipales', '0401', 'activo'),
+    ('0401-02', 'Gerencia De Gestion Integral De Residuos Solidos', '0401', 'activo'),
+    ('0401-03', 'Unidad De Recolección De Residuos Solidos', '0401', 'activo'),
+    ('0401-04', 'Unidad De Barrido De Calles', '0401', 'activo'),
+    ('0401-05', 'Unidad De Taller Municipal', '0401', 'activo'),
+    ('0401-06', 'Centro De Monitoreo Para La Gestion De Los Residuos Solidos', '0401', 'activo'),
+    ('0401-07', 'Gerencia De Obras Municipales', '0401', 'activo'),
+    ('0401-08', 'Unidad De Planificacion De Obras Municipales', '0401', 'activo'),
+    ('0103-01/01', 'Jefatura Distrito Panchimalco', '0103', 'activo'),
+    ('0101-07', 'Unidad De Gestión Documental Y Archivo', '0101', 'activo'),
+    ('0401-09', 'Unidad Operativa De Obras Municipales', '0401', 'activo'),
+    ('0402-01', 'Dirección De Desarrollo Economico Local', '0402', 'activo'),
+    ('0402-02', 'Gerencia De Desarrollo Economico', '0402', 'activo'),
+    ('0402-03', 'Unidad De Turismo Municipal', '0402', 'activo'),
+    ('0402-04', 'Unidad De Fomento Al Emprendimiento, Industria Y Agricultura', '0402', 'activo'),
+    ('0402-05', 'Gerencia De Mercados Y Ordenamiento Comercial', '0402', 'activo'),
+    ('0402-06', 'Administracion De Mercados Municipales', '0402', 'activo'),
+    ('0402-07', 'Unidad De Ordenamiento Comercial', '0402', 'activo'),
+    ('0101-08', 'Oficialía De Cumplimiento', '0101', 'activo'),
+    ('0103-01/02', 'Jefatura Distrito Rosario de Mora', '0103', 'activo'),
+    ('0101-09', 'Unidad De Acceso A La Informacion Publica', '0101', 'activo'),
+    ('0103-01/04', 'Jefatura Distrito Santiago Texacuangos', '0103', 'activo')
+) as v(codigo, nombre, codigo_direccion, estado)
+join public.direcciones_administrativas da on da.codigo = v.codigo_direccion
+on conflict (codigo) do update
+    set nombre       = excluded.nombre,
+        direccion_id = excluded.direccion_id,
+        estado       = excluded.estado;
+
+commit;
+
+-- ============================================================================
+-- VERIFICACIÓN
+-- ============================================================================
+-- Conteos esperados: 8 direcciones, 82 departamentos
+--   select (select count(*) from public.direcciones_administrativas) as direcciones,
+--          (select count(*) from public.departamentos)               as departamentos;
+--
+-- Departamentos por dirección:
+--   select da.codigo, da.nombre, count(d.id) as departamentos
+--     from public.direcciones_administrativas da
+--     left join public.departamentos d on d.direccion_id = da.id
+--    group by 1, 2 order by 1;
+--
+-- CUIDADO: public.departamentos tiene unique (direccion_id, nombre). Si dentro
+-- de una misma dirección dos unidades intercambian nombre entre dos corridas
+-- del seed, el upsert falla por colisión transitoria. Aplica ese cambio en dos
+-- pasos: renombra una a un valor temporal, corre, y luego el valor final.
