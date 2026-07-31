@@ -66,43 +66,120 @@
         </div>
       </div>
 
-      <!-- Tabs Style SOSAFE -->
-      <div class="flex p-1.5 bg-gray-200/70 rounded-2xl mb-5">
-        <button v-for="tab in Object.keys(categoriasTabs)" :key="tab" @click="tabActivo = tab"
-          class="flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300"
-          :class="tabActivo === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
-          {{ tab }}
+      <!-- ── BUSCADOR ──
+           Salida de emergencia para quien no sabe en qué grupo cae su
+           problema. Busca en TODO el catálogo, ignorando la pestaña activa. -->
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input v-model="busquedaCategoria" type="search" inputmode="search"
+          placeholder="Buscar: bache, luminaria, basura…"
+          class="w-full bg-white border border-gray-200 rounded-2xl pl-11 pr-11 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all duration-200">
+        <button v-if="busquedaCategoria" @click="limpiarBusqueda" type="button"
+          class="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center active:scale-90 transition-all duration-150">
+          <i class="fa-solid fa-xmark text-xs"></i>
         </button>
       </div>
 
-      <!-- Grid de categorías SOSAFE Style (3 columnas circulares) -->
-      <div class="pb-24">
-        <div class="grid grid-cols-3 gap-x-2 gap-y-6">
-          <button v-for="categoria in categoriasTabs[tabActivo]" :key="categoria.id"
-            @click="formulario.categoriaId = categoria.id"
-            class="flex flex-col items-center gap-2 relative group transition-all duration-200 active:scale-[0.92]">
+      <!-- ── PESTAÑAS POR MACRO-GRUPO ──
+           3 grupos (Ciudad / Seguridad / Trámites), no ~15 departamentos.
+           El empleado piensa en el problema; el enrutamiento al departamento
+           responsable lo resuelve la BD vía departamento_responsable_id. -->
+      <div v-show="!buscando" class="flex gap-1.5 p-1.5 bg-gray-100 rounded-2xl">
+        <button v-for="grupo in gruposCategorias" :key="grupo.id" @click="grupoActivo = grupo.id"
+          type="button"
+          class="flex-1 min-w-0 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl transition-all duration-300"
+          :class="grupoActivo === grupo.id ? 'bg-white shadow-sm' : 'active:scale-95'">
+          <i class="fa-solid text-base transition-colors duration-300"
+            :class="[grupo.icono, grupoActivo === grupo.id ? '' : 'text-gray-400']"
+            :style="grupoActivo === grupo.id ? { color: grupo.color } : {}"></i>
+          <span class="text-[11px] font-bold leading-none truncate max-w-full"
+            :class="grupoActivo === grupo.id ? 'text-gray-900' : 'text-gray-500'">
+            {{ grupo.nombre }}
+          </span>
+        </button>
+      </div>
 
-            <!-- Icono circular -->
+      <!-- Subtítulo del grupo activo / contador de resultados -->
+      <p v-if="!buscando && grupoActivoInfo" class="text-[11px] text-gray-400 -mt-2 px-1">
+        {{ grupoActivoInfo.descripcion }} · {{ grupoActivoInfo.categorias.length }} opciones
+      </p>
+      <p v-else class="text-[11px] text-gray-400 -mt-2 px-1">
+        {{ categoriasVisibles.length }} resultado(s) para “{{ busquedaCategoria }}”
+      </p>
+
+      <!-- ── GRILLA DE CATEGORÍAS (3 columnas circulares, estilo SOSAFE) ── -->
+      <div class="pb-24">
+        <div v-if="categoriasVisibles.length" class="grid grid-cols-3 gap-x-2 gap-y-5">
+          <button v-for="categoria in categoriasVisibles" :key="categoria.id"
+            @click="seleccionarCategoria(categoria)" type="button"
+            class="flex flex-col items-center gap-2 transition-all duration-200 active:scale-[0.92]">
+
+            <!-- Icono circular.
+                 El color viene de categorias_caso.color_hex, así que se aplica
+                 como estilo en línea. getColorClass() no sirve aquí: espera
+                 nombres tipo 'blue' y ante un hex devuelve gris para todo.
+                 `relative` va en este div, no en el botón: el check se ancla
+                 al círculo, no al bloque que incluye la etiqueta de texto. -->
             <div
-              class="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 shadow-sm border-[3px]"
-              :class="[
-                formulario.categoriaId === categoria.id ? getColorClass(categoria.color).icon + ' border-gray-900 shadow-lg scale-105' : getColorClass(categoria.color).icon + ' border-white/50 opacity-90'
-              ]">
+              class="relative w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 border-[3px]"
+              :style="{ backgroundColor: categoria.color || '#6b7280' }"
+              :class="formulario.categoriaId === categoria.id
+                ? 'border-gray-900 shadow-lg scale-105'
+                : 'border-white shadow-sm opacity-90'">
               <i :class="'fa-solid ' + categoria.icono + ' text-[26px] text-white'"></i>
 
               <!-- Check de seleccionado -->
               <div v-if="formulario.categoriaId === categoria.id"
-                class="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center bg-gray-900 border-2 border-white shadow-sm z-10">
+                class="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center bg-gray-900 border-2 border-white shadow-sm">
                 <i class="fa-solid fa-check text-white text-[10px]"></i>
               </div>
             </div>
 
-            <!-- Texto -->
-            <p class="text-[10px] font-semibold text-center leading-tight px-1 line-clamp-3 h-10 flex items-start justify-center"
-              :class="formulario.categoriaId === categoria.id ? 'text-gray-900 font-bold' : 'text-gray-600'">
+            <!-- Etiqueta. `h-8` fija la altura para que las filas queden
+                 alineadas aunque unos nombres ocupen 1 línea y otros 2. -->
+            <p class="text-[10px] leading-tight text-center px-0.5 line-clamp-2 h-8"
+              :class="formulario.categoriaId === categoria.id ? 'text-gray-900 font-bold' : 'text-gray-600 font-semibold'">
               {{ categoria.nombre }}
             </p>
           </button>
+        </div>
+
+        <!-- Vacío: catálogo sin cargar o búsqueda sin resultados -->
+        <div v-else class="bg-white border border-dashed border-gray-200 rounded-2xl py-10 px-6 text-center">
+          <i class="fa-solid fa-magnifying-glass text-gray-300 text-2xl"></i>
+          <p class="text-sm font-semibold text-gray-500 mt-3">
+            {{ buscando ? 'Sin coincidencias' : 'No hay categorías disponibles' }}
+          </p>
+          <p class="text-xs text-gray-400 mt-1">
+            {{ buscando
+              ? 'Prueba con otra palabra o revisa las pestañas.'
+              : 'El catálogo de categorías aún no se ha cargado.' }}
+          </p>
+          <button v-if="buscando" @click="limpiarBusqueda" type="button"
+            class="mt-4 text-xs font-bold text-emerald-600 active:scale-95 transition-transform duration-150">
+            Limpiar búsqueda
+          </button>
+        </div>
+
+        <!-- ── CONFIRMACIÓN DE RUTEO ──
+             El empleado ya no navega por departamento, así que se le muestra
+             explícitamente a qué unidad va a caer el caso. Evita el reclamo
+             de "lo reporté y nunca llegó al área correcta". -->
+        <div v-if="categoriaSeleccionada"
+          class="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            :style="{ backgroundColor: categoriaSeleccionada.color || '#6b7280' }">
+            <i :class="'fa-solid ' + categoriaSeleccionada.icono + ' text-white text-base'"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-gray-900 leading-tight break-words">
+              {{ categoriaSeleccionada.nombre }}
+            </p>
+            <p class="text-[11px] text-gray-400 mt-1 leading-tight break-words">
+              <i class="fa-solid fa-arrow-right-long text-[9px] mr-1"></i>
+              Se asignará a {{ categoriaSeleccionada.departamento }}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -268,7 +345,7 @@
       <div v-if="categoriaSeleccionada"
         class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          :class="getColorClass(categoriaSeleccionada.color).icon">
+          :style="{ backgroundColor: categoriaSeleccionada.color || '#6b7280' }">
           <i :class="'fa-solid ' + categoriaSeleccionada.icono + ' text-white text-base'"></i>
         </div>
         <div class="flex-1 min-w-0">

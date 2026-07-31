@@ -5,7 +5,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 
 export default {
   setup() {
-    const { usuarioActual, rolUsuario, cerrarSesion, irA } = useNavegacion();
+    const { usuarioActual, nombreUsuario, rolUsuario, cerrarSesion, irA } = useNavegacion();
 
     // Obtener datos del empleado del localStorage
     const empleadoDatos = computed(() => {
@@ -13,18 +13,26 @@ export default {
       return datos ? JSON.parse(datos) : null;
     });
 
-    // Nombre del usuario (Primer nombre y primer apellido)
+    // Nombre del usuario (primer nombre y primer apellido).
+    // Orden de preferencia: perfil de public.usuarios → datos locales del
+    // empleado → parte local del correo. NUNCA el correo completo: no tiene
+    // espacios, así que como token indivisible en un titular grande desborda
+    // el ancho de la pantalla y arrastra a toda la página al scroll horizontal.
     const usuarioNombre = computed(() => {
-      const parseNombre = (nombreCompleto) => {
-        if (!nombreCompleto) return '';
-        const partes = nombreCompleto.trim().split(/\\s+/);
-        return partes.length >= 2 ? `${partes[0]} ${partes[1]}` : partes[0];
+      const dosPrimeras = (texto) => {
+        if (!texto) return '';
+        const partes = texto.trim().split(/\s+/).filter(Boolean);
+        return partes.slice(0, 2).join(' ');
       };
 
-      if (empleadoDatos.value && empleadoDatos.value.nombre) {
-        return parseNombre(empleadoDatos.value.nombre) || 'Empleado';
-      }
-      return parseNombre(usuarioActual.value) || 'Empleado';
+      if (nombreUsuario.value) return dosPrimeras(nombreUsuario.value);
+      if (empleadoDatos.value?.nombre) return dosPrimeras(empleadoDatos.value.nombre) || 'Empleado';
+
+      // Último recurso: "soporte.ti@dominio" → "Soporte Ti"
+      const local = (usuarioActual.value || '').split('@')[0];
+      if (!local) return 'Empleado';
+      return dosPrimeras(local.replace(/[._-]+/g, ' '))
+        .replace(/\b\p{L}/gu, (c) => c.toUpperCase()) || 'Empleado';
     });
 
     // Display del rol

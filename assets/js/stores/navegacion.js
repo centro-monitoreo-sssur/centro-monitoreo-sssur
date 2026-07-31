@@ -18,6 +18,10 @@ const isDarkMode = ref(localStorage.getItem('color-theme') === 'dark');
 // Estado de autenticación (DEMO: persistencia en localStorage)
 const autenticado = ref(localStorage.getItem('sesion_activa') === 'true');
 const usuarioActual = ref(localStorage.getItem('usuario_autenticado') || '');
+// Nombre y apellido reales del perfil en public.usuarios. `usuarioActual` es el
+// correo institucional y no sirve para saludar: no tiene espacios, así que en
+// un titular grande desborda el layout en móvil.
+const nombreUsuario = ref(localStorage.getItem('nombre_usuario') || '');
 const rolUsuario = ref(localStorage.getItem('rol_usuario') || '');
 // UUID de Supabase Auth — necesario para filtrar casos por usuario_responsable_id
 const usuarioId = ref(localStorage.getItem('usuario_id') || '');
@@ -45,8 +49,10 @@ const setAutenticado = async (valor, usuario = '', rol = '') => {
       localStorage.removeItem('sesion_activa');
       localStorage.removeItem('usuario_autenticado');
       localStorage.removeItem('rol_usuario');
+  localStorage.removeItem('nombre_usuario');
       usuarioActual.value = '';
       rolUsuario.value = '';
+  nombreUsuario.value = '';
     }
     return { ok: true };
   }
@@ -88,9 +94,11 @@ const cerrarSesion = async () => {
   autenticado.value = false;
   usuarioActual.value = '';
   rolUsuario.value = '';
+  nombreUsuario.value = '';
   localStorage.removeItem('sesion_activa');
   localStorage.removeItem('usuario_autenticado');
   localStorage.removeItem('rol_usuario');
+  localStorage.removeItem('nombre_usuario');
   vistaActual.value = 'login';
 };
 
@@ -111,6 +119,10 @@ if (db) {
       if (perfil) {
         rolUsuario.value = perfil.roles?.codigo || 'empleado';
         localStorage.setItem('rol_usuario', rolUsuario.value);
+        // El nombre del perfil se consultaba y se descartaba, así que la UI
+        // terminaba saludando con el correo institucional completo.
+        nombreUsuario.value = [perfil.nombres, perfil.apellidos].filter(Boolean).join(' ').trim();
+        if (nombreUsuario.value) localStorage.setItem('nombre_usuario', nombreUsuario.value);
       }
       localStorage.setItem('sesion_activa', 'true');
       localStorage.setItem('usuario_autenticado', session.user.email);
@@ -118,10 +130,12 @@ if (db) {
       autenticado.value = false;
       usuarioActual.value = '';
       rolUsuario.value = '';
+  nombreUsuario.value = '';
       usuarioId.value = '';
       localStorage.removeItem('sesion_activa');
       localStorage.removeItem('usuario_autenticado');
       localStorage.removeItem('rol_usuario');
+  localStorage.removeItem('nombre_usuario');
       localStorage.removeItem('usuario_id');
       vistaActual.value = 'login';
     }
@@ -191,7 +205,7 @@ export function useNavegacion() {
     vistaActual, sidebarAbierto, sidebarColapsado, logoError, toggleSidebar,
     mapaFullscreen, toggleMapaFullscreen,
     isDarkMode, toggleDarkMode,
-    autenticado, usuarioActual, rolUsuario, usuarioId,
+    autenticado, usuarioActual, nombreUsuario, rolUsuario, usuarioId,
     errorAuth, cargandoAuth,
     setAutenticado, iniciarSesion, cerrarSesion,
     navOperacion, navAdmin, titulos, tituloVista, irA,

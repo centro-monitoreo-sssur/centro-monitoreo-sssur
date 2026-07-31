@@ -1,6 +1,6 @@
 // Vista: Levantar Denuncia (Empleado) - Diseño Stepper Material 3
 // DEMO: Funcionalidad simulada - reemplazar con API real
-import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
+import { ref, computed, watch, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { useCatalogos } from '../../stores/catalogos.js';
@@ -8,13 +8,14 @@ import { comprimirImagen } from '../../utils/image-compressor.js';
 import { db } from '../../core/supabase.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
+import { agruparCategorias, normalizarTexto } from '../../utils/grupos-categorias.js';
 
 export default {
   setup() {
     const { irA } = useNavegacion();
     const { agregarOperacion, TIPOS_OPERACION } = useOfflineQueue();
     const { estaOnline } = useConexion();
-    const { tiposDenuncia } = useCatalogos();
+    const { tiposDenuncia, areaDeTipo } = useCatalogos();
 
     const formulario = ref({
       categoriaId: localStorage.getItem('tipo_denuncia_seleccionado') || '',
@@ -28,21 +29,81 @@ export default {
     const pasoActual = ref(1);
     const totalPasos = 3;
 
-    // Categorías de denuncias desde catálogos reales (fallback: array vacío)
-    const categoriasTabs = ref({});
-    const tabActivo = ref('');
+    // ── Clasificador de denuncias ──────────────────────────────
+    // Las categorías se agrupan en 3 macro-grupos (Ciudad / Seguridad /
+    // Trámites), NO por departamento responsable. Agrupar por departamento
+    // generaba ~15 pestañas con nombres como "Unidad Operativa De Obras
+    // Municipales", que desbordan la pantalla y obligan al empleado a conocer
+    // el organigrama para reportar un bache. El departamento sigue siendo el
+    // destino real del caso — lo resuelve la BD — y se muestra como dato de
+    // confirmación una vez elegida la categoría, no como criterio de búsqueda.
+    const grupoActivo = ref('');
+    const busquedaCategoria = ref('');
 
-    // Cargar categorías agrupadas por departamento
-    const cargarCategorias = () => {
-      const agrupadas = {};
-      (tiposDenuncia.value || []).forEach(t => {
-        const area = t.area || 'General';
-        if (!agrupadas[area]) agrupadas[area] = [];
-        agrupadas[area].push({ id: t.id, nombre: t.nombre, icono: t.icono, color: t.color_hex });
-      });
-      categoriasTabs.value = agrupadas;
-      if (!tabActivo.value) tabActivo.value = Object.keys(agrupadas)[0] || '';
+    // Catálogo plano normalizado para la UI. Conserva `codigo` porque su
+    // prefijo es lo que decide el macro-grupo.
+    const categoriasPlanas = computed(() =>
+      (tiposDenuncia.value || []).map((t) => ({
+        id: t.id,
+        codigo: t.codigo || '',
+        nombre: t.nombre,
+        descripcion: t.descripcion || '',
+        icono: t.icono || 'fa-circle',
+        color: t.color_hex || '#6b7280',
+        // `t.area` ya no existe en el schema: el área se resuelve vía
+        // categorias_caso.departamento_responsable_id.
+        departamento: areaDeTipo(t.id) || 'Sin asignar',
+      }))
+    );
+
+    const gruposCategorias = computed(() => agruparCategorias(categoriasPlanas.value));
+
+    // Pestaña por defecto: la primera con contenido. Se recalcula si el
+    // catálogo llega después (carga asíncrona) o si el grupo activo se vacía.
+    watch(gruposCategorias, (grupos) => {
+      if (!grupos.length) { grupoActivo.value = ''; return; }
+      if (!grupos.some((g) => g.id === grupoActivo.value)) {
+        grupoActivo.value = grupos[0].id;
+      }
+    }, { immediate: true });
+
+    const grupoActivoInfo = computed(
+      () => gruposCategorias.value.find((g) => g.id === grupoActivo.value) || null
+    );
+
+    // Búsqueda global: cuando el empleado escribe, se ignoran las pestañas y
+    // se busca en TODO el catálogo. Es la salida para quien no sabe en qué
+    // grupo cae su problema — el caso que hace que la gente se pierda.
+    const buscando = computed(() => normalizarTexto(busquedaCategoria.value).length >= 2);
+
+    const resultadosBusqueda = computed(() => {
+      if (!buscando.value) return [];
+      const q = normalizarTexto(busquedaCategoria.value);
+      return categoriasPlanas.value.filter((c) =>
+        normalizarTexto(c.nombre).includes(q) ||
+        normalizarTexto(c.descripcion).includes(q) ||
+        normalizarTexto(c.departamento).includes(q)
+      );
+    });
+
+    // Lo que finalmente se pinta en la grilla.
+    const categoriasVisibles = computed(() => {
+      if (buscando.value) return resultadosBusqueda.value;
+      const grupo = gruposCategorias.value.find((g) => g.id === grupoActivo.value);
+      return grupo ? grupo.categorias : [];
+    });
+
+    const seleccionarCategoria = (categoria) => {
+      formulario.value.categoriaId = categoria.id;
+      // Al elegir desde la búsqueda, dejar la pestaña sincronizada para que al
+      // limpiar el buscador el empleado siga viendo su selección en contexto.
+      const grupo = gruposCategorias.value.find((g) =>
+        g.categorias.some((c) => c.id === categoria.id)
+      );
+      if (grupo) grupoActivo.value = grupo.id;
     };
+
+    const limpiarBusqueda = () => { busquedaCategoria.value = ''; };
 
     // Estado del mapa
     const mapa = ref(null);
@@ -240,9 +301,14 @@ export default {
       }
     };
 
+    // Se resuelve contra el catálogo real. Antes leía `categoriasDenuncias`,
+    // que nunca se importó en este archivo (ReferenceError al llegar al paso 3)
+    // y además comparaba con parseInt(): los ids de categorias_caso son UUID,
+    // así que la comparación jamás habría acertado.
     const categoriaSeleccionada = computed(() => {
-      if (!formulario.value.categoriaId) return null;
-      return categoriasDenuncias.find(cat => cat.id === parseInt(formulario.value.categoriaId));
+      const id = formulario.value.categoriaId;
+      if (!id) return null;
+      return categoriasPlanas.value.find((cat) => String(cat.id) === String(id)) || null;
     });
 
     const obtenerUbicacion = () => {
@@ -456,7 +522,9 @@ export default {
     };
 
     onMounted(() => {
-      cargarCategorias();
+      // Las categorías ya no se copian a un ref local: `gruposCategorias` es
+      // un computed sobre el store, así que se agrupa solo cuando el catálogo
+      // llega (app-root lo carga tras autenticar) y se reagrupa si cambia.
       if (formulario.value.categoriaId) {
         pasoActual.value = 2;
         setTimeout(() => {
@@ -480,8 +548,15 @@ export default {
 
     return {
       formulario,
-      categoriasTabs,
-      tabActivo,
+      // Clasificador
+      gruposCategorias,
+      grupoActivo,
+      grupoActivoInfo,
+      busquedaCategoria,
+      buscando,
+      categoriasVisibles,
+      seleccionarCategoria,
+      limpiarBusqueda,
       coordenadasSeleccionadas,
       mostrarMenuCapas,
       estiloTile,

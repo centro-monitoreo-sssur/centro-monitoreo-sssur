@@ -41,60 +41,61 @@ export default {
     // El sidebar y topbar siempre están visibles, se eliminó la lógica de fullscreen forzado.
     const ocultarShell = computed(() => false);
 
+    // Vista propia de cada contexto con módulo fuera del shell administrativo.
+    const VISTA_POR_CONTEXTO = { poblacion: 'pwa-poblacion', empleados: 'pwa-empleado' };
+    // Roles cuyo destino natural es la PWA de campo. El resto (superadmin,
+    // admin, alcalde, directivo, jefe_area) opera el Centro de Monitoreo.
+    const ROLES_DE_CAMPO = ['empleado'];
+
+    // Única fuente de verdad para decidir a dónde va un usuario ya autenticado.
+    // La usan tanto el watch de `autenticado` como el onMounted; antes cada uno
+    // decidía por su cuenta —uno por localStorage, otro por rol— y divergían.
+    const resolverVistaDestino = () => {
+      const contexto = localStorage.getItem('contexto_acceso');
+      if (contexto && VISTA_POR_CONTEXTO[contexto] && config.value.accesoContextos[contexto]) {
+        return VISTA_POR_CONTEXTO[contexto];
+      }
+      const rol = localStorage.getItem('rol_usuario');
+      if (ROLES_DE_CAMPO.includes(rol) && config.value.accesoContextos.empleados) return 'pwa-empleado';
+      if (rol === 'poblacion' && config.value.accesoContextos.poblacion) return 'pwa-poblacion';
+      return 'dashboard';
+    };
+
     // Detectar parámetros URL para contexto de acceso (identifica origen, no autentica)
     const detectarContextoURL = () => {
       if (typeof window === 'undefined') return null;
-      
-      const params = new URLSearchParams(window.location.search);
-      
-      // Detectar ?contexto=poblacion
-      const contextoParam = params.get('contexto');
-      console.log('detectarContextoURL - contextoParam:', contextoParam);
-      
-      if (contextoParam) {
-        // Verificar kill switch antes de procesar
-        if (contextoParam === 'poblacion' && !config.value.accesoContextos.poblacion) {
-          console.log('detectarContextoURL - Kill switch activo para poblacion, ignorando');
-          return null;
-        }
-        if (contextoParam === 'empleados' && !config.value.accesoContextos.empleados) {
-          console.log('detectarContextoURL - Kill switch activo para empleados, ignorando');
-          return null;
-        }
-        
-        const contextoValido = obtenerContexto(contextoParam);
-        console.log('detectarContextoURL - contextoValido:', contextoValido);
-        
-        if (contextoValido) {
-          // Guardar contexto en localStorage
-          localStorage.setItem('contexto_acceso', contextoParam);
-          
-          console.log('detectarContextoURL - autenticado.value:', autenticado.value);
-          console.log('detectarContextoURL - requiereRegistro:', contextoValido.requiereRegistro);
-          
-          // Si no está autenticado y requiere registro, ir a registro
-          if (!autenticado.value && contextoValido.requiereRegistro) {
-            console.log('detectarContextoURL - Redirigiendo a registro-poblacion');
-            vistaActual.value = 'registro-poblacion';
-          } else if (!autenticado.value) {
-            // Si no requiere registro (empleados), ir a login
-            console.log('detectarContextoURL - Redirigiendo a login');
-            vistaActual.value = 'login';
-          } else if (autenticado.value) {
-            // Si está autenticado, ir a vista correspondiente
-            if (contextoParam === 'poblacion') {
-              console.log('detectarContextoURL - Redirigiendo a pwa-poblacion');
-              vistaActual.value = 'pwa-poblacion';
-            } else if (contextoParam === 'empleados') {
-              console.log('detectarContextoURL - Redirigiendo a pwa-empleado');
-              vistaActual.value = 'pwa-empleado';
-            }
-          }
-          return contextoParam;
-        }
+
+      const contextoParam = new URLSearchParams(window.location.search).get('contexto');
+
+      // Sin parámetro, la URL base significa Centro de Monitoreo. Hay que
+      // BORRAR el contexto guardado: si no, una visita previa a
+      // ?contexto=empleados deja la clave rancia en localStorage y el usuario
+      // aterriza en la PWA de campo al iniciar sesión en el panel admin.
+      if (!contextoParam) {
+        localStorage.removeItem('contexto_acceso');
+        return null;
       }
-      
-      return null;
+
+      // Kill switch por contexto (ver stores/configuracion.js)
+      if (!config.value.accesoContextos[contextoParam]) {
+        localStorage.removeItem('contexto_acceso');
+        return null;
+      }
+
+      const contextoValido = obtenerContexto(contextoParam);
+      if (!contextoValido) {
+        localStorage.removeItem('contexto_acceso');
+        return null;
+      }
+
+      localStorage.setItem('contexto_acceso', contextoParam);
+
+      if (autenticado.value) {
+        vistaActual.value = VISTA_POR_CONTEXTO[contextoParam];
+      } else {
+        vistaActual.value = contextoValido.requiereRegistro ? 'registro-poblacion' : 'login';
+      }
+      return contextoParam;
     };
 
     // Redirigir a login si no está autenticado (excepto si ya está en login o registro)
@@ -102,21 +103,9 @@ export default {
       const contexto = localStorage.getItem('contexto_acceso');
       
       if (!nuevoValor && vistaActual.value !== 'login' && vistaActual.value !== 'registro-poblacion') {
-        // Si hay contexto de población, ir a registro
-        if (contexto === 'poblacion') {
-          vistaActual.value = 'registro-poblacion';
-        } else {
-          vistaActual.value = 'login';
-        }
+        vistaActual.value = contexto === 'poblacion' ? 'registro-poblacion' : 'login';
       } else if (nuevoValor && vistaActual.value === 'login') {
-        // Si hay contexto de población, ir a PWA población
-        if (contexto === 'poblacion') {
-          vistaActual.value = 'pwa-poblacion';
-        } else if (contexto === 'empleados') {
-          vistaActual.value = 'pwa-empleado';
-        } else {
-          vistaActual.value = 'dashboard';
-        }
+        vistaActual.value = resolverVistaDestino();
       }
     });
 
@@ -125,40 +114,13 @@ export default {
       // PWA Setup
       registrarSW();
 
-      // Detectar contexto de URL primero
+      // Detectar contexto de URL primero. Si no hay parámetro, esta llamada ya
+      // limpió el `contexto_acceso` guardado.
       const contexto = detectarContextoURL();
-      const contextoGuardado = localStorage.getItem('contexto_acceso');
-      
-      // Si está autenticado, establecer la vista correcta según contexto URL o rol
+
       if (autenticado.value) {
-        const rol = localStorage.getItem('rol_usuario');
-        
-        // Si NO hay parámetro contexto en la URL, limpiar contexto guardado y usar rol
-        if (!contexto) {
-          localStorage.removeItem('contexto_acceso');
-          
-          if (rol === 'admin') {
-            vistaActual.value = 'dashboard';
-          } else if (rol === 'poblacion' && config.value.accesoContextos.poblacion) {
-            vistaActual.value = 'pwa-poblacion';
-          } else if (rol === 'empleado' && config.value.accesoContextos.empleados) {
-            vistaActual.value = 'pwa-empleado';
-          } else {
-            // Si el rol corresponde a un contexto desactivado, ir al dashboard
-            vistaActual.value = 'dashboard';
-          }
-        } else {
-          // Si HAY parámetro contexto en la URL, respetarlo
-          if (contexto === 'poblacion' && config.value.accesoContextos.poblacion) {
-            vistaActual.value = 'pwa-poblacion';
-          } else if (contexto === 'empleados' && config.value.accesoContextos.empleados) {
-            vistaActual.value = 'pwa-empleado';
-          } else {
-            // Contexto en URL pero kill switch desactivado, ir al dashboard
-            vistaActual.value = 'dashboard';
-          }
-        }
-        
+        vistaActual.value = resolverVistaDestino();
+
         // Cargar datos
         await cargarTipos();
         await cargarDepartamentos();
