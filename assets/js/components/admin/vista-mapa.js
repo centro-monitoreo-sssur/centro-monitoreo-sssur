@@ -3,13 +3,14 @@
 // Vista única para visualizar todo lo que recibe el sistema. Hereda la
 // identidad visual institucional (ver .kilocode/rules/04-sistema-diseno):
 // paneles tipo tarjeta blanca, badges con badgeEstado(), tiles CartoDB
-// light_all. Toda la data fluye desde los stores (denuncias/catálogos);
-// rutas e intervenciones son datos demo de la capa de monitoreo.
+// light_all. Toda la data fluye desde los stores: denuncias, catálogos e
+// intervenciones (tramos y puntos), sin datos de demostración.
 // ============================================================
 import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from '../../core/vue.js';
 import { L } from '../../core/libs.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+import { useIntervenciones } from '../../stores/intervenciones.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { formatoFecha } from '../../utils/formato.js';
 import { badgeEstado, etiquetaEstado } from '../../utils/badge.js';
@@ -40,7 +41,16 @@ export default {
     const estiloTile = ref('google'); // 'google' | 'osm' | 'satellite' | 'cartomap'
     const ubicacionActiva = ref(false);
     const ubicacionCargando = ref(false);
-    const marcadorUbicacion = ref(null);
+    // ⚠ Los objetos de Leaflet NUNCA deben vivir dentro de un ref/reactive.
+    // Vue 3 los envuelve en un Proxy, y Leaflet des-registra sus listeners
+    // comparando identidad de contexto: `map.off(tipo, fn, context)`. Si el
+    // marcador se añade crudo (`L.marker(...).addTo(map)`) y luego se remueve
+    // a través del Proxy, el `off` no encuentra el listener y el handler
+    // 'zoomanim' queda huérfano mientras `_map` ya vale null → al siguiente
+    // zoom animado revienta con
+    // "Cannot read properties of null (reading '_latLngToNewLayerPoint')".
+    // Nada del template lee este marcador, así que va en una variable simple.
+    let marcadorUbicacion = null;
     const feedOpen = ref(true);
     const rpanelOpen = ref(true);
     const selectedCat = ref(null);
@@ -55,12 +65,27 @@ export default {
     const mostrarPanelFiltros = ref(false);
     const filtros = reactive({
       distrito: '',   // nombre del distrito o '' para todos
+      centroPoblacional: '',   // texto libre o '' para todos
       tipoIncidencia: '',   // tipo_id o '' para todos
-      estadoIncidencia: '',   // 'pendiente' | 'en_revision' | 'en_obra' | 'resuelta' | ''
+      // 'pendiente' | 'en_revision' | 'en_obra' | 'resuelta' | '' ó el estado
+      // agregado 'en_curso' (= en_revision + en_obra) que dispara la franja de KPIs.
+      estadoIncidencia: '',
       historicoActivo: false, // false = todas o solo las de hoy (depende de lógica de negocio)
       fechaInicio: '',
       fechaFin: ''
     });
+
+    // Opciones del selector de estado en el panel de filtros. Se declara aquí
+    // (y no inline en el template) para que la franja de KPIs y el panel usen
+    // exactamente el mismo vocabulario de estados.
+    const ESTADOS_FILTRO = [
+      { v: '', l: 'Todos', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' },
+      { v: 'pendiente', l: 'Pendiente', cls: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' },
+      { v: 'en_curso', l: 'En curso', cls: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' },
+      { v: 'en_revision', l: 'En revisión', cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' },
+      { v: 'en_obra', l: 'En obra', cls: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
+      { v: 'resuelta', l: 'Resuelta', cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' },
+    ];
 
     const acordeonTipos = ref(true);
     const acordeonTramos = ref(true);
@@ -104,9 +129,13 @@ export default {
 
     const _timers = new Set(); // Para controlar los setTimeout/setInterval y limpiarlos en onUnmounted
 
-    /* ─── Datos demo de la capa de monitoreo (bbox SSSur) ─── */
-    const routes = reactive([]);
-    const interventions = reactive([]);
+    /* ─── Capas de monitoreo (datos reales desde el store) ───────────────
+       `routes` son los tramos: casos cuya geometría es una línea.
+       `interventions` son las intervenciones puntuales con responsable
+       asignado. La separación es geométrica, no de catálogo. */
+    const { tramos, intervencionesMapa, cargarCapasMapa } = useIntervenciones();
+    const routes = tramos;
+    const interventions = intervencionesMapa;
 
     /* ─── Leaflet (instancia local a la vista) ─── */
     let lmap = null;
@@ -156,11 +185,46 @@ export default {
       }
     }
 
-    /* ─── Conteos (computed, derivados del store) ─── */
-    const total = computed(() => categories.value.reduce((s, c) => s + c.points.length, 0));
-    const pendientes = computed(() => categories.value.reduce((s, c) => s + c.points.filter((p) => p.estado === 'pendiente').length, 0));
-    const enCurso = computed(() => categories.value.reduce((s, c) => s + c.points.filter((p) => p.estado === 'en_revision' || p.estado === 'en_obra').length, 0) + interventions.length);
-    const resueltas = computed(() => categories.value.reduce((s, c) => s + c.points.filter((p) => p.estado === 'resuelta').length, 0));
+    /* ─── Predicados de filtrado ──────────────────────────────────────────
+       `pasaFiltrosBase` cubre todo EXCEPTO el estado; `pasaFiltroEstado` solo
+       el estado. La separación permite que la franja de KPIs siga siendo un
+       resumen estable del ámbito consultado (distrito/tipo/período) mientras
+       el segmento de estado actúa como drill-down: si los conteos se
+       calcularan sobre el resultado ya filtrado, al pulsar "Pendientes" los
+       demás segmentos caerían a 0 y la franja perdería sentido.
+       ─────────────────────────────────────────────────────────────────── */
+    function pasaFiltrosBase(d) {
+      if (filtros.tipoIncidencia && d.tipo_id !== filtros.tipoIncidencia) return false;
+      if (filtros.distrito && (d.distrito || '') !== filtros.distrito) return false;
+      if (filtros.centroPoblacional && (d.centro_poblacional || '') !== filtros.centroPoblacional) return false;
+      if (filtros.historicoActivo) {
+        if (filtros.fechaInicio) {
+          const desde = new Date(filtros.fechaInicio + 'T00:00:00');
+          if (!d.created_at || new Date(d.created_at) < desde) return false;
+        }
+        if (filtros.fechaFin) {
+          const hasta = new Date(filtros.fechaFin + 'T23:59:59');
+          if (!d.created_at || new Date(d.created_at) > hasta) return false;
+        }
+      }
+      return true;
+    }
+
+    function pasaFiltroEstado(d) {
+      if (!filtros.estadoIncidencia) return true;
+      if (filtros.estadoIncidencia === 'en_curso') {
+        // Estado agregado: agrupa lo que el tablero muestra como "En curso".
+        return d.estado === 'en_revision' || d.estado === 'en_obra';
+      }
+      return d.estado === filtros.estadoIncidencia;
+    }
+
+    /* ─── Conteos para la franja de KPIs (ámbito sin filtro de estado) ─── */
+    const denunciasEnAmbito = computed(() => (denuncias.value || []).filter(pasaFiltrosBase));
+    const total = computed(() => denunciasEnAmbito.value.length);
+    const pendientes = computed(() => denunciasEnAmbito.value.filter((d) => d.estado === 'pendiente').length);
+    const enCurso = computed(() => denunciasEnAmbito.value.filter((d) => d.estado === 'en_revision' || d.estado === 'en_obra').length + interventions.value.length);
+    const resueltas = computed(() => denunciasEnAmbito.value.filter((d) => d.estado === 'resuelta').length);
 
     // Propiedades computadas para el modal de detalle
     const modalTitulo = computed(() => {
@@ -199,8 +263,8 @@ export default {
     /* ─── Construcción de categorías desde el store (con filtros aplicados) ─── */
     function construirCategorias() {
       return (tiposDenuncia.value || []).map((t) => {
-        let puntos = (denuncias.value || [])
-          .filter((d) => d.tipo_id === t.id)
+        const puntos = (denuncias.value || [])
+          .filter((d) => d.tipo_id === t.id && pasaFiltrosBase(d) && pasaFiltroEstado(d))
           .map((d) => ({
             id: d.id, lat: d.lat, lng: d.lng,
             title: d.descripcion || nombreDeTipo(d.tipo_id),
@@ -209,30 +273,6 @@ export default {
             distrito: d.distrito || '', centroPoblacional: d.centro_poblacional || '',
             createdAt: d.created_at,
           }));
-
-        // Aplicar filtros activos
-        if (filtros.tipoIncidencia && filtros.tipoIncidencia !== t.id) {
-          puntos = []; // Este tipo de incidencia está excluido
-        }
-        if (filtros.distrito) {
-          puntos = puntos.filter(p => p.distrito === filtros.distrito);
-        }
-        if (filtros.centroPoblacional) {
-          puntos = puntos.filter(p => p.centroPoblacional === filtros.centroPoblacional);
-        }
-        if (filtros.estadoIncidencia) {
-          puntos = puntos.filter(p => p.estado === filtros.estadoIncidencia);
-        }
-        if (filtros.historicoActivo) {
-          if (filtros.fechaInicio) {
-            const desde = new Date(filtros.fechaInicio + 'T00:00:00');
-            puntos = puntos.filter(p => p.createdAt && new Date(p.createdAt) >= desde);
-          }
-          if (filtros.fechaFin) {
-            const hasta = new Date(filtros.fechaFin + 'T23:59:59');
-            puntos = puntos.filter(p => p.createdAt && new Date(p.createdAt) <= hasta);
-          }
-        }
 
         if (visibilidad[t.id] === undefined) visibilidad[t.id] = true;
         
@@ -290,10 +330,19 @@ export default {
       feedItems.value = todos.sort(() => Math.random() - 0.5);
     }
     /* ─── Filtros: computed y helpers ─────────────────────────────────────────── */
-    const filtrosActivos = computed(() => {
-      return filtros.distrito || filtros.centroPoblacional || filtros.tipoIncidencia
-        || filtros.estadoIncidencia || filtros.historicoActivo;
-    });
+    const conteoFiltros = computed(() => [
+      filtros.distrito, filtros.centroPoblacional, filtros.tipoIncidencia,
+      filtros.estadoIncidencia, filtros.historicoActivo,
+    ].filter(Boolean).length);
+
+    const filtrosActivos = computed(() => conteoFiltros.value > 0);
+
+    // Atajo desde la franja de KPIs: pulsar un segmento filtra el mapa por ese
+    // estado; pulsarlo de nuevo (o pulsar "Denuncias") vuelve al total.
+    function filtrarPorEstado(estado) {
+      filtros.estadoIncidencia = filtros.estadoIncidencia === estado ? '' : estado;
+      aplicarFiltros();
+    }
 
     function aplicarFiltros() {
       categories.value = construirCategorias();
@@ -627,6 +676,16 @@ export default {
       medicionTerminada.value = false;
     }
 
+    // Cambia entre medición en línea recta y ruta vial reiniciando la captura.
+    function cambiarModoMedicion(modo) {
+      if (medicionModo.value === modo) return;
+      medicionModo.value = modo;
+      if (herramientasActivas.medicion) {
+        detenerMedicion();
+        iniciarMedicion();
+      }
+    }
+
     /* ─── Herramienta de Polígonos ─── */
     let _poligonosLayer = null;
     let _poligonoDrawnLayer = null; // Capa de los poligonos ya guardados
@@ -791,6 +850,14 @@ export default {
       }
     }
 
+    // Retira el marcador de ubicación siempre por la misma referencia cruda con
+    // la que se añadió, para que Leaflet pueda des-registrar sus listeners.
+    function quitarMarcadorUbicacion() {
+      if (!marcadorUbicacion) return;
+      if (lmap) lmap.removeLayer(marcadorUbicacion);
+      marcadorUbicacion = null;
+    }
+
     function obtenerUbicacion() {
       if (!navigator.geolocation) {
         alert('Tu navegador no soporta geolocalización');
@@ -799,10 +866,7 @@ export default {
 
       if (ubicacionActiva.value) {
         // Desactivar ubicación
-        if (marcadorUbicacion.value) {
-          lmap.removeLayer(marcadorUbicacion.value);
-          marcadorUbicacion.value = null;
-        }
+        quitarMarcadorUbicacion();
         ubicacionActiva.value = false;
         return;
       }
@@ -812,13 +876,13 @@ export default {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           ubicacionCargando.value = false;
+          // La geolocalización es asíncrona: la vista pudo desmontarse mientras
+          // el usuario aceptaba el permiso del navegador.
+          if (!lmap) return;
           const { latitude, longitude } = position.coords;
-          
-          // Remover marcador anterior si existe
-          if (marcadorUbicacion.value) {
-            lmap.removeLayer(marcadorUbicacion.value);
-          }
-          
+
+          quitarMarcadorUbicacion();
+
           // Crear marcador de ubicación
           const iconoUbicacion = L.divIcon({
             className: 'ubicacion-icon',
@@ -827,10 +891,11 @@ export default {
             iconAnchor: [10, 10]
           });
           
-          marcadorUbicacion.value = L.marker([latitude, longitude], { icon: iconoUbicacion })
+          marcadorUbicacion = L.marker([latitude, longitude], { icon: iconoUbicacion })
             .addTo(lmap)
             .bindPopup('Tu ubicación actual');
-          
+
+
           // Centrar mapa en ubicación
           lmap.setView([latitude, longitude], 16);
           ubicacionActiva.value = true;
@@ -873,8 +938,10 @@ export default {
     }
 
     function pintarRutas() {
+      // Los tramos llegan de forma asíncrona: hay que poder repintar la capa.
+      if (routesLayer && lmap) lmap.removeLayer(routesLayer);
       routesLayer = L.layerGroup();
-      routes.forEach((r) => {
+      routes.value.forEach((r) => {
         L.polyline(r.coords, { color: r.color, weight: 9, opacity: 0.12, lineCap: 'round', lineJoin: 'round' }).addTo(routesLayer);
         const polyline = L.polyline(r.coords, { color: r.color, weight: 3, opacity: 0.85, dashArray: '8,6', lineCap: 'round', lineJoin: 'round' }).addTo(routesLayer);
         polyline.on('click', () => abrirDetalle({ tipo: 'tramo', r }));
@@ -889,8 +956,9 @@ export default {
     }
 
     function pintarIntervenciones() {
+      if (intervLayer && lmap) lmap.removeLayer(intervLayer);
       intervLayer = L.layerGroup();
-      interventions.forEach((iv) => {
+      interventions.value.forEach((iv) => {
         const mk = L.marker([iv.lat, iv.lng], { icon: marcadorIntervencion() });
         mk.on('click', () => abrirDetalle({ tipo: 'intervencion', iv }));
         intervLayer.addLayer(mk);
@@ -991,9 +1059,9 @@ export default {
       selectedCat.value = id;
       const c = categories.value.find((x) => x.id === id);
       if (!c || !c.points.length) return;
-      lmap.fitBounds(L.latLngBounds(c.points.map((p) => [p.lat, p.lng])), { padding: [60, 320], maxZoom: 17 });
+      lmap.fitBounds(L.latLngBounds(c.points.map((p) => [p.lat, p.lng])), { padding: [48, 48], maxZoom: 17 });
     }
-    function zoomRoute(r) { lmap.fitBounds(L.latLngBounds(r.coords), { padding: [60, 320], maxZoom: 17 }); }
+    function zoomRoute(r) { lmap.fitBounds(L.latLngBounds(r.coords), { padding: [48, 48], maxZoom: 17 }); }
     function zoomInterv(iv) { lmap.flyTo([iv.lat, iv.lng], 17, { duration: 0.7 }); }
     function flyToFeed(item) { lmap.flyTo([item.lat, item.lng], 17, { duration: 0.7 }); }
     function doZoomIn() { lmap.zoomIn(); }
@@ -1002,9 +1070,9 @@ export default {
     function fitAll() {
       const pts = [];
       categories.value.forEach((c) => c.points.forEach((p) => pts.push([p.lat, p.lng])));
-      interventions.forEach((i) => pts.push([i.lat, i.lng]));
-      routes.forEach((r) => r.coords.forEach((c) => pts.push(c)));
-      if (pts.length) lmap.fitBounds(L.latLngBounds(pts), { padding: [60, 320] });
+      interventions.value.forEach((i) => pts.push([i.lat, i.lng]));
+      routes.value.forEach((r) => r.coords.forEach((c) => pts.push(c)));
+      if (pts.length) lmap.fitBounds(L.latLngBounds(pts), { padding: [48, 48] });
     }
 
     /* ─── Reloj ─── */
@@ -1029,14 +1097,18 @@ export default {
       mostrarPanelFiltros.value = false;
     };
 
-    /* ─── Auto-cierre de paneles al iniciar (2s) ─── */
-    let _panelTimeout = null;
-    const triggerAutoClose = () => {
-      _panelTimeout = setTimeout(() => {
-        feedOpen.value = false;
-        rpanelOpen.value = false;
-      }, 2000);
-    };
+    /* ─── Reflow de Leaflet al plegar/desplegar paneles ───────────────────
+       Con el layout en grid los paneles son columnas reales: al abrirlos o
+       cerrarlos cambia el ancho del escenario y Leaflet debe recalcular su
+       viewport, o el mapa queda con tiles en gris. La transición de ancho
+       dura 300ms (ver .mv-panel en mapa.css), así que revalidamos al final. */
+    let _reflowTimeout = null;
+    watch([feedOpen, rpanelOpen], () => {
+      clearTimeout(_reflowTimeout);
+      _reflowTimeout = setTimeout(() => {
+        if (lmap) lmap.invalidateSize({ animate: false });
+      }, 320);
+    });
 
     /* ─── Sincronizar estilo de mapa con Dark Mode ─── */
     watch(isDarkMode, (isDark) => {
@@ -1045,9 +1117,16 @@ export default {
     }, { immediate: true });
 
     /* ─── Ciclo de vida ─── */
+    /* ─── Repintar las capas cuando llegan del backend ───────────────────
+       cargarCapasMapa() es asíncrona y el mapa puede montarse antes. */
+    watch(routes, () => { if (lmap) pintarRutas(); });
+    watch(interventions, () => { if (lmap) pintarIntervenciones(); });
+
     onMounted(() => {
+      cargarCapasMapa();
       mapaFullscreen.value = false; // el mapa arranca normal (con sidebar)
-      triggerAutoClose(); // Iniciar cuenta regresiva al montar
+      // Los paneles arrancan abiertos: al estar acoplados al grid no tapan el
+      // mapa, así que el operador ve feed y capas desde el primer segundo.
       tick();
       clockInt = setInterval(tick, 1000);
       nextTick(() => { initMap(); if (lmap) lmap.invalidateSize(); });
@@ -1057,7 +1136,9 @@ export default {
     onUnmounted(() => {
       clearInterval(clockInt);
       if (initTimeoutId) clearTimeout(initTimeoutId);
+      clearTimeout(_reflowTimeout);
       mapaFullscreen.value = false;
+      marcadorUbicacion = null;
       if (lmap) { lmap.remove(); lmap = null; }
       window.removeEventListener('resize', _kpiResizeHandler);
     });
@@ -1069,7 +1150,7 @@ export default {
       modalTitulo, modalSubtitulo, modalLatitud, modalLongitud,
       mapaFullscreen, toggleMapaFullscreen,
       mostrarMenuCapas, seccionesCapas, herramientasActivas, toggleHerramienta, medicionModo,
-      medicionTerminada, medicionPuntosCount, deshacerPuntoMedicion, limpiarMedicion,
+      medicionTerminada, medicionPuntosCount, deshacerPuntoMedicion, limpiarMedicion, cambiarModoMedicion,
       mostrarModalPoligono, formPoligono, guardarPoligono, cerrarModalPoligono,
       hasNewFeed, pillFlash, toasts, feedItems, categories, visibilidad,
       routes, interventions, routesVis, intervVis,
@@ -1080,7 +1161,8 @@ export default {
       doZoomIn, doZoomOut, resetView, fitAll,
       dismissToast,
       // Filtros
-      mostrarPanelFiltros, filtros, filtrosActivos, DISTRITOS, hoy,
+      mostrarPanelFiltros, filtros, filtrosActivos, conteoFiltros, filtrarPorEstado,
+      ESTADOS_FILTRO, DISTRITOS, hoy,
       aplicarFiltros, limpiarFiltros, tiposDenuncia,
       sidebarColapsado,
       acordeonTipos, acordeonTramos, acordeonIntervenciones

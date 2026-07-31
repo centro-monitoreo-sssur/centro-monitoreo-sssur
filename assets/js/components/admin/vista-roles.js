@@ -14,21 +14,41 @@ export default {
     const rolSeleccionado = ref(null);
     const cargando = ref(false);
 
+    // Espejo de public.permisos_modulos (database/migration_v11). El `id` es el
+    // `codigo_modulo`, que es lo que evalúan las policies de la base — ojo: el
+    // módulo de denuncias se llama 'casos' en la BD aunque se muestre como
+    // "Gestión de Denuncias".
     const MODULOS_DEFAULT = [
       { id: 'dashboard', label: 'Dashboard y Métricas' },
       { id: 'mapa', label: 'Mapa en Vivo y Cartograma' },
-      { id: 'denuncias', label: 'Gestión de Denuncias' },
+      { id: 'casos', label: 'Gestión de Denuncias' },
       { id: 'intervenciones', label: 'Intervenciones en Campo' },
       { id: 'reportes', label: 'Generación de Reportes' },
+      { id: 'cuadrillas', label: 'Cuadrillas de Campo' },
+      { id: 'poblacion', label: 'Ciudadanos Registrados' },
+      { id: 'usuarios', label: 'Usuarios y Roles' },
       { id: 'config', label: 'Configuración del Sistema' }
     ];
 
+    // Espejo de public.roles (database/migration_v13). Solo se usa si la BD no
+    // responde; los ids reales los asigna Postgres.
     const ROLES_DEFAULT = [
       { id: 1, codigo: 'superadmin', nombre: 'Superadministrador', descripcion: 'Acceso total al sistema', color: 'text-purple-600', bg: 'bg-purple-100', usuarios: 0 },
       { id: 2, codigo: 'admin', nombre: 'Administrador', descripcion: 'Gestión operativa del sistema', color: 'text-blue-600', bg: 'bg-blue-100', usuarios: 0 },
-      { id: 3, codigo: 'operador', nombre: 'Operador de Campo', descripcion: 'Gestión de denuncias e intervenciones', color: 'text-emerald-600', bg: 'bg-emerald-100', usuarios: 0 },
-      { id: 4, codigo: 'lector', nombre: 'Lector', descripcion: 'Solo lectura de reportes', color: 'text-gray-600', bg: 'bg-gray-100', usuarios: 0 },
+      { id: 3, codigo: 'alcalde', nombre: 'Alcalde', descripcion: 'Consulta total del municipio', color: 'text-amber-600', bg: 'bg-amber-100', usuarios: 0 },
+      { id: 4, codigo: 'directivo', nombre: 'Director / Gerente', descripcion: 'Consulta y exportación de la operación', color: 'text-indigo-600', bg: 'bg-indigo-100', usuarios: 0 },
+      { id: 5, codigo: 'jefe_area', nombre: 'Jefatura de Área', descripcion: 'Gestiona casos e intervenciones de su área', color: 'text-blue-600', bg: 'bg-blue-100', usuarios: 0 },
+      { id: 6, codigo: 'empleado', nombre: 'Personal de Campo', descripcion: 'Ejecuta y actualiza el trabajo asignado', color: 'text-emerald-600', bg: 'bg-emerald-100', usuarios: 0 },
     ];
+
+    // La matriz visual habla de leer / escribir / borrar; roles_permisos guarda
+    // bits CRUD explícitos. Este es el puente entre ambos vocabularios.
+    const COLUMNAS_POR_ACCION = {
+      leer:     ['ver'],
+      escribir: ['crear', 'editar'],
+      borrar:   ['borrar'],
+      exportar: ['exportar'],
+    };
 
     async function cargarData() {
       cargando.value = true;
@@ -49,8 +69,10 @@ export default {
           usuarios: 0
         }));
 
+        // `dbId` conserva el id numérico porque roles_permisos referencia
+        // permisos_modulos por id, no por código.
         modulos.value = resModulos.data?.length
-          ? resModulos.data.map(m => ({ id: m.codigo_modulo, label: m.nombre }))
+          ? resModulos.data.map(m => ({ id: m.codigo_modulo, dbId: m.id, label: m.nombre_modulo }))
           : MODULOS_DEFAULT;
 
         rolesPermisos.value = resPermisos.data || [];
@@ -69,25 +91,41 @@ export default {
     }
 
     function tienePermiso(rolId, moduloId, accion) {
+      const columnas = COLUMNAS_POR_ACCION[accion] || [];
+      if (!columnas.length) return false;
+
+      // Sin datos de la BD: aproximación por código de rol, solo para que la
+      // pantalla no se vea vacía en modo demo.
       if (!rolesPermisos.value.length) {
-        const rol = roles.value.find(r => r.id === rolId);
-        if (!rol) return false;
-        const cod = rol.codigo;
+        const cod = roles.value.find(r => r.id === rolId)?.codigo;
+        if (!cod) return false;
         if (cod === 'superadmin') return true;
-        if (cod === 'lector' && accion !== 'leer') return false;
-        if (cod === 'lector' && accion === 'leer' && moduloId !== 'config') return true;
         if (cod === 'admin') return moduloId === 'config' ? accion === 'leer' : true;
-        if (cod === 'operador') {
-          if (moduloId === 'config' || moduloId === 'reportes') return false;
-          if (accion === 'borrar') return false;
-          return true;
+        if (cod === 'alcalde')   return accion === 'leer' || (accion === 'exportar' && moduloId !== 'poblacion');
+        if (cod === 'directivo') return (accion === 'leer' || accion === 'exportar')
+          && !['poblacion', 'usuarios', 'config'].includes(moduloId);
+        if (cod === 'jefe_area') {
+          if (['poblacion', 'usuarios', 'config'].includes(moduloId)) return false;
+          return accion !== 'borrar';
+        }
+        if (cod === 'empleado') {
+          return ['dashboard', 'mapa', 'casos', 'intervenciones', 'cuadrillas'].includes(moduloId)
+            && accion !== 'borrar' && accion !== 'exportar';
         }
         return false;
       }
-      // Con datos reales de roles_permisos
-      const permiso = rolesPermisos.value.find(p => p.rol_id === rolId && p.modulo_id === moduloId);
+
+      // Con datos reales: roles_permisos.permiso_modulo_id apunta al id
+      // numérico de permisos_modulos, no al código del módulo.
+      const dbId = modulos.value.find(m => m.id === moduloId)?.dbId;
+      if (!dbId) return false;
+
+      const permiso = rolesPermisos.value.find(
+        (p) => p.rol_id === rolId && p.permiso_modulo_id === dbId
+      );
       if (!permiso) return false;
-      return !!permiso[accion];
+
+      return columnas.some((col) => !!permiso[col]);
     }
 
     // onMounted en contexto síncrono de setup() — patrón correcto

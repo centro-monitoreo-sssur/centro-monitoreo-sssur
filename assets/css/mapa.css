@@ -1,9 +1,25 @@
 /* ============================================================
    VISTA MAPA EN VIVO — estilos de la consola de monitoreo.
    Paleta municipal (ver .kilocode/rules/04-sistema-diseno.md): superficie
-   clara, tarjetas blancas, acento institucional (--brand / --gold). Los
-   paneles flotan sobre el mapa CartoDB light_all, dentro de .mapa-vista.
-   Solo quedan aquí keyframes y controles que Tailwind no cubre bien.
+   clara, tarjetas blancas, acento institucional (--brand / --gold).
+
+   ARQUITECTURA DE LAYOUT (rediseño v2):
+   `.mapa-vista` es la base compartida (paleta + caja) y la usan tanto la
+   consola de monitoreo como el cartograma, así que conserva
+   `position: relative` para los hijos absolutos del cartograma.
+
+   El modificador `.mapa-vista--consola` (solo vista-mapa) convierte la caja
+   en un CSS Grid de 3 columnas + fila de footer. Ahí los paneles laterales
+   son COLUMNAS REALES, no overlays absolutos: el mapa se encoge en lugar de
+   quedar tapado y ningún panel puede caer debajo del sidebar de la app. Solo
+   lo verdaderamente flotante (dock, KPIs, leyenda, toasts, popovers) se
+   posiciona `absolute`, y siempre dentro de `.mv-stage`.
+
+     ┌───────────┬───────────────────┬────────────┐
+     │  feed     │      stage        │   capas    │
+     ├───────────┴───────────────────┴────────────┤
+     │                 footer                     │
+     └────────────────────────────────────────────┘
    ============================================================ */
 .mapa-vista {
   --mv-brand: #001ba0;
@@ -16,14 +32,28 @@
   --mv-text-sec: #6b7280;
   --mv-font: "Inter", system-ui, sans-serif;
   --mv-mono: "JetBrains Mono", monospace;
+  /* Anchos de las columnas laterales (una sola fuente de verdad) */
+  --mv-feed-w: 316px;
+  --mv-capas-w: 328px;
+  --mv-dock-w: 48px;
   height: 100%;
   min-height: 0;
   overflow: hidden;
   background: var(--mv-surface2);
-  position: relative;
+  position: relative; /* lo usa el cartograma para sus hijos absolutos */
   color: var(--mv-text);
   font-family: var(--mv-font);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+/* Solo la consola de monitoreo (vista-mapa) adopta el grid de 3 columnas. */
+.mapa-vista--consola {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "feed stage capas"
+    "footer footer footer";
 }
 
 /* Overrides de variables en dark mode */
@@ -34,6 +64,15 @@
   --mv-border-hi: #4b5563;
   --mv-text: #f9fafb;
   --mv-text-sec: #9ca3af;
+}
+
+/* ── Escenario central: único ancestro posicionado del área de mapa ── */
+.mv-stage {
+  grid-area: stage;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 .mv-map {
   position: absolute;
@@ -141,13 +180,105 @@
   background: var(--mv-border);
 }
 
-/* ── Tabs para abrir/cerrar paneles ── */
+/* ══════════════════════════════════════════════════════════════════
+   PANELES LATERALES — columnas del grid, no overlays.
+   El colapso se anima con `width` y el contenido interno conserva su
+   ancho fijo (`.mv-panel__inner`) para que no reflowee al plegarse.
+   ══════════════════════════════════════════════════════════════════ */
+.mv-panel {
+  display: flex;
+  overflow: hidden;
+  background: var(--mv-surface);
+  min-height: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: width;
+}
+.mv-panel--feed {
+  grid-area: feed;
+  width: var(--mv-feed-w);
+  border-right: 1px solid var(--mv-border);
+}
+.mv-panel--capas {
+  grid-area: capas;
+  width: var(--mv-capas-w);
+  border-left: 1px solid var(--mv-border);
+}
+.mv-panel.is-closed {
+  width: 0;
+  border-width: 0;
+}
+.mv-panel__inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 0 auto;
+}
+.mv-panel--feed .mv-panel__inner { width: var(--mv-feed-w); }
+.mv-panel--capas .mv-panel__inner { width: var(--mv-capas-w); }
+
+/* Cabecera de panel — franja institucional compacta */
+.mv-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--mv-border);
+  background: var(--mv-surface2);
+  flex-shrink: 0;
+}
+.mv-panel__title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mv-text-sec);
+  white-space: nowrap;
+}
+.mv-panel__count {
+  font-family: var(--mv-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: var(--mv-surface);
+  border: 1px solid var(--mv-border);
+  color: var(--mv-text-sec);
+}
+.mv-panel__close {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: var(--mv-text-sec);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.mv-panel__close:hover {
+  background: var(--mv-border);
+  color: var(--mv-text);
+}
+.mv-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Pestañas de borde para reabrir un panel plegado ──
+   Viven DENTRO de `.mv-stage`, pegadas a su borde. Al estar el panel
+   acoplado, la pestaña no necesita desplazarse: siempre marca el límite
+   del escenario. */
 .mv-ptab {
   position: absolute;
   z-index: 41;
   top: 50%;
-  width: 18px;
-  height: 52px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -156,40 +287,192 @@
   border: 1px solid var(--mv-border);
   color: var(--mv-text-sec);
   font-size: 9px;
-  transition: transform 0.3s ease-in-out, color 0.15s, border-color 0.15s, background 0.15s;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.10);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .mv-ptab:hover {
-  color: var(--mv-text);
+  color: var(--mv-brand);
   border-color: var(--mv-border-hi);
-  background: var(--mv-surface-hi, #f3f4f6);
+  background: var(--mv-surface2);
 }
-/* Izquierda: ancla en el borde derecho del panel (300px) */
+.dark .mv-ptab:hover { color: #93c5fd; }
 .mv-ptab.l {
-  left: 300px;
-  transform: translateY(-50%);
+  left: 0;
   border-left: none;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 7px 7px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
 }
-/* Cuando el panel izq. está cerrado, la pestaña se desliza junto con él */
-.mv-ptab.l.panel-closed {
-  transform: translateY(-50%) translateX(-300px);
-}
-/* Derecha: ancla en el borde izquierdo del panel (312px desde la derecha) */
 .mv-ptab.r {
-  right: 312px;
-  transform: translateY(-50%);
+  right: 0;
   border-right: none;
-  border-radius: 6px 0 0 6px;
-  box-shadow: -2px 0 8px rgba(0,0,0,0.10);
+  border-radius: 7px 0 0 7px;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
 }
-/* Cuando el panel der. está cerrado, la pestaña se desliza junto con él */
-.mv-ptab.r.panel-closed {
-  transform: translateY(-50%) translateX(312px);
+
+/* ══════════════════════════════════════════════════════════════════
+   DOCK UNIFICADO DE CONTROLES — una sola tarjeta vertical, agrupada
+   por función con separadores. Patrón Google Maps / ArcGIS.
+   ══════════════════════════════════════════════════════════════════ */
+.mv-dock {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 45;
+  width: var(--mv-dock-w);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--mv-surface);
+  background: color-mix(in srgb, var(--mv-surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--mv-border);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
 }
-.mv-ptab.hidden-tab {
-  opacity: 0;
-  pointer-events: none;
+.mv-dock__sep {
+  height: 1px;
+  margin: 3px 7px;
+  background: var(--mv-border);
+  flex-shrink: 0;
+}
+.mv-dock__btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--mv-text-sec);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.mv-dock__btn:hover {
+  background: var(--mv-surface2);
+  color: var(--mv-text);
+}
+.mv-dock__btn:focus-visible {
+  outline: 2px solid var(--mv-brand);
+  outline-offset: -2px;
+}
+.mv-dock__btn.is-active {
+  background: rgba(0, 27, 160, 0.1);
+  color: var(--mv-brand);
+}
+.dark .mv-dock__btn.is-active {
+  background: rgba(96, 165, 250, 0.16);
+  color: #93c5fd;
+}
+.mv-dock__badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 9999px;
+  background: var(--mv-brand);
+  color: #fff;
+  font-family: var(--mv-mono);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 15px;
+  text-align: center;
+}
+.dark .mv-dock__badge { background: #3b82f6; }
+
+/* Popovers anclados a la izquierda del dock */
+.mv-pop {
+  position: absolute;
+  top: 12px;
+  right: calc(var(--mv-dock-w) + 20px);
+  z-index: 46;
+  border-radius: 16px;
+  background: var(--mv-surface);
+  border: 1px solid var(--mv-border);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100% - 24px);
+}
+.mv-pop--capas { width: min(340px, calc(100% - var(--mv-dock-w) - 32px)); }
+.mv-pop--filtros { width: min(324px, calc(100% - var(--mv-dock-w) - 32px)); }
+
+/* ══════════════════════════════════════════════════════════════════
+   FRANJA DE KPIs — tarjeta única segmentada, clicable para filtrar
+   por estado. Pensada para lectura ejecutiva de un vistazo.
+   ══════════════════════════════════════════════════════════════════ */
+.mv-kpis {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: stretch;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--mv-surface);
+  background: color-mix(in srgb, var(--mv-surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--mv-border);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  max-width: calc(100% - 2 * (var(--mv-dock-w) + 24px));
+}
+.mv-kpi {
+  --mv-kpi-color: var(--mv-text);
+  min-width: 84px;
+  padding: 5px 14px 6px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+.mv-kpi:hover { background: var(--mv-surface2); }
+.mv-kpi.is-active {
+  background: var(--mv-surface2);
+  background: color-mix(in srgb, var(--mv-kpi-color) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mv-kpi-color) 35%, transparent);
+}
+.mv-kpi__val {
+  display: block;
+  font-family: var(--mv-mono);
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--mv-kpi-color);
+  font-variant-numeric: tabular-nums;
+}
+.mv-kpi__lbl {
+  display: block;
+  margin-top: 1px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--mv-text-sec);
+  white-space: nowrap;
+}
+.mv-kpi--total     { --mv-kpi-color: var(--mv-text); }
+.mv-kpi--pend      { --mv-kpi-color: #dc2626; }
+.mv-kpi--curso     { --mv-kpi-color: #d97706; }
+.mv-kpi--resuelta  { --mv-kpi-color: #059669; }
+.dark .mv-kpi--pend     { --mv-kpi-color: #f87171; }
+.dark .mv-kpi--curso    { --mv-kpi-color: #fbbf24; }
+.dark .mv-kpi--resuelta { --mv-kpi-color: #34d399; }
+.mv-kpi__sep {
+  width: 1px;
+  margin: 7px 0;
+  background: var(--mv-border);
+  flex-shrink: 0;
 }
 
 /* ── Switch de capa (toggle) ── */
@@ -232,9 +515,10 @@
 }
 
 /* ── Toasts ── */
+/* Vive dentro de `.mv-stage`; el footer ya no lo pisa porque es otra fila del grid. */
 .mv-toast-wrap {
   position: absolute;
-  bottom: 56px;
+  bottom: 1rem;
   left: 1rem;
   z-index: 200;
   display: flex;
@@ -315,12 +599,14 @@
   }
 }
 
-/* ── Transiciones de paneles ── */
-/* ── Pantalla completa: el mapa cubre todo el viewport (oculta shell) ── */
+/* ── Pantalla completa: el mapa cubre todo el viewport ──
+   El <aside> del shell de la app es z-[9999] (ver app-sidebar.html), así que
+   el modo pantalla completa debe superarlo o el sidebar seguiría dibujándose
+   encima del mapa. */
 .mapa-vista.is-fullscreen {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 10000;
   border-radius: 0;
   border: none;
   box-shadow: none;
@@ -328,10 +614,20 @@
   min-height: 0;
 }
 
-.mv-panel {
-  transition:
-    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s;
+/* ── Barra inferior de controles ── */
+.mv-footer {
+  grid-area: footer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px;
+  border-top: 1px solid var(--mv-border);
+  background: var(--mv-surface);
+  z-index: 2;
+}
+@media (min-width: 1024px) {
+  .mv-footer { padding: 0 16px; }
 }
 
 /* ── Estilos de Clústeres (Institucionales) ── */
@@ -446,16 +742,55 @@
 .carto-poly { cursor: pointer; }
 
 /* ════════════════════════════════════════════════════════════════
-   RESPONSIVIDAD — evitar solapamiento de botones flotantes y paneles
-   en pantallas pequeñas. Por debajo de 768px los paneles laterales
-/* ==========================================================================
-   RESPONSIVE Y MÓVILES (Tailwind maneja el layout principal)
-   ========================================================================== */
+   RESPONSIVIDAD
+   Por debajo de `lg` (1024px) no hay ancho para columnas acopladas:
+   el grid colapsa a una sola columna (solo el escenario del mapa) y el
+   contenido de Feed/Capas se sirve desde el bottom sheet del template.
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 1023.98px) {
+  .mapa-vista--consola {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "stage"
+      "footer";
+  }
+  .mv-panel,
+  .mv-ptab { display: none; }
+
+  /* El dock se compacta para no comerse el mapa en tablet/móvil */
+  .mapa-vista { --mv-dock-w: 42px; }
+  .mv-dock__btn { width: 34px; height: 34px; font-size: 14px; }
+  .mv-dock { top: 10px; right: 10px; border-radius: 12px; }
+
+  /* La franja de KPIs baja bajo el dock y puede envolverse */
+  .mv-kpis {
+    top: auto;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    max-width: none;
+    justify-content: space-between;
+  }
+  .mv-kpi { min-width: 0; flex: 1; padding: 5px 6px 6px; }
+  .mv-kpi__val { font-size: 16px; }
+  .mv-kpi__lbl { font-size: 8px; letter-spacing: 0.04em; }
+}
+
 @media (max-width: 768px) {
   /* Toasts responsivos */
   .mv-toast { width: calc(100vw - 2rem) !important; max-width: 340px; }
   .mv-toast-wrap { left: 1rem; right: 1rem; max-width: none; }
-  
+
   /* Footer de controles: permitir scroll horizontal si no cabe */
   .mv-footer { overflow-x: auto; }
+
+  /* Popovers a pantalla casi completa para que sean usables con el pulgar */
+  .mv-pop {
+    left: 10px;
+    right: 10px;
+    top: 56px;
+    width: auto !important;
+    max-height: calc(100% - 120px);
+  }
 }
