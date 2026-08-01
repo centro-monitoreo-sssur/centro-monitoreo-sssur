@@ -10,6 +10,7 @@ import { useIntervenciones } from '../../stores/intervenciones.js';
 import { useDashboard } from '../../stores/dashboard.js';
 import { usePwa } from '../../stores/pwa.js';
 import { usePermisos } from '../../stores/permisos.js';
+import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
@@ -50,42 +51,15 @@ export default {
     // admin, alcalde, directivo, jefe_area) opera el Centro de Monitoreo.
     const ROLES_DE_CAMPO = ['empleado'];
 
-    // ⚠ El contexto es una propiedad DE LA PESTAÑA, no del navegador.
+    // El contexto ya viene resuelto y persistido por `core/app-contexto.js`,
+    // que se evalúa antes que ningún store porque de él depende la clave donde
+    // Supabase guarda la sesión. Aquí solo se decide la VISTA; la partición de
+    // almacenamiento es cosa suya.
     //
-    // Vivía en `localStorage`, que se comparte entre todas las pestañas del
-    // mismo origen. Con una pestaña abierta en `?contexto=empleados` y otra en
-    // la URL base, la primera escribía 'empleados' y la segunda lo leía al
-    // iniciar sesión: el usuario del Centro de Monitoreo aterrizaba en la PWA
-    // de campo. Al recargar parecía corregirse solo porque el borrado y la
-    // decisión ocurrían en el mismo bloque síncrono, sin dar tiempo a que la
-    // otra pestaña repusiera la clave.
-    //
-    // `sessionStorage` es por pestaña, que es justo la semántica que se busca.
-    const CLAVE_CONTEXTO = 'contexto_acceso';
-
-    const leerContexto = () => {
-      // La URL manda siempre: es el dato que el usuario tiene delante.
-      if (typeof window !== 'undefined') {
-        const param = new URLSearchParams(window.location.search).get('contexto');
-        if (param) return param;
-      }
-      // Respaldo por pestaña, para navegaciones internas que pierden el query.
-      return sessionStorage.getItem(CLAVE_CONTEXTO);
-    };
-
-    // Restos de la versión que guardaba el contexto en localStorage. Si no se
-    // borran, la clave compartida sigue viva en el navegador de quien ya venía
-    // usando el sistema. Nada la lee ya, pero se limpia para no dejar basura.
-    const limpiarLegado = () => localStorage.removeItem(CLAVE_CONTEXTO);
-
-    const guardarContexto = (valor) => {
-      sessionStorage.setItem(CLAVE_CONTEXTO, valor);
-      limpiarLegado();
-    };
-    const olvidarContexto = () => {
-      sessionStorage.removeItem(CLAVE_CONTEXTO);
-      limpiarLegado();
-    };
+    // Restos de la versión que guardaba el contexto en localStorage —donde una
+    // pestaña le pisaba el contexto a la otra—. Nada lo lee ya, pero se limpia
+    // para no dejar basura en el navegador de quien venía usando el sistema.
+    localStorage.removeItem('contexto_acceso');
 
     // Única fuente de verdad para decidir a dónde va un usuario ya autenticado.
     // El rol se lee del store reactivo, NO de localStorage. Durante un login
@@ -94,9 +68,10 @@ export default {
     // después consulta public.usuarios para escribir el rol real. Leer
     // localStorage en ese punto decide con datos rancios.
     const resolverVistaDestino = () => {
-      const contexto = leerContexto();
-      if (contexto && VISTA_POR_CONTEXTO[contexto] && config.value.accesoContextos[contexto]) {
-        return VISTA_POR_CONTEXTO[contexto];
+      // `VISTA_POR_CONTEXTO['monitoreo']` es undefined a propósito: el Centro de
+      // Monitoreo no fuerza vista, la decide el rol unas líneas más abajo.
+      if (VISTA_POR_CONTEXTO[CONTEXTO] && config.value.accesoContextos[CONTEXTO]) {
+        return VISTA_POR_CONTEXTO[CONTEXTO];
       }
       const rol = rolUsuario.value;
       if (ROLES_DE_CAMPO.includes(rol) && config.value.accesoContextos.empleados) return 'pwa-empleado';
@@ -109,46 +84,34 @@ export default {
     // navegación que el usuario haya hecho por su cuenta mientras tanto.
     let destinoOptimista = null;
 
-    // Detectar parámetros URL para contexto de acceso (identifica origen, no autentica)
-    const detectarContextoURL = () => {
-      if (typeof window === 'undefined') return null;
+    // Aplica la vista inicial que impone el contexto (identifica origen, no
+    // autentica). Devuelve el contexto si tomó el control de la vista, o null
+    // si la decisión queda en manos del rol.
+    const aplicarContextoInicial = () => {
+      // El Centro de Monitoreo no tiene vista propia que forzar.
+      if (CONTEXTO === CONTEXTOS.MONITOREO) return null;
 
-      const contextoParam = new URLSearchParams(window.location.search).get('contexto');
+      // Kill switch por contexto (ver stores/configuracion.js). Un contexto
+      // apagado no abre su PWA: cae al shell administrativo y ahí deciden los
+      // permisos, que es la degradación segura.
+      if (!config.value.accesoContextos[CONTEXTO]) return null;
 
-      // Sin parámetro, la URL base significa Centro de Monitoreo. Se borra el
-      // contexto de ESTA pestaña; las demás conservan el suyo.
-      if (!contextoParam) {
-        olvidarContexto();
-        return null;
-      }
-
-      // Kill switch por contexto (ver stores/configuracion.js)
-      if (!config.value.accesoContextos[contextoParam]) {
-        olvidarContexto();
-        return null;
-      }
-
-      const contextoValido = obtenerContexto(contextoParam);
-      if (!contextoValido) {
-        olvidarContexto();
-        return null;
-      }
-
-      guardarContexto(contextoParam);
+      const definicion = obtenerContexto(CONTEXTO);
+      if (!definicion) return null;
 
       if (autenticado.value) {
-        vistaActual.value = VISTA_POR_CONTEXTO[contextoParam];
+        vistaActual.value = VISTA_POR_CONTEXTO[CONTEXTO];
       } else {
-        vistaActual.value = contextoValido.requiereRegistro ? 'registro-poblacion' : 'login';
+        vistaActual.value = definicion.requiereRegistro ? 'registro-poblacion' : 'login';
       }
-      return contextoParam;
+      return CONTEXTO;
     };
 
     // Redirigir a login al perder la sesión (salvo si ya está en login/registro)
     watch(autenticado, (nuevoValor) => {
       if (nuevoValor) return;
       if (vistaActual.value === 'login' || vistaActual.value === 'registro-poblacion') return;
-      vistaActual.value = leerContexto() === 'poblacion' ? 'registro-poblacion' : 'login';
+      vistaActual.value = CONTEXTO === CONTEXTOS.POBLACION ? 'registro-poblacion' : 'login';
     });
 
     // La entrada al sistema se decide aquí, y SOLO cuando el perfil ya resolvió
@@ -172,9 +135,8 @@ export default {
       // PWA Setup
       registrarSW();
 
-      // Detectar contexto de URL primero. Si no hay parámetro, esta llamada ya
-      // limpió el `contexto_acceso` guardado.
-      const contexto = detectarContextoURL();
+      // El contexto ya está resuelto; aquí solo se aplica la vista que impone.
+      const contexto = aplicarContextoInicial();
 
       if (autenticado.value) {
         // Pintado optimista: al recargar con sesión viva, `rolUsuario` ya viene

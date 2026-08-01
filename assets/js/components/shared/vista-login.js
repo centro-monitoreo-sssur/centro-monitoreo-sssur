@@ -5,6 +5,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { usePermisos } from '../../stores/permisos.js';
+import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
 
 export default {
   setup() {
@@ -13,15 +14,16 @@ export default {
     const { cargarDenuncias, suscribirRealtime } = useDenuncias();
     const { cargarAlcance } = usePermisos();
 
-    // Detectar contexto desde URL
-    const contexto = computed(() => {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('contexto') || 'admin';
-    });
+    // El contexto lo resuelve `core/app-contexto.js`, que es además quien
+    // decide la partición de almacenamiento. Antes se releía aquí de la URL por
+    // separado: dos lecturas independientes del mismo dato que podían discrepar,
+    // y de hecho discrepaban en el nombre del valor por defecto ('admin' aquí,
+    // 'monitoreo' allí). Deja de ser computed porque no cambia sin recargar.
+    const contexto = CONTEXTO;
 
     // Configuración dinámica según contexto
     const configLogin = computed(() => {
-      switch (contexto.value) {
+      switch (contexto) {
         case 'poblacion':
           return {
             tituloLogin: 'Portal de Denucias Ciudadanas',
@@ -158,7 +160,7 @@ export default {
         // de cada caso contra `catalogos.distritos`. Si los catálogos no están
         // cargados, los casos quedan sin distrito y el filtro territorial del
         // Mapa en Vivo no encuentra nada hasta recargar la página.
-        if (contexto.value === 'admin') {
+        if (contexto === CONTEXTOS.MONITOREO) {
           await cargarTipos();
           await cargarDepartamentos();
           await cargarDistritos();
@@ -180,9 +182,9 @@ export default {
     };
 
     const irARegistro = () => {
-      // Contexto por PESTAÑA: en localStorage se filtraba a las demás pestañas
-      // abiertas y desviaba su destino al iniciar sesión (ver app-root.js).
-      sessionStorage.setItem('contexto_acceso', 'poblacion');
+      // Navegación interna y no recarga: este botón SOLO se pinta en contexto
+      // población, así que ya se está en la partición correcta y forzar una
+      // recarga a `?contexto=poblacion` devolvería a este mismo login.
       irA('registro-poblacion');
     };
 

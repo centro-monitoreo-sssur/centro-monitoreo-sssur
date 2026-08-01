@@ -67,6 +67,11 @@ export function estadoInicialPaneles(configMapa = {}) {
   return {
     feedOpen: configMapa.panelFeedAbierto ?? true,
     rpanelOpen: configMapa.panelCapasAbierto ?? true,
+    // Auto-repliegue. `> 0` como guarda: un 0 o un valor no numérico guardado
+    // por error cerraría los paneles en el mismo frame en que se pintan, y
+    // parecería que nunca existieron.
+    autoOcultar: (configMapa.autoOcultarPaneles ?? true) && Number(configMapa.segundosAutoOcultar) !== 0,
+    msAutoOcultar: Math.max(500, (Number(configMapa.segundosAutoOcultar) || 2.5) * 1000),
     kpisOpen: configMapa.kpisVisiblesMovil ?? false,
     mobileTab: configMapa.tabMovilInicial || 'feed',
     acordeonTipos: configMapa.acordeonTipos ?? true,

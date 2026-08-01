@@ -460,17 +460,50 @@
     <!-- ══ Estado inicial del Mapa en Vivo ══
          Define con qué configuración ARRANCA la consola. Los cambios no
          reordenan el mapa de quien lo tenga abierto: se aplican al entrar. -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <button type="button" @click="toggleSeccion('mapa-paneles')"
+        :aria-expanded="seccionAbierta('mapa-paneles') ? 'true' : 'false'"
+        class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        :class="seccionAbierta('mapa-paneles') ? 'border-b border-gray-100 dark:border-gray-700' : ''">
+        <div class="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center shrink-0">
           <i class="fa-solid fa-table-columns text-sky-500 text-sm"></i>
         </div>
-        <div>
+        <div class="flex-1 min-w-0">
           <h2 class="text-sm font-bold text-gray-800 dark:text-white">Paneles al abrir</h2>
-          <p class="text-[11px] text-gray-500 dark:text-gray-400">Estado inicial de la consola de monitoreo</p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Estado inicial y auto-repliegue</p>
         </div>
-      </div>
-      <div class="p-5 space-y-2">
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform shrink-0"
+          :class="seccionAbierta('mapa-paneles') ? 'rotate-180' : ''"></i>
+      </button>
+      <div v-show="seccionAbierta('mapa-paneles')" class="p-5 space-y-2">
+
+        <!-- Auto-repliegue. Va primero porque es el ajuste que más cambia la
+             sensación de la consola al entrar. -->
+        <div class="p-4 rounded-xl bg-sky-50/60 dark:bg-sky-900/15 border border-sky-200 dark:border-sky-800 space-y-3">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" v-model="config.mapa.autoOcultarPaneles" class="w-4 h-4 mt-0.5 rounded accent-sky-600 shrink-0">
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-gray-800 dark:text-gray-200">Replegar los paneles automáticamente</p>
+              <p class="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                Se muestran al entrar y se cierran solos para devolverle el ancho al mapa.
+                Ocurre una sola vez: pasar el ratón por encima pausa la cuenta, y abrir o cerrar
+                un panel a mano la cancela.
+              </p>
+            </div>
+          </label>
+          <div :class="{'opacity-40 pointer-events-none': !config.mapa.autoOcultarPaneles}">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Esperar antes de replegar</label>
+              <span class="text-xs font-mono font-bold text-sky-700 dark:text-sky-400">{{ config.mapa.segundosAutoOcultar }} s</span>
+            </div>
+            <input type="range" min="0.5" max="15" step="0.5" v-model.number="config.mapa.segundosAutoOcultar"
+              class="w-full h-2 rounded-full appearance-none cursor-pointer accent-sky-500">
+            <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+              <span>0,5 s</span><span>2,5 s — recomendado</span><span>15 s</span>
+            </div>
+          </div>
+        </div>
+
         <label v-for="p in AJUSTES_PANELES" :key="p.clave"
           class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
           <input type="checkbox" v-model="config.mapa[p.clave]"
@@ -494,17 +527,22 @@
     </div>
 
     <!-- ══ Herramientas de visualización ══ -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <button type="button" @click="toggleSeccion('mapa-herramientas')"
+        :aria-expanded="seccionAbierta('mapa-herramientas') ? 'true' : 'false'"
+        class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        :class="seccionAbierta('mapa-herramientas') ? 'border-b border-gray-100 dark:border-gray-700' : ''">
+        <div class="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
           <i class="fa-solid fa-toolbox text-violet-500 text-sm"></i>
         </div>
-        <div>
+        <div class="flex-1 min-w-0">
           <h2 class="text-sm font-bold text-gray-800 dark:text-white">Herramientas activas al abrir</h2>
           <p class="text-[11px] text-gray-500 dark:text-gray-400">Solo las de visualización</p>
         </div>
-      </div>
-      <div class="p-5 space-y-2">
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform shrink-0"
+          :class="seccionAbierta('mapa-herramientas') ? 'rotate-180' : ''"></i>
+      </button>
+      <div v-show="seccionAbierta('mapa-herramientas')" class="p-5 space-y-2">
         <label v-for="h in AJUSTES_HERRAMIENTAS" :key="h.clave"
           class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
           <input type="checkbox" v-model="config.mapa[h.clave]" class="w-4 h-4 rounded accent-blue-600 shrink-0">
@@ -538,17 +576,22 @@
     </div>
 
     <!-- ══ Filtros y comparativo territorial ══ -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <button type="button" @click="toggleSeccion('mapa-filtros')"
+        :aria-expanded="seccionAbierta('mapa-filtros') ? 'true' : 'false'"
+        class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        :class="seccionAbierta('mapa-filtros') ? 'border-b border-gray-100 dark:border-gray-700' : ''">
+        <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
           <i class="fa-solid fa-filter text-amber-500 text-sm"></i>
         </div>
-        <div>
+        <div class="flex-1 min-w-0">
           <h2 class="text-sm font-bold text-gray-800 dark:text-white">Filtros y comparativo</h2>
           <p class="text-[11px] text-gray-500 dark:text-gray-400">Con qué recorte de datos arranca la vista</p>
         </div>
-      </div>
-      <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform shrink-0"
+          :class="seccionAbierta('mapa-filtros') ? 'rotate-180' : ''"></i>
+      </button>
+      <div v-show="seccionAbierta('mapa-filtros')" class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Estado inicial</label>
           <select v-model="config.mapa.estadoInicial"
@@ -583,17 +626,22 @@
     </div>
 
     <!-- ══ Comportamiento en tiempo real ══ -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <button type="button" @click="toggleSeccion('mapa-entrantes')"
+        :aria-expanded="seccionAbierta('mapa-entrantes') ? 'true' : 'false'"
+        class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        :class="seccionAbierta('mapa-entrantes') ? 'border-b border-gray-100 dark:border-gray-700' : ''">
+        <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
           <i class="fa-solid fa-bolt text-rose-500 text-sm"></i>
         </div>
-        <div>
+        <div class="flex-1 min-w-0">
           <h2 class="text-sm font-bold text-gray-800 dark:text-white">Incidencias entrantes</h2>
           <p class="text-[11px] text-gray-500 dark:text-gray-400">Cómo se señala una denuncia recién llegada</p>
         </div>
-      </div>
-      <div class="p-5 space-y-4">
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform shrink-0"
+          :class="seccionAbierta('mapa-entrantes') ? 'rotate-180' : ''"></i>
+      </button>
+      <div v-show="seccionAbierta('mapa-entrantes')" class="p-5 space-y-4">
         <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
           <input type="checkbox" v-model="config.mapa.animarNuevas" class="w-4 h-4 rounded accent-blue-600 shrink-0">
           <div class="min-w-0">
@@ -612,18 +660,23 @@
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <button type="button" @click="toggleSeccion('mapa-encuadre')"
+        :aria-expanded="seccionAbierta('mapa-encuadre') ? 'true' : 'false'"
+        class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        :class="seccionAbierta('mapa-encuadre') ? 'border-b border-gray-100 dark:border-gray-700' : ''">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
           <i class="fa-solid fa-map text-emerald-500 text-sm"></i>
         </div>
-        <div>
-          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Configuración del Mapa en Vivo</h2>
-          <p class="text-[11px] text-gray-500 dark:text-gray-400">Centro, zoom y visualización predeterminada</p>
+        <div class="flex-1 min-w-0">
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Encuadre y visualización</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Centro, zoom, estilo y tamaño de marcadores</p>
         </div>
-      </div>
+        <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform shrink-0"
+          :class="seccionAbierta('mapa-encuadre') ? 'rotate-180' : ''"></i>
+      </button>
 
-      <div class="p-5 space-y-6">
+      <div v-show="seccionAbierta('mapa-encuadre')" class="p-5 space-y-6">
 
         <!-- Centro del mapa -->
         <div class="grid grid-cols-2 gap-4">

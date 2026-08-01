@@ -22,6 +22,11 @@ const DEFAULTS = {
     // Paneles laterales
     panelFeedAbierto: true,
     panelCapasAbierto: true,
+    // Los paneles se repliegan solos poco después de abrir la consola para
+    // devolverle el ancho al mapa. Se muestran primero —en vez de arrancar
+    // cerrados— para que el operador vea que existen y dónde están.
+    autoOcultarPaneles: true,
+    segundosAutoOcultar: 2.5,
     kpisVisiblesMovil: false,
     tabMovilInicial: 'feed',    // feed | capas
     acordeonTipos: true,

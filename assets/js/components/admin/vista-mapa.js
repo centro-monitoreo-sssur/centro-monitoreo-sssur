@@ -1256,14 +1256,55 @@ export default {
       tableroAbierto.value = puedeCompararDistritos.value && comparativo.autoAbrir;
     }, { immediate: true });
 
+    /* ─── Auto-repliegue de los paneles laterales ───────────────────────────
+       Los paneles arrancan abiertos y se cierran solos a los pocos segundos:
+       así el operador ve que existen y dónde están, y después el mapa recupera
+       todo el ancho. Arrancar cerrados sería más simple, pero quien entra por
+       primera vez no descubriría el feed.
+
+       Reglas:
+       · Se dispara UNA sola vez. Que los paneles se cerraran cada vez que el
+         ratón sale de ellos sería insufrible en una jornada completa.
+       · Pasar el ratón por encima pausa la cuenta: si alguien está leyendo el
+         feed, no se le puede cerrar en la cara.
+       · Cualquier cierre o apertura manual antes de que salte lo cancela: el
+         usuario ya expresó su preferencia. */
+    let temporizadorAutoOcultar = null;
+    let autoOcultarConsumido = false;
+
+    function programarAutoOcultar() {
+      if (!inicialPaneles.autoOcultar || autoOcultarConsumido) return;
+      clearTimeout(temporizadorAutoOcultar);
+      temporizadorAutoOcultar = setTimeout(() => {
+        autoOcultarConsumido = true;
+        temporizadorAutoOcultar = null;
+        feedOpen.value = false;
+        rpanelOpen.value = false;
+      }, inicialPaneles.msAutoOcultar);
+    }
+
+    /** `definitivo` = el usuario tomó el control; no se vuelve a programar. */
+    function cancelarAutoOcultar(definitivo = false) {
+      clearTimeout(temporizadorAutoOcultar);
+      temporizadorAutoOcultar = null;
+      if (definitivo) autoOcultarConsumido = true;
+    }
+
+    // Alterna un panel y desactiva el auto-repliegue: si el operador ya está
+    // decidiendo qué ver, el temporizador no debe contradecirle.
+    function alternarPanel(cual) {
+      cancelarAutoOcultar(true);
+      if (cual === 'feed') feedOpen.value = !feedOpen.value;
+      else rpanelOpen.value = !rpanelOpen.value;
+    }
+
     onMounted(() => {
       cargarCapasMapa();
       // KPIs agregados en la base de datos, no calculados sobre las filas ya
       // cargadas: los de la franja se computaban sobre un tope de 200 casos.
       cargarKpisDistrito();
       mapaFullscreen.value = false; // el mapa arranca normal (con sidebar)
-      // Los paneles arrancan abiertos: al estar acoplados al grid no tapan el
-      // mapa, así que el operador ve feed y capas desde el primer segundo.
+      programarAutoOcultar();
       tick();
       clockInt = setInterval(tick, 1000);
       nextTick(() => { initMap(); if (lmap) lmap.invalidateSize(); });
@@ -1274,6 +1315,9 @@ export default {
       clearInterval(clockInt);
       if (initTimeoutId) clearTimeout(initTimeoutId);
       clearTimeout(_reflowTimeout);
+      // Sin esto, salir de la vista antes de que salte dejaría el temporizador
+      // vivo escribiendo sobre refs de un componente ya desmontado.
+      cancelarAutoOcultar(true);
       mapaFullscreen.value = false;
       marcadorUbicacion = null;
       if (lmap) { lmap.remove(); lmap = null; }
@@ -1283,6 +1327,7 @@ export default {
     return {
       clock, dateStr, coords, zoomLvl, altitudStr, estiloTile,
       feedOpen, rpanelOpen, sidebarsOpen, toggleSidebars, selectedCat, kpisOpen, isLgUp, mobileTab,
+      alternarPanel, programarAutoOcultar, cancelarAutoOcultar,
       modalDetalle, abrirDetalle, cerrarDetalle, estadoClase, verDetalleEnMapa,
       modalTitulo, modalSubtitulo, modalLatitud, modalLongitud,
       mapaFullscreen, toggleMapaFullscreen,

@@ -6,6 +6,7 @@
 // `supabase` que expone el CDN.
 // ============================================================
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
+import { CLAVE_SESION, CONTEXTO } from './app-contexto.js';
 
 // `conexionOk` es true solo cuando hay un cliente Supabase real
 // configurado (es decir, when los placeholders fueron reemplazados).
@@ -15,8 +16,24 @@ export const conexionOk =
 export let db = null;
 try {
   if (conexionOk) {
-    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        // Una clave de sesión POR CONTEXTO.
+        //
+        // Con la clave que Supabase deriva por defecto del proyecto, las tres
+        // aplicaciones comparten sesión: iniciar sesión como empleado en una
+        // pestaña cerraba la del Centro de Monitoreo en la otra, y ambas
+        // acababan siendo el mismo usuario. Es lo que impedía validar los
+        // flujos de campo y de monitoreo a la vez en el mismo navegador.
+        //
+        // Separar la clave separa además el canal de sincronización entre
+        // pestañas: el SDK lo nombra a partir de ella, así que dos contextos
+        // con claves distintas dejan de propagarse `onAuthStateChange`.
+        storageKey: CLAVE_SESION,
+      },
+    });
     window.__supabaseDbActivo = true; // Flag global para componentes
+    console.info(`[supabase] Contexto "${CONTEXTO}" · sesión en "${CLAVE_SESION}"`);
   }
 } catch (e) {
   console.error('Error inicializando Supabase:', e);

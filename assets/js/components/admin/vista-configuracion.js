@@ -129,6 +129,29 @@ export default {
       'fa-street-view', 'fa-triangle-exclamation', 'fa-circle-info',
     ];
 
+    // ── Acordeón de las tarjetas de configuración ────────────
+    // Cada pestaña apila varias tarjetas y llegaron a ser demasiadas para
+    // recorrerlas a scroll. Plegarlas deja visible el índice de lo que se puede
+    // configurar, que es lo que uno busca al entrar.
+    const CLAVE_SECCIONES = 'config_secciones_abiertas';
+    const leerSeccionesAbiertas = () => {
+      try {
+        const guardado = JSON.parse(localStorage.getItem(CLAVE_SECCIONES));
+        if (Array.isArray(guardado)) return guardado;
+      } catch { /* JSON corrupto: se ignora */ }
+      return ['mapa-paneles'];   // la primera abierta para que no parezca vacío
+    };
+    const seccionesAbiertas = ref(leerSeccionesAbiertas());
+
+    const seccionAbierta = (id) => seccionesAbiertas.value.includes(id);
+
+    const toggleSeccion = (id) => {
+      const i = seccionesAbiertas.value.indexOf(id);
+      if (i === -1) seccionesAbiertas.value.push(id);
+      else seccionesAbiertas.value.splice(i, 1);
+      localStorage.setItem(CLAVE_SECCIONES, JSON.stringify(seccionesAbiertas.value));
+    };
+
     // ── Mapa en Vivo ─────────────────────────────────────────
     // Etiquetas de los paneles. Las claves coinciden con `config.mapa` y con
     // lo que lee `estadoInicialPaneles()` en config/mapa/paneles-mapa.js.
@@ -258,6 +281,7 @@ export default {
       // Mapa en Vivo. Con sufijo _CFG los que comparten nombre con algo de la
       // consola, para que no se confundan al leer la plantilla.
       AJUSTES_PANELES, AJUSTES_HERRAMIENTAS,
+      seccionAbierta, toggleSeccion,
       ESTADOS_FILTRO_CFG: ESTADOS_FILTRO,
       VENTANAS_TIEMPO_CFG: VENTANAS_TIEMPO,
       COLUMNAS_COMPARATIVO_CFG: COLUMNAS_COMPARATIVO,

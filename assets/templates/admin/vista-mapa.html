@@ -24,7 +24,12 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        COLUMNA IZQUIERDA · FEED DE INCIDENCIAS EN VIVO
        ═══════════════════════════════════════════════════════════════════ -->
+  <!-- `mouseenter`/`focusin` pausan el auto-repliegue: cerrarle el panel a
+       alguien que está leyendo el feed sería inaceptable. Al salir se vuelve a
+       programar, salvo que ya haya saltado o el usuario lo haya cancelado. -->
   <aside class="mv-panel mv-panel--feed" :class="{'is-closed': !feedOpen}"
+    @mouseenter="cancelarAutoOcultar()" @mouseleave="programarAutoOcultar()"
+    @focusin="cancelarAutoOcultar(true)"
     aria-label="Feed de incidencias en vivo">
     <div class="mv-panel__inner">
 
@@ -33,7 +38,7 @@
           :style="hasNewFeed ? 'animation:pulseRing 1.6s ease-out infinite;' : ''"></span>
         <span class="mv-panel__title">Feed de Incidencias</span>
         <span class="mv-panel__count">{{ feedItems.length }}</span>
-        <button class="mv-panel__close" @click="feedOpen = false" title="Cerrar feed" aria-label="Cerrar feed">
+        <button class="mv-panel__close" @click="alternarPanel('feed')" title="Cerrar feed" aria-label="Cerrar feed">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
       </header>
@@ -672,13 +677,16 @@
   <!-- ═══════════════════════════════════════════════════════════════════
        COLUMNA DERECHA · CAPAS DEL MAPA
        ═══════════════════════════════════════════════════════════════════ -->
-  <aside class="mv-panel mv-panel--capas" :class="{'is-closed': !rpanelOpen}" aria-label="Capas del mapa">
+  <aside class="mv-panel mv-panel--capas" :class="{'is-closed': !rpanelOpen}"
+    @mouseenter="cancelarAutoOcultar()" @mouseleave="programarAutoOcultar()"
+    @focusin="cancelarAutoOcultar(true)"
+    aria-label="Capas del mapa">
     <div class="mv-panel__inner">
 
       <header class="mv-panel__head">
         <i class="fa-solid fa-layer-group text-[var(--mv-brand)] dark:text-blue-400 text-xs"></i>
         <span class="mv-panel__title">Capas del Mapa</span>
-        <button class="mv-panel__close" @click="rpanelOpen = false" title="Cerrar capas" aria-label="Cerrar capas">
+        <button class="mv-panel__close" @click="alternarPanel('capas')" title="Cerrar capas" aria-label="Cerrar capas">
           <i class="fa-solid fa-chevron-right"></i>
         </button>
       </header>

@@ -1,10 +1,23 @@
-// Store de Offline Queue
-// Gestión de cola de operaciones para modo offline-first
-// DEMO: Funcionalidad simulada - reemplazar con API real cuando se conecte backend
+// ============================================================
+// COLA DE OPERACIONES OFFLINE
+//
+// Un empleado en territorio pierde señal con normalidad, así que toda escritura
+// que falle se guarda aquí y se reintenta al recuperar conexión. Cada elemento
+// de la cola es una orden autocontenida —tipo + datos— que se puede reproducir
+// más tarde: patrón Orden (Command), que es lo que permite persistirla y
+// reintentarla sin que quien la encoló siga vivo en memoria.
+//
+// La cola vive en el almacén CON PREFIJO DE CONTEXTO. Antes estaba en la clave
+// global `offline_queue`, de modo que el Centro de Monitoreo abierto en otra
+// pestaña la leía y sincronizaba con SU token los partes de un empleado.
+// ============================================================
 import { ref, computed } from '../core/vue.js';
 import eventBus from '../core/event-bus.js';
 import { EVENTOS_OFFLINE } from '../core/eventos-offline.js';
 import { db } from '../core/supabase.js';
+import { almacen } from '../core/almacen.js';
+
+const CLAVE_COLA = 'offline_queue';
 
 // Estado del store
 const colaOperaciones = ref([]);
@@ -31,23 +44,27 @@ const ESTADO_OPERACION = {
   REINTENTANDO: 'reintentando'
 };
 
-// Cargar cola desde localStorage
+// Un JSON corrupto —una escritura interrumpida al cerrarse la app— dejaba la
+// cola irrecuperable y lanzaba en tiempo de carga del módulo, tumbando la app
+// entera. `leerJson` devuelve el valor por defecto en ese caso.
 const cargarCola = () => {
-  const guardada = localStorage.getItem('offline_queue');
-  if (guardada) {
-    colaOperaciones.value = JSON.parse(guardada);
-  }
+  const guardada = almacen.leerJson(CLAVE_COLA, []);
+  colaOperaciones.value = Array.isArray(guardada) ? guardada : [];
 };
 
-// Guardar cola en localStorage
-const guardarCola = () => {
-  localStorage.setItem('offline_queue', JSON.stringify(colaOperaciones.value));
-};
+// Devuelve `{ ok, error, mensaje }`. NO es decorativo: la cola guarda las
+// fotografías en base64 y localStorage da unos 5 MB por origen, así que
+// agotar la cuota es el fallo esperable de una jornada sin señal. Quien encola
+// tiene que poder avisar en pantalla en vez de responder "guardado" y perderlo.
+const guardarCola = () => almacen.escribirJson(CLAVE_COLA, colaOperaciones.value);
 
-// Agregar operación a la cola
+// Agregar operación a la cola.
+// Devuelve `{ ok, operacion, mensaje }`. Si la persistencia falla se revierte
+// el push: una orden que solo existe en memoria desaparece al cerrar la app y
+// habría quedado contada como pendiente sin llegar a estarlo.
 const agregarOperacion = (operacion) => {
   const nuevaOperacion = {
-    id: `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: `op_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     tipo: operacion.tipo,
     datos: operacion.datos,
     estado: ESTADO_OPERACION.PENDIENTE,
@@ -58,13 +75,25 @@ const agregarOperacion = (operacion) => {
     error: null,
     prioridad: operacion.prioridad || 'normal'
   };
-  
+
   colaOperaciones.value.push(nuevaOperacion);
-  guardarCola();
-  
+  const guardado = guardarCola();
+
+  if (!guardado.ok) {
+    colaOperaciones.value.pop();
+    return {
+      ok: false,
+      operacion: null,
+      mensaje: guardado.error === 'cuota'
+        ? 'No queda espacio en el dispositivo para guardar el reporte. ' +
+          'Conéctate a una red para sincronizar el buzón offline y libera espacio.'
+        : 'No se pudo guardar el reporte en el dispositivo.',
+    };
+  }
+
   eventBus.emit(EVENTOS_OFFLINE.OPERACION_AGREGADA, nuevaOperacion);
-  
-  return nuevaOperacion;
+
+  return { ok: true, operacion: nuevaOperacion, mensaje: '' };
 };
 
 // Marcar operación como en proceso
@@ -260,10 +289,10 @@ const limpiarCola = () => {
   guardarCola();
 };
 
-// Limpiar errores
+// Limpiar errores. Solo viven en memoria: la clave `offline_errores` que se
+// borraba aquí no la escribía nadie, así que la llamada no hacía nada.
 const limpiarErrores = () => {
   erroresSincronizacion.value = [];
-  localStorage.removeItem('offline_errores');
 };
 
 // Reintentar operación específica

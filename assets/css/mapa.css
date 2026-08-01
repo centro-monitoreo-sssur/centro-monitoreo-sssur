@@ -1213,8 +1213,75 @@
       "stage"
       "footer";
   }
-  .mv-barra { padding: 6px 10px; gap: 8px; }
-  .mv-barra__ambito { max-width: none; }
+  /* ── Barra territorial en móvil ──────────────────────────────────────────
+     En una sola fila el ambito se comia el ancho y al selector le quedaban
+     ~100 px: seis distritos en una tira diminuta con scroll, imposible de
+     usar con el pulgar. Pasa a dos filas — identidad y acciones arriba,
+     selector a lo ancho debajo — con areas de grid en vez de reordenar el
+     marcado, para que escritorio y movil compartan el mismo HTML. */
+  .mv-barra {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "ambito   acciones"
+      "selector selector";
+    align-items: center;
+    row-gap: 8px;
+    column-gap: 8px;
+    padding: 8px 10px;
+  }
+  .mv-barra__ambito   { grid-area: ambito; max-width: none; }
+  .mv-barra__acciones { grid-area: acciones; }
+  /* El aviso ocupa el mismo hueco que el selector al que sustituye. */
+  .mv-barra__selector,
+  .mv-barra__aviso    { grid-area: selector; }
+
+  /* El control segmentado se convierte en una fila de chips. El marco y el
+     fondo del contenedor roban ancho justo donde menos sobra, y ademas el
+     desvanecido del borde tendria que atravesarlos: al enmascarar el
+     contenedor se desvaneceria tambien su borde redondeado. Sin chrome, el
+     mask solo afecta a los chips, que es lo que se quiere difuminar. */
+  .mv-barra__selector {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    gap: 6px;
+    /* Sin el, con la barra de scroll oculta nada indica que haya mas
+       distritos fuera de vista. */
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Al llegar al final no debe seguir insinuando contenido que ya no existe. */
+  .mv-barra__selector.is-fin {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .mv-barra__opcion {
+    /* ~34 px de alto util: por debajo el pulgar falla mas de lo aceptable en
+       un control que decide que territorio se esta viendo. */
+    padding: 9px 14px;
+    font-size: 12px;
+    border-radius: 999px;
+    border: 1px solid var(--mv-border);
+    background: var(--mv-surface2);
+    scroll-snap-align: start;
+  }
+  /* En movil el activo va en solido: el sutil cambio de fondo del segmentado
+     de escritorio no se distingue a la luz del sol. */
+  .mv-barra__opcion.is-activa {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .mv-barra__titulo { font-size: 14px; }
+  .mv-barra__btn    { padding: 8px 12px; }
   .mv-barra__btn-txt { display: none; }
   .mv-tablero { right: 12px; top: 8px; padding: 12px; }
   .mv-tablero__grid { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }

@@ -1,4 +1,10 @@
 import { ref } from '../core/vue.js';
+import { almacen } from '../core/almacen.js';
+
+// El aplazamiento de la instalación es POR APLICACIÓN: quien pospone instalar
+// la PWA de campo no está diciendo nada sobre el Centro de Monitoreo, que es
+// otra app con otro icono y otro público.
+const CLAVE_POSPUESTA = 'pwa_dismissed';
 
 const versionApp = ref('v?.?.?');
 const pwaInstalada = ref(false);
@@ -56,7 +62,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   // Si no está instalada, mostramos el modal (por ejemplo, en móviles)
   if (!esStandalone()) {
     // Comprobar si el usuario pospuso la instalación recientemente (últimas 24h)
-    const pwaDismissedStr = localStorage.getItem('pwa_dismissed');
+    const pwaDismissedStr = almacen.leerTexto(CLAVE_POSPUESTA);
     let debeMostrarModal = true;
     
     if (pwaDismissedStr) {
@@ -84,7 +90,7 @@ window.addEventListener('appinstalled', () => {
   pwaInstalada.value = true;
   mostrarModalInstalacion.value = false;
   deferredPrompt = null;
-  localStorage.removeItem('pwa_dismissed'); // Limpiar el estado
+  almacen.borrar(CLAVE_POSPUESTA); // Limpiar el estado
 });
 
 const instalarPWA = async () => {
@@ -112,7 +118,7 @@ const instalarPWA = async () => {
 const posponerInstalacion = () => {
   mostrarModalInstalacion.value = false;
   // Guardar timestamp actual en milisegundos
-  localStorage.setItem('pwa_dismissed', new Date().getTime().toString());
+  almacen.escribirTexto(CLAVE_POSPUESTA, new Date().getTime().toString());
 };
 
 // Auto-evaluar el estado inicial

@@ -9,7 +9,7 @@
 // El componente NO decide qué puede ver nadie: solo evita ofrecer controles
 // que no llevan a ninguna parte. El filtrado real lo impone la RLS.
 // ============================================================
-import { computed } from '../../../core/vue.js';
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from '../../../core/vue.js';
 import { useCatalogos } from '../../../stores/catalogos.js';
 import { usePermisos } from '../../../stores/permisos.js';
 import { useTerritorio } from '../../../stores/territorio.js';
@@ -74,6 +74,46 @@ export default {
 
     const seleccionar = (id) => emit('update:distrito', id === null ? '' : String(id));
 
+    /* ─── Comportamiento del selector en móvil ───────────────────────────────
+       En pantalla estrecha el selector es una tira con scroll horizontal. Eso
+       trae dos problemas que en escritorio no existen:
+
+       1. El distrito activo puede quedar fuera de vista al entrar, y entonces
+          la barra parece decir que no hay ninguno seleccionado.
+       2. Con la barra de scroll oculta, nada indica que haya más distritos a la
+          derecha. El desvanecido del borde lo resuelve, pero debe desaparecer
+          al llegar al final para no simular contenido que ya no existe. */
+    const selectorRef = ref(null);
+    const enElFinal = ref(false);
+
+    function revisarFin() {
+      const el = selectorRef.value;
+      if (!el) return;
+      // 2 px de tolerancia: el scroll fraccionario de los navegadores rara vez
+      // alcanza el valor exacto y el desvanecido se quedaría pegado.
+      enElFinal.value = el.scrollLeft + el.clientWidth >= el.scrollWidth - 2;
+    }
+
+    function centrarActivo() {
+      const el = selectorRef.value;
+      if (!el) return;
+      const activo = el.querySelector('.is-activa');
+      // `nearest` y no `center`: con el primer distrito seleccionado, `center`
+      // desplazaría la tira dejando un hueco vacío a su izquierda.
+      if (activo) activo.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+      revisarFin();
+    }
+
+    onMounted(() => {
+      nextTick(centrarActivo);
+      window.addEventListener('resize', revisarFin, { passive: true });
+    });
+    onUnmounted(() => window.removeEventListener('resize', revisarFin));
+
+    // El catálogo de distritos llega asíncrono: sin esto, al montar todavía no
+    // hay botones que centrar.
+    watch([() => props.distrito, distritosOfrecidos], () => nextTick(centrarActivo));
+
     return {
       distritosOfrecidos,
       esAmbitoUnico,
@@ -85,6 +125,9 @@ export default {
       cargandoKpis,
       horaActualizacion,
       seleccionar,
+      selectorRef,
+      enElFinal,
+      revisarFin,
     };
   },
 };

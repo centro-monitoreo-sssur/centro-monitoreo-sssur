@@ -5,8 +5,26 @@
 // ============================================================
 import { ref, computed } from '../core/vue.js';
 import { db } from '../core/supabase.js';
+import { almacen, almacenDispositivo } from '../core/almacen.js';
 import { useDenuncias } from './denuncias.js';
 import { usePermisos } from './permisos.js';
+
+// Nombres de las claves persistidas, en un solo sitio. Estaban repetidas como
+// literales en catorce llamadas distintas, y una errata en cualquiera de ellas
+// no falla: simplemente escribe en una clave que nadie lee después.
+const CLAVES = Object.freeze({
+  SESION_ACTIVA: 'sesion_activa',
+  USUARIO: 'usuario_autenticado',
+  NOMBRE: 'nombre_usuario',
+  ROL: 'rol_usuario',
+  USUARIO_ID: 'usuario_id',
+  GRUPOS_ABIERTOS: 'sidebar_grupos_abiertos',
+});
+
+// El tema NO lleva prefijo de contexto: es una preferencia de quien mira la
+// pantalla, no de la app abierta, y además la lee un script en línea de
+// index.html antes de que cargue ningún módulo (anti-FOUC).
+const CLAVE_TEMA = 'color-theme';
 
 const vistaActual = ref('login'); // Iniciar en login por defecto
 const sidebarAbierto = ref(false);
@@ -14,18 +32,20 @@ const sidebarColapsado = ref(false); // estado de colapso en escritorio (estilo 
 const logoError = ref(false);
 
 // Estado de Dark Mode (Por defecto light mode, a menos que se active expresamente)
-const isDarkMode = ref(localStorage.getItem('color-theme') === 'dark');
+const isDarkMode = ref(almacenDispositivo.leerTexto(CLAVE_TEMA) === 'dark');
 
-// Estado de autenticación (DEMO: persistencia en localStorage)
-const autenticado = ref(localStorage.getItem('sesion_activa') === 'true');
-const usuarioActual = ref(localStorage.getItem('usuario_autenticado') || '');
+// Estado de autenticación. Es un espejo local de la sesión de Supabase que
+// evita el parpadeo del login al recargar; la sesión real vive en la clave
+// `sb-sssur-<contexto>` que gestiona el SDK.
+const autenticado = ref(almacen.leerTexto(CLAVES.SESION_ACTIVA) === 'true');
+const usuarioActual = ref(almacen.leerTexto(CLAVES.USUARIO));
 // Nombre y apellido reales del perfil en public.usuarios. `usuarioActual` es el
 // correo institucional y no sirve para saludar: no tiene espacios, así que en
 // un titular grande desborda el layout en móvil.
-const nombreUsuario = ref(localStorage.getItem('nombre_usuario') || '');
-const rolUsuario = ref(localStorage.getItem('rol_usuario') || '');
+const nombreUsuario = ref(almacen.leerTexto(CLAVES.NOMBRE));
+const rolUsuario = ref(almacen.leerTexto(CLAVES.ROL));
 // UUID de Supabase Auth — necesario para filtrar casos por usuario_responsable_id
-const usuarioId = ref(localStorage.getItem('usuario_id') || '');
+const usuarioId = ref(almacen.leerTexto(CLAVES.USUARIO_ID));
 
 // `autenticado` pasa a true en cuanto Supabase confirma la sesión, pero el ROL
 // llega después: hay que consultar public.usuarios. Quien decida a qué vista
@@ -50,17 +70,14 @@ const setAutenticado = async (valor, usuario = '', rol = '') => {
   if (!db) {
     autenticado.value = valor;
     if (valor) {
-      localStorage.setItem('sesion_activa', 'true');
-      if (usuario) { localStorage.setItem('usuario_autenticado', usuario); usuarioActual.value = usuario; }
-      if (rol)     { localStorage.setItem('rol_usuario', rol); rolUsuario.value = rol; }
+      almacen.escribirTexto(CLAVES.SESION_ACTIVA, 'true');
+      if (usuario) { almacen.escribirTexto(CLAVES.USUARIO, usuario); usuarioActual.value = usuario; }
+      if (rol)     { almacen.escribirTexto(CLAVES.ROL, rol); rolUsuario.value = rol; }
     } else {
-      localStorage.removeItem('sesion_activa');
-      localStorage.removeItem('usuario_autenticado');
-      localStorage.removeItem('rol_usuario');
-  localStorage.removeItem('nombre_usuario');
+      almacen.borrarVarias([CLAVES.SESION_ACTIVA, CLAVES.USUARIO, CLAVES.ROL, CLAVES.NOMBRE]);
       usuarioActual.value = '';
       rolUsuario.value = '';
-  nombreUsuario.value = '';
+      nombreUsuario.value = '';
     }
     return { ok: true };
   }
@@ -133,9 +150,9 @@ const iniciarSesion = async (identificador, password) => {
       autenticado.value = true;
       usuarioActual.value = match.usuario;
       rolUsuario.value = match.rol;
-      localStorage.setItem('sesion_activa', 'true');
-      localStorage.setItem('usuario_autenticado', match.usuario);
-      localStorage.setItem('rol_usuario', match.rol);
+      almacen.escribirTexto(CLAVES.SESION_ACTIVA, 'true');
+      almacen.escribirTexto(CLAVES.USUARIO, match.usuario);
+      almacen.escribirTexto(CLAVES.ROL, match.rol);
       vistaActual.value = match.vista;
       return { ok: true };
     }
@@ -172,7 +189,13 @@ const iniciarSesion = async (identificador, password) => {
 const { limpiarAlcance, puedeVer } = usePermisos();
 
 const cerrarSesion = async () => {
-  if (db) await db.auth.signOut();
+  // `scope: 'local'` cierra SOLO esta aplicación. Por defecto Supabase usa
+  // 'global', que revoca todos los refresh tokens del usuario: un supervisor
+  // que sale de la PWA de campo se encontraría con la sesión del Centro de
+  // Monitoreo caída en la otra pestaña, y no es lo que ha pedido. La sesión de
+  // cada contexto vive en su propia clave, así que cerrarlas por separado es
+  // coherente con el aislamiento (ver core/app-contexto.js).
+  if (db) await db.auth.signOut({ scope: 'local' });
   autenticado.value = false;
   perfilCargado.value = false;
   // Sin esto el siguiente usuario hereda el alcance territorial del anterior
@@ -182,10 +205,12 @@ const cerrarSesion = async () => {
   usuarioActual.value = '';
   rolUsuario.value = '';
   nombreUsuario.value = '';
-  localStorage.removeItem('sesion_activa');
-  localStorage.removeItem('usuario_autenticado');
-  localStorage.removeItem('rol_usuario');
-  localStorage.removeItem('nombre_usuario');
+  // Se borran claves concretas y NO `almacen.limpiarTodo()`: un barrido se
+  // llevaría por delante la cola offline, y un empleado que cierra sesión al
+  // final de la jornada perdería los partes que levantó sin señal.
+  almacen.borrarVarias([
+    CLAVES.SESION_ACTIVA, CLAVES.USUARIO, CLAVES.ROL, CLAVES.NOMBRE, CLAVES.USUARIO_ID,
+  ]);
   vistaActual.value = 'login';
 };
 
@@ -197,9 +222,9 @@ if (db) {
       autenticado.value = true;
       usuarioActual.value = session.user.email;
       usuarioId.value = session.user.id;
-      localStorage.setItem('usuario_id', session.user.id);
-      localStorage.setItem('sesion_activa', 'true');
-      localStorage.setItem('usuario_autenticado', session.user.email);
+      almacen.escribirTexto(CLAVES.USUARIO_ID, session.user.id);
+      almacen.escribirTexto(CLAVES.SESION_ACTIVA, 'true');
+      almacen.escribirTexto(CLAVES.USUARIO, session.user.email);
       try {
         // Leer rol desde la tabla `usuarios` usando el UUID de Supabase Auth
         const { data: perfil, error } = await db
@@ -222,13 +247,13 @@ if (db) {
           );
         }
         rolUsuario.value = codigoRol;
-        if (codigoRol) localStorage.setItem('rol_usuario', codigoRol);
-        else localStorage.removeItem('rol_usuario');
+        if (codigoRol) almacen.escribirTexto(CLAVES.ROL, codigoRol);
+        else almacen.borrar(CLAVES.ROL);
 
         // El nombre del perfil se consultaba y se descartaba, así que la UI
         // terminaba saludando con el correo institucional completo.
         nombreUsuario.value = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(' ').trim();
-        if (nombreUsuario.value) localStorage.setItem('nombre_usuario', nombreUsuario.value);
+        if (nombreUsuario.value) almacen.escribirTexto(CLAVES.NOMBRE, nombreUsuario.value);
       } catch (e) {
         console.error('[navegacion] Falló la carga del perfil del usuario:', e.message);
       } finally {
@@ -244,11 +269,9 @@ if (db) {
       rolUsuario.value = '';
       nombreUsuario.value = '';
       usuarioId.value = '';
-      localStorage.removeItem('sesion_activa');
-      localStorage.removeItem('usuario_autenticado');
-      localStorage.removeItem('rol_usuario');
-  localStorage.removeItem('nombre_usuario');
-      localStorage.removeItem('usuario_id');
+      almacen.borrarVarias([
+        CLAVES.SESION_ACTIVA, CLAVES.USUARIO, CLAVES.ROL, CLAVES.NOMBRE, CLAVES.USUARIO_ID,
+      ]);
       vistaActual.value = 'login';
     }
   });
@@ -258,10 +281,10 @@ const toggleDarkMode = () => {
   isDarkMode.value = !isDarkMode.value;
   if (isDarkMode.value) {
     document.documentElement.classList.add('dark');
-    localStorage.setItem('color-theme', 'dark');
+    almacenDispositivo.escribirTexto(CLAVE_TEMA, 'dark');
   } else {
     document.documentElement.classList.remove('dark');
-    localStorage.setItem('color-theme', 'light');
+    almacenDispositivo.escribirTexto(CLAVE_TEMA, 'light');
   }
 };
 
@@ -352,13 +375,11 @@ const gruposVisibles = computed(() =>
 const navPlano = computed(() => gruposVisibles.value.flatMap((g) => g.items));
 
 // ── Estado del acordeón ──────────────────────────────────────
-const CLAVE_GRUPOS = 'sidebar_grupos_abiertos';
 const leerGruposAbiertos = () => {
-  try {
-    const guardado = JSON.parse(localStorage.getItem(CLAVE_GRUPOS));
-    if (Array.isArray(guardado)) return guardado;
-  } catch { /* JSON corrupto: se ignora y se usa el valor por defecto */ }
-  return ['operacion'];   // el grupo de trabajo diario arranca abierto
+  // `almacen.leerJson` ya absorbe el JSON corrupto; aquí solo queda validar que
+  // lo guardado siga siendo una lista.
+  const guardado = almacen.leerJson(CLAVES.GRUPOS_ABIERTOS);
+  return Array.isArray(guardado) ? guardado : ['operacion']; // el grupo diario arranca abierto
 };
 const gruposAbiertos = ref(leerGruposAbiertos());
 
@@ -366,7 +387,7 @@ const toggleGrupo = (id) => {
   const i = gruposAbiertos.value.indexOf(id);
   if (i === -1) gruposAbiertos.value.push(id);
   else gruposAbiertos.value.splice(i, 1);
-  localStorage.setItem(CLAVE_GRUPOS, JSON.stringify(gruposAbiertos.value));
+  almacen.escribirJson(CLAVES.GRUPOS_ABIERTOS, gruposAbiertos.value);
 };
 
 const grupoAbierto = (id) => gruposAbiertos.value.includes(id);

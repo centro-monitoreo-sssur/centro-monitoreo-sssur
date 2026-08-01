@@ -24,6 +24,7 @@
        Solo aparece si hay más de uno que elegir. Con un único distrito el
        selector sería un control de una sola opción: ruido, no información. -->
   <div v-if="!esAmbitoUnico && distritosOfrecidos.length" class="mv-barra__selector" role="group"
+    ref="selectorRef" @scroll.passive="revisarFin" :class="{ 'is-fin': enElFinal }"
     aria-label="Seleccionar distrito">
     <button type="button" class="mv-barra__opcion" :class="{ 'is-activa': !distrito }"
       :aria-pressed="!distrito ? 'true' : 'false'" @click="seleccionar(null)">
