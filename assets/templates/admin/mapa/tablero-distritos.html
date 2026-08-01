@@ -1,0 +1,83 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TABLERO COMPARATIVO ENTRE DISTRITOS
+     Overlay sobre el escenario del mapa. Responde "¿dónde está el problema
+     hoy?" antes de que el usuario tenga que buscarlo en el mapa.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<section class="mv-tablero" role="region" aria-label="Comparativo entre distritos">
+
+  <header class="mv-tablero__head">
+    <div class="min-w-0">
+      <h2 class="mv-tablero__titulo">Comparativo territorial</h2>
+      <p class="mv-tablero__sub">Pulsa un distrito para filtrar el mapa</p>
+    </div>
+    <button type="button" class="mv-tablero__cerrar" @click="$emit('cerrar')"
+      title="Cerrar comparativo" aria-label="Cerrar comparativo">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <!-- Selector de criterio de orden. El orden por defecto es "Fuera de SLA":
+       en un centro de monitoreo lo que importa es lo que va tarde. -->
+  <div class="mv-tablero__orden" role="group" aria-label="Ordenar por">
+    <button v-for="col in COLUMNAS" :key="col.clave" type="button"
+      class="mv-tablero__crit" :class="{ 'is-activo': ordenPor === col.clave }"
+      :aria-pressed="ordenPor === col.clave ? 'true' : 'false'" :title="col.titulo"
+      @click="ordenar(col.clave)">
+      {{ col.etiqueta }}
+      <i v-if="ordenPor === col.clave" class="fa-solid text-[9px]"
+        :class="ordenDesc ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-short-wide'" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <!-- Estado de carga -->
+  <div v-if="cargandoKpis && !filas.length" class="mv-tablero__vacio">
+    <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+    Cargando indicadores…
+  </div>
+
+  <!-- Error explícito: nunca un tablero en blanco que parezca "sin incidencias" -->
+  <div v-else-if="errorKpis" class="mv-tablero__error">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+    <div class="min-w-0">
+      <p class="font-semibold">No se pudieron cargar los indicadores</p>
+      <p class="mv-tablero__error-detalle">{{ errorKpis }}</p>
+    </div>
+    <button type="button" class="mv-tablero__reintentar" @click="cargarKpisDistrito">Reintentar</button>
+  </div>
+
+  <div v-else-if="!filas.length" class="mv-tablero__vacio">
+    <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+    Sin distritos en tu ámbito
+  </div>
+
+  <!-- Tarjetas comparativas -->
+  <div v-else class="mv-tablero__grid">
+    <button v-for="f in filas" :key="f.distrito_id" type="button"
+      class="mv-dcard" :class="['is-' + semaforo(f), { 'is-activa': esActivo(f) }]"
+      :aria-pressed="esActivo(f) ? 'true' : 'false'" @click="seleccionar(f)">
+
+      <div class="mv-dcard__head">
+        <span class="mv-dcard__punto" aria-hidden="true"></span>
+        <span class="mv-dcard__nombre">{{ f.distrito_nombre }}</span>
+        <i v-if="esActivo(f)" class="fa-solid fa-check mv-dcard__check" aria-hidden="true"></i>
+      </div>
+
+      <!-- Cifra del criterio de orden activo -->
+      <p class="mv-dcard__cifra">{{ f[ordenPor] }}</p>
+      <div class="mv-dcard__barra" role="presentation">
+        <span class="mv-dcard__barra-fill" :style="{ width: proporcion(f) + '%' }"></span>
+      </div>
+
+      <dl class="mv-dcard__detalle">
+        <div><dt>Pend.</dt><dd>{{ f.pendientes }}</dd></div>
+        <div><dt>Curso</dt><dd>{{ f.en_curso }}</dd></div>
+        <div><dt>Resu.</dt><dd>{{ f.resueltas }}</dd></div>
+      </dl>
+
+      <p class="mv-dcard__pie" title="Tiempo medio desde que entra el caso hasta que se cierra">
+        <i class="fa-regular fa-clock" aria-hidden="true"></i>
+        {{ formatoHoras(f.horas_promedio_cierre) }} de cierre
+      </p>
+    </button>
+  </div>
+</section>

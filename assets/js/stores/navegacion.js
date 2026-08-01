@@ -6,6 +6,7 @@
 import { ref, computed } from '../core/vue.js';
 import { db } from '../core/supabase.js';
 import { useDenuncias } from './denuncias.js';
+import { usePermisos } from './permisos.js';
 
 const vistaActual = ref('login'); // Iniciar en login por defecto
 const sidebarAbierto = ref(false);
@@ -25,6 +26,13 @@ const nombreUsuario = ref(localStorage.getItem('nombre_usuario') || '');
 const rolUsuario = ref(localStorage.getItem('rol_usuario') || '');
 // UUID de Supabase Auth — necesario para filtrar casos por usuario_responsable_id
 const usuarioId = ref(localStorage.getItem('usuario_id') || '');
+
+// `autenticado` pasa a true en cuanto Supabase confirma la sesión, pero el ROL
+// llega después: hay que consultar public.usuarios. Quien decida a qué vista
+// mandar al usuario debe esperar esta bandera, no leer `rol_usuario` de
+// localStorage — en ese instante todavía contiene el valor de la sesión
+// anterior y el usuario aterriza en el módulo equivocado.
+const perfilCargado = ref(false);
 
 // Error de autenticación (para mostrarlo en el formulario de login)
 const errorAuth = ref('');
@@ -89,9 +97,16 @@ const iniciarSesion = async (email, password) => {
   }
 };
 
+const { limpiarAlcance } = usePermisos();
+
 const cerrarSesion = async () => {
   if (db) await db.auth.signOut();
   autenticado.value = false;
+  perfilCargado.value = false;
+  // Sin esto el siguiente usuario hereda el alcance territorial del anterior
+  // hasta que `mi_alcance()` responda: una jefatura distrital vería por un
+  // instante el comparativo de los 5 distritos.
+  limpiarAlcance();
   usuarioActual.value = '';
   rolUsuario.value = '';
   nombreUsuario.value = '';
@@ -106,31 +121,56 @@ const cerrarSesion = async () => {
 if (db) {
   db.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
+      perfilCargado.value = false;
       autenticado.value = true;
       usuarioActual.value = session.user.email;
       usuarioId.value = session.user.id;
       localStorage.setItem('usuario_id', session.user.id);
-      // Leer rol desde la tabla `usuarios` usando el UUID de Supabase Auth
-      const { data: perfil } = await db
-        .from('usuarios')
-        .select('rol_id, nombres, apellidos, roles(codigo)')
-        .eq('id', session.user.id)
-        .single();
-      if (perfil) {
-        rolUsuario.value = perfil.roles?.codigo || 'empleado';
-        localStorage.setItem('rol_usuario', rolUsuario.value);
-        // El nombre del perfil se consultaba y se descartaba, así que la UI
-        // terminaba saludando con el correo institucional completo.
-        nombreUsuario.value = [perfil.nombres, perfil.apellidos].filter(Boolean).join(' ').trim();
-        if (nombreUsuario.value) localStorage.setItem('nombre_usuario', nombreUsuario.value);
-      }
       localStorage.setItem('sesion_activa', 'true');
       localStorage.setItem('usuario_autenticado', session.user.email);
+      try {
+        // Leer rol desde la tabla `usuarios` usando el UUID de Supabase Auth
+        const { data: perfil, error } = await db
+          .from('usuarios')
+          .select('rol_id, nombres, apellidos, roles(codigo)')
+          .eq('id', session.user.id)
+          .single();
+        if (error) throw error;
+
+        const codigoRol = perfil?.roles?.codigo || '';
+        if (!codigoRol) {
+          // Antes esto caía a 'empleado' por defecto. Un fallo de RLS sobre
+          // `roles` degradaba en silencio a un superadmin a rol de campo y lo
+          // mandaba a la PWA. Preferimos rol vacío + error visible: sin rol el
+          // destino es el Centro de Monitoreo y los permisos los aplica RLS.
+          console.error(
+            '[navegacion] No se pudo resolver el rol del usuario ' + session.user.email +
+            '. Revisa que `usuarios.rol_id` apunte a un registro de `roles` legible ' +
+            'por el usuario autenticado (policy de select sobre public.roles).'
+          );
+        }
+        rolUsuario.value = codigoRol;
+        if (codigoRol) localStorage.setItem('rol_usuario', codigoRol);
+        else localStorage.removeItem('rol_usuario');
+
+        // El nombre del perfil se consultaba y se descartaba, así que la UI
+        // terminaba saludando con el correo institucional completo.
+        nombreUsuario.value = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(' ').trim();
+        if (nombreUsuario.value) localStorage.setItem('nombre_usuario', nombreUsuario.value);
+      } catch (e) {
+        console.error('[navegacion] Falló la carga del perfil del usuario:', e.message);
+      } finally {
+        // Se marca SIEMPRE, incluso si la consulta falló: de lo contrario la
+        // app se queda esperando para siempre y no redirige a ninguna vista.
+        perfilCargado.value = true;
+      }
     } else {
+      perfilCargado.value = false;
       autenticado.value = false;
+      limpiarAlcance();
       usuarioActual.value = '';
       rolUsuario.value = '';
-  nombreUsuario.value = '';
+      nombreUsuario.value = '';
       usuarioId.value = '';
       localStorage.removeItem('sesion_activa');
       localStorage.removeItem('usuario_autenticado');
@@ -205,7 +245,7 @@ export function useNavegacion() {
     vistaActual, sidebarAbierto, sidebarColapsado, logoError, toggleSidebar,
     mapaFullscreen, toggleMapaFullscreen,
     isDarkMode, toggleDarkMode,
-    autenticado, usuarioActual, nombreUsuario, rolUsuario, usuarioId,
+    autenticado, perfilCargado, usuarioActual, nombreUsuario, rolUsuario, usuarioId,
     errorAuth, cargandoAuth,
     setAutenticado, iniciarSesion, cerrarSesion,
     navOperacion, navAdmin, titulos, tituloVista, irA,

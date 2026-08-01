@@ -50,9 +50,14 @@
 .mapa-vista--consola {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-rows: minmax(0, 1fr) auto;
+  /* `auto` en la primera fila: la barra ocupa lo que necesite. El
+     `minmax(0, 1fr)` de la fila del mapa sigue siendo obligatorio — sin él, el
+     `min-height: auto` de grid impide que el escenario se encoja y el footer
+     acaba fuera del viewport. */
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "feed stage capas"
+    "barra  barra barra"
+    "feed   stage capas"
     "footer footer footer";
 }
 
@@ -793,4 +798,422 @@
     width: auto !important;
     max-height: calc(100% - 120px);
   }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CONSOLA TERRITORIAL (v16)
+   Barra de contexto por distrito y tablero comparativo.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Barra superior: fila `barra` del grid ── */
+.mv-barra {
+  grid-area: barra;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--mv-surface);
+  border-bottom: 1px solid var(--mv-border);
+}
+
+.mv-barra__ambito {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+  max-width: 34%;
+}
+.mv-barra__icono {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  font-size: 12px;
+}
+.dark .mv-barra__icono { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+
+.mv-barra__titulo {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--mv-text);
+  /* Sin esto un toponimo largo empuja el selector fuera de la barra. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mv-barra__sub {
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--mv-text-sec);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+}
+.mv-barra__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  font-weight: 700;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.dark .mv-barra__chip { background: rgba(245, 158, 11, 0.22); color: #fcd34d; }
+
+/* ── Selector segmentado de distrito ── */
+.mv-barra__selector {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--mv-surface2);
+  border: 1px solid var(--mv-border);
+  min-width: 0;
+  /* Con 6 opciones no siempre cabe: se desplaza en horizontal en lugar de
+     desbordar la barra o comprimir las etiquetas hasta hacerlas ilegibles. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mv-barra__selector::-webkit-scrollbar { display: none; }
+
+.mv-barra__opcion {
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--mv-text-sec);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+.mv-barra__opcion:hover { color: var(--mv-text); }
+.mv-barra__opcion.is-activa {
+  background: var(--mv-surface);
+  color: var(--mv-text);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+}
+.mv-barra__opcion:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+.mv-barra__aviso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b45309;
+}
+
+.mv-barra__acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.mv-barra__hora {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--mv-text-sec);
+  font-variant-numeric: tabular-nums;
+}
+.mv-barra__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--mv-border);
+  background: var(--mv-surface2);
+  color: var(--mv-text-sec);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.mv-barra__btn:hover { color: var(--mv-text); border-color: var(--mv-border-hi); }
+.mv-barra__btn.is-activo {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.mv-barra__btn:focus-visible { outline: 2px solid #3b82f6; outline-offset: 1px; }
+
+/* ── Tablero comparativo: overlay dentro del escenario ── */
+.mv-tablero {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: calc(var(--mv-dock-w, 46px) + 24px);
+  z-index: 620;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--mv-surface);
+  border: 1px solid var(--mv-border);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+}
+
+.mv-tablero__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.mv-tablero__titulo {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mv-text);
+  line-height: 1.15;
+}
+.mv-tablero__sub {
+  font-size: 10px;
+  color: var(--mv-text-sec);
+  margin-top: 2px;
+}
+.mv-tablero__cerrar {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 0;
+  background: var(--mv-surface2);
+  color: var(--mv-text-sec);
+  cursor: pointer;
+  font-size: 12px;
+}
+.mv-tablero__cerrar:hover { color: var(--mv-text); }
+
+.mv-tablero__orden {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.mv-tablero__crit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--mv-border);
+  background: var(--mv-surface2);
+  color: var(--mv-text-sec);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mv-tablero__crit.is-activo {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #fff;
+}
+.dark .mv-tablero__crit.is-activo { background: #e5e7eb; border-color: #e5e7eb; color: #111827; }
+.mv-tablero__crit:focus-visible { outline: 2px solid #3b82f6; outline-offset: 1px; }
+
+.mv-tablero__grid {
+  display: grid;
+  /* `minmax(0, 1fr)` y no `1fr`: con `1fr` una cifra larga ensancha la columna
+     y descuadra la comparacion visual entre distritos. */
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 8px;
+}
+
+.mv-tablero__vacio,
+.mv-tablero__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 12px;
+  font-size: 11px;
+  color: var(--mv-text-sec);
+  justify-content: center;
+}
+.mv-tablero__error {
+  justify-content: flex-start;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 10px;
+}
+.mv-tablero__error-detalle {
+  font-size: 10px;
+  opacity: 0.85;
+  word-break: break-word;
+}
+.mv-tablero__reintentar {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ── Tarjeta de distrito ── */
+.mv-dcard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--mv-border);
+  background: var(--mv-surface2);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  /* El color del semaforo se hereda a punto y barra desde aqui. */
+  --dcard-color: #94a3b8;
+}
+.mv-dcard:hover { border-color: var(--mv-border-hi); }
+.mv-dcard.is-activa {
+  border-color: var(--dcard-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dcard-color) 28%, transparent);
+}
+/* Fallback para navegadores sin color-mix */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+  .mv-dcard.is-activa { box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.35); }
+}
+.mv-dcard:focus-visible { outline: 2px solid #3b82f6; outline-offset: 1px; }
+
+.mv-dcard.is-ok       { --dcard-color: #10b981; }
+.mv-dcard.is-atencion { --dcard-color: #f59e0b; }
+.mv-dcard.is-alerta   { --dcard-color: #f97316; }
+.mv-dcard.is-critico  { --dcard-color: #ef4444; }
+.mv-dcard.is-neutro   { --dcard-color: #94a3b8; }
+
+.mv-dcard__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.mv-dcard__punto {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--dcard-color);
+}
+.mv-dcard__nombre {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mv-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.mv-dcard__check { margin-left: auto; font-size: 10px; color: var(--dcard-color); }
+
+.mv-dcard__cifra {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--mv-text);
+  font-variant-numeric: tabular-nums;
+}
+.mv-dcard__barra {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--mv-border);
+  overflow: hidden;
+}
+.mv-dcard__barra-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--dcard-color);
+  transition: width 320ms ease;
+}
+
+.mv-dcard__detalle {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+}
+.mv-dcard__detalle > div { min-width: 0; }
+.mv-dcard__detalle dt {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mv-text-sec);
+  font-weight: 700;
+}
+.mv-dcard__detalle dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mv-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.mv-dcard__pie {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: var(--mv-text-sec);
+  padding-top: 4px;
+  border-top: 1px solid var(--mv-border);
+}
+
+/* ── Responsivo ──
+   La barra se conserva por debajo de lg: es el control principal de la vista,
+   no un adorno. Lo que se sacrifica es el texto del boton, no el control. */
+@media (max-width: 1023.98px) {
+  .mapa-vista--consola {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "barra"
+      "stage"
+      "footer";
+  }
+  .mv-barra { padding: 6px 10px; gap: 8px; }
+  .mv-barra__ambito { max-width: none; }
+  .mv-barra__btn-txt { display: none; }
+  .mv-tablero { right: 12px; top: 8px; padding: 12px; }
+  .mv-tablero__grid { grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mv-barra__opcion,
+  .mv-dcard,
+  .mv-dcard__barra-fill { transition: none; }
 }

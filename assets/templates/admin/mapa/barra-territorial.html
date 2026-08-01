@@ -1,0 +1,61 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     BARRA DE CONTEXTO TERRITORIAL
+     Fila superior del grid de la consola (grid-area: barra).
+     Se adapta al alcance: selector para quien ve varios distritos, etiqueta
+     fija para una jefatura distrital.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<header class="mv-barra" role="navigation" aria-label="Contexto territorial">
+
+  <!-- ── Identidad del ámbito ── -->
+  <div class="mv-barra__ambito">
+    <i class="fa-solid fa-location-dot mv-barra__icono" aria-hidden="true"></i>
+    <div class="min-w-0">
+      <p class="mv-barra__titulo">{{ nombreDistritoActivo }}</p>
+      <p class="mv-barra__sub">
+        {{ etiquetaAlcance }}
+        <span v-if="tieneDelegacion" class="mv-barra__chip" title="Tienes distritos delegados temporalmente">
+          <i class="fa-solid fa-user-clock" aria-hidden="true"></i> delegación
+        </span>
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Selector de distrito ──
+       Solo aparece si hay más de uno que elegir. Con un único distrito el
+       selector sería un control de una sola opción: ruido, no información. -->
+  <div v-if="!esAmbitoUnico && distritosOfrecidos.length" class="mv-barra__selector" role="group"
+    aria-label="Seleccionar distrito">
+    <button type="button" class="mv-barra__opcion" :class="{ 'is-activa': !distrito }"
+      :aria-pressed="!distrito ? 'true' : 'false'" @click="seleccionar(null)">
+      Todos
+    </button>
+    <button v-for="d in distritosOfrecidos" :key="d.id" type="button" class="mv-barra__opcion"
+      :class="{ 'is-activa': String(distrito) === String(d.id) }"
+      :aria-pressed="String(distrito) === String(d.id) ? 'true' : 'false'"
+      :title="d.nombre" @click="seleccionar(d.id)">
+      {{ d.nombre }}
+    </button>
+  </div>
+
+  <!-- Catálogo de distritos no disponible: se avisa en lugar de dejar un hueco -->
+  <div v-else-if="!distritosOfrecidos.length" class="mv-barra__aviso">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+    Sin distritos disponibles para tu usuario
+  </div>
+
+  <!-- ── Acciones ── -->
+  <div class="mv-barra__acciones">
+    <span v-if="horaActualizacion" class="mv-barra__hora" :title="'Indicadores actualizados a las ' + horaActualizacion">
+      <i class="fa-solid fa-rotate" :class="{ 'fa-spin': cargandoKpis }" aria-hidden="true"></i>
+      {{ horaActualizacion }}
+    </span>
+
+    <!-- Comparar distritos solo tiene sentido si se ve más de uno -->
+    <button v-if="puedeCompararDistritos" type="button" class="mv-barra__btn"
+      :class="{ 'is-activo': comparativoAbierto }" :aria-pressed="comparativoAbierto ? 'true' : 'false'"
+      @click="$emit('toggle-comparativo')">
+      <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+      <span class="mv-barra__btn-txt">Comparar distritos</span>
+    </button>
+  </div>
+</header>

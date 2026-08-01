@@ -9,18 +9,21 @@ import { useConfiguracion } from '../../stores/configuracion.js';
 import { useIntervenciones } from '../../stores/intervenciones.js';
 import { useDashboard } from '../../stores/dashboard.js';
 import { usePwa } from '../../stores/pwa.js';
+import { usePermisos } from '../../stores/permisos.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
   setup() {
-    const { vistaActual, sidebarAbierto, tituloVista, autenticado, setAutenticado, irA, cerrarSesion } = useNavegacion();
-    const { cargarTipos, cargarDepartamentos } = useCatalogos();
+    const { vistaActual, sidebarAbierto, tituloVista, autenticado, perfilCargado, rolUsuario,
+            setAutenticado, irA, cerrarSesion } = useNavegacion();
+    const { cargarTipos, cargarDepartamentos, cargarDistritos } = useCatalogos();
     const { cargarDenuncias, suscribirRealtime } = useDenuncias();
     const { cargarPoblacion } = usePoblacion();
     const { config } = useConfiguracion();
     const { cargarIntervenciones } = useIntervenciones();
     const { cargarKpis } = useDashboard();
     const { registrarSW, mostrarModalInstalacion, instalarPWA, posponerInstalacion } = usePwa();
+    const { cargarAlcance } = usePermisos();
 
     // Estado del modal de logout
     const mostrarModalLogout = ref(false);
@@ -47,19 +50,64 @@ export default {
     // admin, alcalde, directivo, jefe_area) opera el Centro de Monitoreo.
     const ROLES_DE_CAMPO = ['empleado'];
 
+    // ⚠ El contexto es una propiedad DE LA PESTAÑA, no del navegador.
+    //
+    // Vivía en `localStorage`, que se comparte entre todas las pestañas del
+    // mismo origen. Con una pestaña abierta en `?contexto=empleados` y otra en
+    // la URL base, la primera escribía 'empleados' y la segunda lo leía al
+    // iniciar sesión: el usuario del Centro de Monitoreo aterrizaba en la PWA
+    // de campo. Al recargar parecía corregirse solo porque el borrado y la
+    // decisión ocurrían en el mismo bloque síncrono, sin dar tiempo a que la
+    // otra pestaña repusiera la clave.
+    //
+    // `sessionStorage` es por pestaña, que es justo la semántica que se busca.
+    const CLAVE_CONTEXTO = 'contexto_acceso';
+
+    const leerContexto = () => {
+      // La URL manda siempre: es el dato que el usuario tiene delante.
+      if (typeof window !== 'undefined') {
+        const param = new URLSearchParams(window.location.search).get('contexto');
+        if (param) return param;
+      }
+      // Respaldo por pestaña, para navegaciones internas que pierden el query.
+      return sessionStorage.getItem(CLAVE_CONTEXTO);
+    };
+
+    // Restos de la versión que guardaba el contexto en localStorage. Si no se
+    // borran, la clave compartida sigue viva en el navegador de quien ya venía
+    // usando el sistema. Nada la lee ya, pero se limpia para no dejar basura.
+    const limpiarLegado = () => localStorage.removeItem(CLAVE_CONTEXTO);
+
+    const guardarContexto = (valor) => {
+      sessionStorage.setItem(CLAVE_CONTEXTO, valor);
+      limpiarLegado();
+    };
+    const olvidarContexto = () => {
+      sessionStorage.removeItem(CLAVE_CONTEXTO);
+      limpiarLegado();
+    };
+
     // Única fuente de verdad para decidir a dónde va un usuario ya autenticado.
-    // La usan tanto el watch de `autenticado` como el onMounted; antes cada uno
-    // decidía por su cuenta —uno por localStorage, otro por rol— y divergían.
+    // El rol se lee del store reactivo, NO de localStorage. Durante un login
+    // recién hecho, localStorage todavía guarda el rol de la sesión anterior:
+    // `onAuthStateChange` marca `autenticado = true` de inmediato y solo
+    // después consulta public.usuarios para escribir el rol real. Leer
+    // localStorage en ese punto decide con datos rancios.
     const resolverVistaDestino = () => {
-      const contexto = localStorage.getItem('contexto_acceso');
+      const contexto = leerContexto();
       if (contexto && VISTA_POR_CONTEXTO[contexto] && config.value.accesoContextos[contexto]) {
         return VISTA_POR_CONTEXTO[contexto];
       }
-      const rol = localStorage.getItem('rol_usuario');
+      const rol = rolUsuario.value;
       if (ROLES_DE_CAMPO.includes(rol) && config.value.accesoContextos.empleados) return 'pwa-empleado';
       if (rol === 'poblacion' && config.value.accesoContextos.poblacion) return 'pwa-poblacion';
       return 'dashboard';
     };
+
+    // Vista elegida antes de conocer el rol real (pintado optimista al recargar
+    // con sesión viva). Sirve para saber si podemos corregirla sin pisar una
+    // navegación que el usuario haya hecho por su cuenta mientras tanto.
+    let destinoOptimista = null;
 
     // Detectar parámetros URL para contexto de acceso (identifica origen, no autentica)
     const detectarContextoURL = () => {
@@ -67,28 +115,26 @@ export default {
 
       const contextoParam = new URLSearchParams(window.location.search).get('contexto');
 
-      // Sin parámetro, la URL base significa Centro de Monitoreo. Hay que
-      // BORRAR el contexto guardado: si no, una visita previa a
-      // ?contexto=empleados deja la clave rancia en localStorage y el usuario
-      // aterriza en la PWA de campo al iniciar sesión en el panel admin.
+      // Sin parámetro, la URL base significa Centro de Monitoreo. Se borra el
+      // contexto de ESTA pestaña; las demás conservan el suyo.
       if (!contextoParam) {
-        localStorage.removeItem('contexto_acceso');
+        olvidarContexto();
         return null;
       }
 
       // Kill switch por contexto (ver stores/configuracion.js)
       if (!config.value.accesoContextos[contextoParam]) {
-        localStorage.removeItem('contexto_acceso');
+        olvidarContexto();
         return null;
       }
 
       const contextoValido = obtenerContexto(contextoParam);
       if (!contextoValido) {
-        localStorage.removeItem('contexto_acceso');
+        olvidarContexto();
         return null;
       }
 
-      localStorage.setItem('contexto_acceso', contextoParam);
+      guardarContexto(contextoParam);
 
       if (autenticado.value) {
         vistaActual.value = VISTA_POR_CONTEXTO[contextoParam];
@@ -98,15 +144,27 @@ export default {
       return contextoParam;
     };
 
-    // Redirigir a login si no está autenticado (excepto si ya está en login o registro)
+    // Redirigir a login al perder la sesión (salvo si ya está en login/registro)
     watch(autenticado, (nuevoValor) => {
-      const contexto = localStorage.getItem('contexto_acceso');
-      
-      if (!nuevoValor && vistaActual.value !== 'login' && vistaActual.value !== 'registro-poblacion') {
-        vistaActual.value = contexto === 'poblacion' ? 'registro-poblacion' : 'login';
-      } else if (nuevoValor && vistaActual.value === 'login') {
-        vistaActual.value = resolverVistaDestino();
+      if (nuevoValor) return;
+      if (vistaActual.value === 'login' || vistaActual.value === 'registro-poblacion') return;
+      vistaActual.value = leerContexto() === 'poblacion' ? 'registro-poblacion' : 'login';
+    });
+
+    // La entrada al sistema se decide aquí, y SOLO cuando el perfil ya resolvió
+    // el rol real. Antes esto colgaba del watch de `autenticado`, que se dispara
+    // varios cientos de ms antes de que se conozca el rol: el usuario del
+    // Centro de Monitoreo aterrizaba en la PWA de empleados y solo al recargar
+    // —con el rol ya en localStorage— llegaba al panel correcto.
+    watch(perfilCargado, (listo) => {
+      if (!listo || !autenticado.value) return;
+      const destino = resolverVistaDestino();
+      // Solo se corrige si seguimos en login o en el destino que se pintó de
+      // forma optimista. Si el usuario ya navegó a otra vista, no se le mueve.
+      if (vistaActual.value === 'login' || vistaActual.value === destinoOptimista) {
+        vistaActual.value = destino;
       }
+      destinoOptimista = null;
     });
 
     // Verificar autenticación al montar
@@ -119,11 +177,22 @@ export default {
       const contexto = detectarContextoURL();
 
       if (autenticado.value) {
-        vistaActual.value = resolverVistaDestino();
+        // Pintado optimista: al recargar con sesión viva, `rolUsuario` ya viene
+        // de localStorage, así que se evita el parpadeo del login. Si el perfil
+        // real difiere, el watch de `perfilCargado` corrige el destino.
+        destinoOptimista = resolverVistaDestino();
+        vistaActual.value = destinoOptimista;
 
-        // Cargar datos
+        // Cargar datos. Los catálogos van ANTES que los casos: el mapeo de un
+        // caso resuelve el nombre de su distrito contra `catalogos.distritos`,
+        // y si el catálogo llega después el nombre queda vacío para siempre.
         await cargarTipos();
         await cargarDepartamentos();
+        await cargarDistritos();
+        // El alcance decide qué controles territoriales ofrece la consola.
+        // Va antes de los casos para que la vista no arranque mostrando un
+        // comparativo de 5 distritos a quien solo puede ver el suyo.
+        await cargarAlcance();
         await cargarPoblacion();
         await cargarDenuncias();
         await cargarIntervenciones();

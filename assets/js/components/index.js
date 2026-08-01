@@ -27,6 +27,9 @@ import vistaBitacora      from './admin/vista-bitacora.js';
 import vistaDepartamentos from './admin/vista-departamentos.js';
 import vistaPoblacion     from './admin/vista-poblacion.js';
 import vistaNotificaciones from './admin/vista-notificaciones.js';
+// Piezas de la consola de monitoreo territorial
+import barraTerritorial  from './admin/mapa/barra-territorial.js';
+import tableroDistritos  from './admin/mapa/tablero-distritos.js';
 
 // ── EMPLEADOS ────────────────────────────────────────────────
 import vistaPwaEmpleado          from './empleados/vista-pwa-empleado.js';
@@ -74,6 +77,10 @@ export const componentes = {
   'vista-departamentos':    { comp: vistaDepartamentos,    tpl: 'admin/vista-departamentos' },
   'vista-poblacion':        { comp: vistaPoblacion,        tpl: 'admin/vista-poblacion' },
   'vista-notificaciones':    { comp: vistaNotificaciones,   tpl: 'admin/vista-notificaciones' },
+
+  // ── ADMIN · piezas de la consola de monitoreo territorial ──
+  'barra-territorial':      { comp: barraTerritorial,      tpl: 'admin/mapa/barra-territorial' },
+  'tablero-distritos':      { comp: tableroDistritos,      tpl: 'admin/mapa/tablero-distritos' },
 
   // ── EMPLEADOS ──────────────────────────────────────────────
   'vista-pwa-empleado':         { comp: vistaPwaEmpleado,         tpl: 'empleados/vista-pwa-empleado' },

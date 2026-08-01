@@ -12,6 +12,8 @@ import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useIntervenciones } from '../../stores/intervenciones.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { usePermisos } from '../../stores/permisos.js';
+import { useTerritorio } from '../../stores/territorio.js';
 import { formatoFecha } from '../../utils/formato.js';
 import { badgeEstado, etiquetaEstado } from '../../utils/badge.js';
 import { marcadorDenuncia, marcadorIntervencion } from '../../services/marcadores.js';
@@ -20,7 +22,13 @@ import { popupDenuncia, popupIntervencion } from '../../services/mapa-monitoreo.
 export default {
   setup() {
     const { denuncias, nombreDeTipo } = useDenuncias();
-    const { tiposDenuncia, buscarDepartamento } = useCatalogos();
+    const { tiposDenuncia, buscarDepartamento, distritos } = useCatalogos();
+    const { distritoPorDefecto, puedeCompararDistritos, alcanceResuelto } = usePermisos();
+    const { cargarKpisDistrito } = useTerritorio();
+
+    // Tablero comparativo. Se abre solo si hay más de un distrito que comparar:
+    // a una jefatura distrital no se le ofrece comparar consigo misma.
+    const tableroAbierto = ref(false);
     const { mapaFullscreen, toggleMapaFullscreen, isDarkMode, sidebarColapsado } = useNavegacion();
 
     /* ─── Estado de UI (efímero, vive en ref) ─── */
@@ -64,8 +72,7 @@ export default {
     // ── Estado de filtros del mapa ──────────────────────────────────────────────
     const mostrarPanelFiltros = ref(false);
     const filtros = reactive({
-      distrito: '',   // nombre del distrito o '' para todos
-      centroPoblacional: '',   // texto libre o '' para todos
+      distrito: '',   // id del distrito (smallint) o '' para todos
       tipoIncidencia: '',   // tipo_id o '' para todos
       // 'pendiente' | 'en_revision' | 'en_obra' | 'resuelta' | '' ó el estado
       // agregado 'en_curso' (= en_revision + en_obra) que dispara la franja de KPIs.
@@ -91,10 +98,10 @@ export default {
     const acordeonTramos = ref(true);
     const acordeonIntervenciones = ref(true);
 
-    // Lista fija de distritos (mismos que GeoJSON)
-    const DISTRITOS = [
-      'San Marcos', 'Santo Tomás', 'Santiago Texacuangos', 'Panchimalco', 'Rosario de Mora'
-    ];
+    // Los distritos salen de `public.distritos` vía el store de catálogos.
+    // Estaban hardcodeados como una lista de nombres, lo que además de
+    // contradecir la regla de "todas las vistas conectadas a BD" hacía que el
+    // filtro comparase un nombre contra el id que traía cada caso.
 
     // Nuevas variables para el Menú de Capas
     const mostrarMenuCapas = ref(false);
@@ -195,8 +202,11 @@ export default {
        ─────────────────────────────────────────────────────────────────── */
     function pasaFiltrosBase(d) {
       if (filtros.tipoIncidencia && d.tipo_id !== filtros.tipoIncidencia) return false;
-      if (filtros.distrito && (d.distrito || '') !== filtros.distrito) return false;
-      if (filtros.centroPoblacional && (d.centro_poblacional || '') !== filtros.centroPoblacional) return false;
+      // El filtro guarda el id del distrito, no su nombre. Antes comparaba el
+      // nombre de la lista hardcodeada contra `d.distrito`, que traía el
+      // smallint de `casos.distrito_id`: la comparación nunca casaba y el
+      // filtro territorial no recortaba nada.
+      if (filtros.distrito && String(d.distrito_id ?? '') !== String(filtros.distrito)) return false;
       if (filtros.historicoActivo) {
         if (filtros.fechaInicio) {
           const desde = new Date(filtros.fechaInicio + 'T00:00:00');
@@ -270,7 +280,8 @@ export default {
             title: d.descripcion || nombreDeTipo(d.tipo_id),
             address: d.direccion, time: formatoFecha(d.created_at),
             estado: d.estado, isNew: nuevosIds.has(d.id),
-            distrito: d.distrito || '', centroPoblacional: d.centro_poblacional || '',
+            distrito: d.distrito || '', distritoId: d.distrito_id ?? null,
+            prioridad: d.prioridad_id ?? null,
             createdAt: d.created_at,
           }));
 
@@ -317,6 +328,35 @@ export default {
       }
     }
 
+    // Orden operativo del feed. En un centro de monitoreo el orden ES la
+    // priorización: lo de arriba es lo que hay que atender primero.
+    //   1. Prioridad — `prioridades.nivel` va de 1 (Crítica) a 5 (Informativa),
+    //      así que ascendente pone lo urgente arriba.
+    //   2. Estado — lo no atendido antes que lo que ya está en curso o cerrado.
+    //   3. Antigüedad — dentro del mismo cajón, primero lo que lleva más tiempo
+    //      sin resolverse. Un caso crítico de hace tres días pesa más que uno
+    //      de hace diez minutos.
+    // Antes esto era `sort(() => Math.random() - 0.5)`: además de barajar el
+    // feed, un comparador que devuelve valores aleatorios no es una relación de
+    // orden válida y el resultado dependía del algoritmo del motor.
+    const RANGO_ESTADO = { pendiente: 0, en_revision: 1, en_obra: 2, resuelta: 3, rechazada: 4 };
+
+    function compararPrioridadOperativa(a, b) {
+      const pa = a.prioridad ?? 99;
+      const pb = b.prioridad ?? 99;
+      if (pa !== pb) return pa - pb;
+
+      const ea = RANGO_ESTADO[a.estado] ?? 98;
+      const eb = RANGO_ESTADO[b.estado] ?? 98;
+      if (ea !== eb) return ea - eb;
+
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (ta !== tb) return ta - tb;            // más antiguo primero
+
+      return String(a.id).localeCompare(String(b.id));  // desempate estable
+    }
+
     function reconstruirFeed() {
       const todos = [];
       categories.value.forEach((cat) => {
@@ -324,18 +364,34 @@ export default {
           todos.push({
             id: p.id, lat: p.lat, lng: p.lng, catShort: cat.shortName, color: cat.color,
             title: p.title, address: p.address, time: p.time, estado: p.estado, isNew: p.isNew,
+            prioridad: p.prioridad, createdAt: p.createdAt, distrito: p.distrito,
           });
         });
       });
-      feedItems.value = todos.sort(() => Math.random() - 0.5);
+      feedItems.value = todos.sort(compararPrioridadOperativa);
     }
     /* ─── Filtros: computed y helpers ─────────────────────────────────────────── */
     const conteoFiltros = computed(() => [
-      filtros.distrito, filtros.centroPoblacional, filtros.tipoIncidencia,
+      filtros.distrito, filtros.tipoIncidencia,
       filtros.estadoIncidencia, filtros.historicoActivo,
     ].filter(Boolean).length);
 
     const filtrosActivos = computed(() => conteoFiltros.value > 0);
+
+    // Leyenda: solo describe lo que está pintado AHORA mismo. Antes listaba las
+    // 19 categorías del catálogo tuvieran o no incidencias; como `shortName` es
+    // el nombre completo del departamento responsable ("Unidad Operativa De
+    // Obras Municipales"), el bloque crecía hasta cubrir el centro del mapa.
+    // Una leyenda que explica símbolos que no están en pantalla no es leyenda.
+    const leyendaCategorias = computed(() =>
+      (categories.value || []).filter((c) => c.visible && c.points.length)
+    );
+    const hayCapasEspeciales = computed(
+      () => (routesVis.value && routes.value.length) || (intervVis.value && interventions.value.length)
+    );
+    const mostrarLeyenda = computed(
+      () => leyendaCategorias.value.length > 0 || hayCapasEspeciales.value
+    );
 
     // Atajo desde la franja de KPIs: pulsar un segmento filtra el mapa por ese
     // estado; pulsarlo de nuevo (o pulsar "Denuncias") vuelve al total.
@@ -350,9 +406,51 @@ export default {
       pintarCapas();
     }
 
+    // Extrae el bounding box del polígono de un distrito desde el GeoJSON
+    // municipal. El GeoJSON identifica los distritos por NOMBRE
+    // (`properties.nombre`), así que hay que traducir el id del catálogo.
+    function limitesDeDistrito(idDistrito) {
+      if (typeof window.getDistritosGeoJSON !== 'function') return null;
+      const dist = (distritos.value || []).find((d) => String(d.id) === String(idDistrito));
+      if (!dist) return null;
+
+      const geojson = window.getDistritosGeoJSON();
+      const feat = (geojson?.features || []).find((f) => {
+        const p = f.properties || {};
+        const nombre = p.nombre || p.NOMBRE || p.name || '';
+        // Comparación laxa: el GeoJSON viene de una fuente externa y no
+        // garantiza la misma acentuación ni capitalización que el catálogo.
+        return nombre.localeCompare(dist.nombre, 'es', { sensitivity: 'base' }) === 0;
+      });
+      if (!feat) return null;
+
+      const puntos = [];
+      const recoger = (coords) => {
+        if (typeof coords[0] === 'number') { puntos.push([coords[1], coords[0]]); return; }
+        coords.forEach(recoger);
+      };
+      recoger(feat.geometry.coordinates);
+      return puntos.length ? L.latLngBounds(puntos) : null;
+    }
+
+    // Cambio de distrito desde la barra o desde el tablero comparativo.
+    // Filtra los datos y además encuadra el mapa: sin el encuadre el usuario
+    // ve menos pines pero sigue mirando el municipio entero, y no percibe que
+    // el contexto cambió.
+    function cambiarDistrito(id) {
+      filtros.distrito = id ? String(id) : '';
+      aplicarFiltros();
+      if (!lmap) return;
+      const limites = id ? limitesDeDistrito(id) : null;
+      if (limites) {
+        lmap.flyToBounds(limites, { padding: [40, 40], duration: 0.7 });
+      } else if (!id) {
+        fitAll();
+      }
+    }
+
     function limpiarFiltros() {
       filtros.distrito = '';
-      filtros.centroPoblacional = '';
       filtros.tipoIncidencia = '';
       filtros.estadoIncidencia = '';
       filtros.historicoActivo = false;
@@ -1122,8 +1220,35 @@ export default {
     watch(routes, () => { if (lmap) pintarRutas(); });
     watch(interventions, () => { if (lmap) pintarIntervenciones(); });
 
+    // Arranque territorial. El alcance puede resolverse después del montaje
+    // (el RPC `mi_alcance()` es asíncrono), así que en lugar de leerlo una vez
+    // en onMounted se observa hasta que llega.
+    //
+    // Una jefatura distrital entra directamente encuadrada en su distrito, sin
+    // tener que seleccionarlo: es el único que puede ver, y obligarle a
+    // elegirlo cada vez sería trabajo sin información.
+    // Se controla con una bandera y NO llamando al `stop` que devuelve watch():
+    // con `immediate: true` el callback corre de forma síncrona DENTRO de la
+    // llamada a watch(), antes de que la constante quede asignada, así que
+    // referenciarla ahí lanza `ReferenceError: Cannot access 'X' before
+    // initialization` (zona muerta temporal de const/let).
+    let arranqueTerritorialHecho = false;
+
+    watch(alcanceResuelto, (listo) => {
+      if (!listo || arranqueTerritorialHecho) return;
+      arranqueTerritorialHecho = true;
+      if (distritoPorDefecto.value && !filtros.distrito) {
+        cambiarDistrito(distritoPorDefecto.value);
+      }
+      // El comparativo solo se ofrece —y solo se abre— si hay algo que comparar.
+      if (!puedeCompararDistritos.value) tableroAbierto.value = false;
+    }, { immediate: true });
+
     onMounted(() => {
       cargarCapasMapa();
+      // KPIs agregados en la base de datos, no calculados sobre las filas ya
+      // cargadas: los de la franja se computaban sobre un tope de 200 casos.
+      cargarKpisDistrito();
       mapaFullscreen.value = false; // el mapa arranca normal (con sidebar)
       // Los paneles arrancan abiertos: al estar acoplados al grid no tapan el
       // mapa, así que el operador ve feed y capas desde el primer segundo.
@@ -1162,7 +1287,10 @@ export default {
       dismissToast,
       // Filtros
       mostrarPanelFiltros, filtros, filtrosActivos, conteoFiltros, filtrarPorEstado,
-      ESTADOS_FILTRO, DISTRITOS, hoy,
+      ESTADOS_FILTRO, distritos, hoy,
+      // Consola territorial
+      tableroAbierto, cambiarDistrito,
+      leyendaCategorias, hayCapasEspeciales, mostrarLeyenda,
       aplicarFiltros, limpiarFiltros, tiposDenuncia,
       sidebarColapsado,
       acordeonTipos, acordeonTramos, acordeonIntervenciones

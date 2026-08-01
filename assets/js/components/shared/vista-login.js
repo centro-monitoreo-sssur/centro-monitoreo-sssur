@@ -4,12 +4,14 @@ import { ref, reactive, computed, onMounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useDenuncias } from '../../stores/denuncias.js';
+import { usePermisos } from '../../stores/permisos.js';
 
 export default {
   setup() {
     const { setAutenticado, iniciarSesion: authIniciarSesion, errorAuth, cargandoAuth, irA } = useNavegacion();
-    const { cargarTipos } = useCatalogos();
+    const { cargarTipos, cargarDepartamentos, cargarDistritos } = useCatalogos();
     const { cargarDenuncias, suscribirRealtime } = useDenuncias();
+    const { cargarAlcance } = usePermisos();
 
     // Detectar contexto desde URL
     const contexto = computed(() => {
@@ -149,9 +151,16 @@ export default {
           return;
         }
 
-        // Cargar catálogos y denuncias al ingresar (admin)
+        // Cargar catálogos y casos al ingresar (admin).
+        // El orden importa: `cargarDenuncias()` resuelve el nombre del distrito
+        // de cada caso contra `catalogos.distritos`. Si los catálogos no están
+        // cargados, los casos quedan sin distrito y el filtro territorial del
+        // Mapa en Vivo no encuentra nada hasta recargar la página.
         if (contexto.value === 'admin') {
           await cargarTipos();
+          await cargarDepartamentos();
+          await cargarDistritos();
+          await cargarAlcance();
           await cargarDenuncias();
           suscribirRealtime();
         }
@@ -169,8 +178,9 @@ export default {
     };
 
     const irARegistro = () => {
-      // Guardar contexto de población
-      localStorage.setItem('contexto_acceso', 'poblacion');
+      // Contexto por PESTAÑA: en localStorage se filtraba a las demás pestañas
+      // abiertas y desviaba su destino al iniciar sesión (ver app-root.js).
+      sessionStorage.setItem('contexto_acceso', 'poblacion');
       irA('registro-poblacion');
     };
 

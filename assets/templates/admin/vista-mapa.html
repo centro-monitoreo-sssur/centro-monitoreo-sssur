@@ -12,6 +12,16 @@
 <div class="mapa-vista mapa-vista--consola" :class="{'is-fullscreen': mapaFullscreen}">
 
   <!-- ═══════════════════════════════════════════════════════════════════
+       FILA SUPERIOR · CONTEXTO TERRITORIAL
+       Control principal de la consola. Se adapta al alcance del usuario:
+       selector de distritos para visión municipal, etiqueta fija para una
+       jefatura distrital. Ver assets/js/stores/permisos.js.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <barra-territorial :distrito="filtros.distrito" :comparativo-abierto="tableroAbierto"
+    @update:distrito="cambiarDistrito" @toggle-comparativo="tableroAbierto = !tableroAbierto">
+  </barra-territorial>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
        COLUMNA IZQUIERDA · FEED DE INCIDENCIAS EN VIVO
        ═══════════════════════════════════════════════════════════════════ -->
   <aside class="mv-panel mv-panel--feed" :class="{'is-closed': !feedOpen}"
@@ -70,6 +80,13 @@
 
     <!-- MAPA -->
     <div id="map-mapa" class="mv-map"></div>
+
+    <!-- ── Tablero comparativo entre distritos ──
+         Overlay, no vista aparte: el usuario nunca pierde de vista el mapa.
+         Solo se ofrece a quien alcanza más de un distrito. -->
+    <tablero-distritos v-if="tableroAbierto" :distrito-activo="filtros.distrito"
+      @seleccionar="cambiarDistrito" @cerrar="tableroAbierto = false">
+    </tablero-distritos>
 
     <!-- ── Pestañas de borde: reabren un panel plegado (solo desktop) ── -->
     <div v-show="!feedOpen" class="mv-ptab l" @click="feedOpen = true" title="Abrir feed de incidencias">
@@ -354,20 +371,10 @@
           <select v-model="filtros.distrito" @change="aplicarFiltros"
             class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
             <option value="">Todos los distritos</option>
-            <option v-for="d in DISTRITOS" :key="d" :value="d">{{ d }}</option>
+            <option v-for="d in distritos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
           </select>
-        </div>
-
-        <!-- Centro Poblacional -->
-        <div>
-          <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-            <i class="fa-solid fa-city mr-1 text-emerald-500"></i>Centro Poblacional
-          </label>
-          <input type="text" v-model="filtros.centroPoblacional" @input="aplicarFiltros"
-            placeholder="Ej: Col. Centro, Cantón El Pino…"
-            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
-          <p class="text-[9px] text-gray-400 mt-1">
-            <i class="fa-solid fa-info-circle mr-0.5"></i>Próximamente: selector por polígono de centro poblacional.
+          <p v-if="!distritos.length" class="text-[9px] text-amber-600 dark:text-amber-400 mt-1">
+            <i class="fa-solid fa-triangle-exclamation mr-0.5"></i>Catálogo de distritos no disponible.
           </p>
         </div>
 
@@ -599,22 +606,32 @@
       </div>
     </div>
 
-    <!-- ── LEYENDA ── -->
-    <div
-      class="absolute bottom-3 left-1/2 -translate-x-1/2 z-[36] max-lg:hidden rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 px-3 py-1.5 flex gap-3 flex-wrap items-center justify-center max-w-[calc(100%-140px)] transition-colors">
-      <div v-for="cat in categories" :key="'l'+cat.id" class="flex items-center gap-1.5">
+    <!-- ── LEYENDA ──
+         Solo describe lo que está pintado en este momento. Listar el catálogo
+         completo hacía que el bloque cubriera el centro del mapa, porque la
+         etiqueta de cada categoría es el nombre del departamento responsable.
+         `max-h` + scroll es el tope duro: la leyenda nunca puede volver a
+         comerse el escenario, por muchas categorías activas que haya. -->
+    <div v-if="mostrarLeyenda"
+      class="absolute bottom-3 left-1/2 -translate-x-1/2 z-[36] max-lg:hidden rounded-xl shadow-lg shadow-gray-900/10 border border-gray-200/80 dark:border-gray-700 bg-white/95 backdrop-blur-sm dark:bg-gray-800/95 px-3 py-1.5 flex gap-x-3 gap-y-1 flex-wrap items-center justify-center max-w-[calc(100%-140px)] max-h-20 overflow-y-auto transition-colors">
+      <div v-for="cat in leyendaCategorias" :key="'l'+cat.id" class="flex items-center gap-1.5 min-w-0">
         <div class="w-[7px] h-[7px] rounded-full shrink-0" :style="{background:cat.color}"></div>
-        <span class="text-[10px] text-gray-600 dark:text-gray-300">{{ cat.shortName }}</span>
+        <span class="text-[10px] text-gray-600 dark:text-gray-300 truncate max-w-[160px]"
+          :title="cat.name + ' · ' + cat.shortName">{{ cat.shortName }}</span>
+        <span class="text-[10px] font-bold text-gray-400 tabular-nums">{{ cat.points.length }}</span>
       </div>
-      <div class="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
-      <div class="flex items-center gap-1.5">
-        <div class="w-[7px] h-[7px] rotate-45 rounded-[1px]" style="background:var(--mv-gold);"></div>
-        <span class="text-[10px] text-gray-600 dark:text-gray-300">Intervención</span>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <div class="w-4 h-0.5 rounded-sm" style="background:#b06a20;"></div>
-        <span class="text-[10px] text-gray-600 dark:text-gray-300">Tramo</span>
-      </div>
+
+      <template v-if="hayCapasEspeciales">
+        <div v-if="leyendaCategorias.length" class="w-px h-3 bg-gray-200 dark:bg-gray-700"></div>
+        <div v-if="intervVis && interventions.length" class="flex items-center gap-1.5">
+          <div class="w-[7px] h-[7px] rotate-45 rounded-[1px]" style="background:var(--mv-gold);"></div>
+          <span class="text-[10px] text-gray-600 dark:text-gray-300">Intervención</span>
+        </div>
+        <div v-if="routesVis && routes.length" class="flex items-center gap-1.5">
+          <div class="w-4 h-0.5 rounded-sm" style="background:#b06a20;"></div>
+          <span class="text-[10px] text-gray-600 dark:text-gray-300">Tramo</span>
+        </div>
+      </template>
     </div>
 
     <!-- ── FLOTANTE DE HERRAMIENTAS DE MEDICIÓN ── -->

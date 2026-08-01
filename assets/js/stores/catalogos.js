@@ -9,13 +9,17 @@ import { tiposDenunciaFallback, departamentosFallback } from '../utils/demo-data
 
 const tiposDenuncia = ref(tiposDenunciaFallback);
 const departamentos = ref(departamentosFallback);
+// Los 5 distritos del municipio. A diferencia del resto de catálogos NO tiene
+// fallback de demo: en una consola territorial, un distrito inventado es peor
+// que una lista vacía — llevaría a leer cifras de un territorio que no existe.
+const distritos = ref([]);
 const cargandoCatalogos = ref(false);
 
 // Un catálogo vacío en Supabase NO lanza excepción: la query responde []. Sin
 // esta bandera el store conserva los datos de demo-data.js y la UI los muestra
 // como si fueran reales — indistinguible de valores hardcodeados. Se expone
 // para que las vistas puedan avisar que están operando sobre datos de demo.
-const catalogosEnFallback = ref({ tipos: true, departamentos: true });
+const catalogosEnFallback = ref({ tipos: true, departamentos: true, distritos: true });
 
 async function cargarTipos() {
   cargandoCatalogos.value = true;
@@ -88,6 +92,34 @@ async function cargarDepartamentos() {
   }
 }
 
+async function cargarDistritos() {
+  cargandoCatalogos.value = true;
+  try {
+    if (db) {
+      const { data, error } = await db
+        .from('distritos')
+        .select('id, codigo, nombre, municipio_id, activo')
+        .eq('activo', true)
+        .order('nombre');
+      if (error) throw error;
+      if (data && data.length) {
+        distritos.value = data;
+        catalogosEnFallback.value.distritos = false;
+      } else {
+        console.error(
+          '[catalogos] La tabla `distritos` está VACÍA en Supabase. El filtro ' +
+          'territorial del Mapa en Vivo quedará deshabilitado. Ejecuta ' +
+          'migration_v11_seed_seguridad_y_catalogos.sql.'
+        );
+      }
+    }
+  } catch (e) {
+    console.error('[catalogos] Falló la carga de distritos:', e.message);
+  } finally {
+    cargandoCatalogos.value = false;
+  }
+}
+
 export function useCatalogos() {
   const buscar = (id) => tiposDenuncia.value.find((t) => t.id === id) || {};
   const nombreDeTipo = (id) => buscar(id).nombre || id;
@@ -103,10 +135,17 @@ export function useCatalogos() {
   const nombreDepartamento = (id) => buscarDepartamento(id).nombre || id;
   const direccionDepartamento = (id) => ''; // Pendiente join con direcciones_administrativas
 
+  // Distritos. `nombreDistrito` devuelve cadena vacía si el catálogo aún no ha
+  // cargado: devolver el id haría que la UI mostrase un número donde espera un
+  // topónimo, y que los filtros por nombre casaran contra basura.
+  const buscarDistrito = (id) => distritos.value.find((d) => d.id === id) || {};
+  const nombreDistrito = (id) => buscarDistrito(id).nombre || '';
+
   return {
-    tiposDenuncia, departamentos, cargandoCatalogos, catalogosEnFallback,
-    cargarTipos, cargarDepartamentos,
+    tiposDenuncia, departamentos, distritos, cargandoCatalogos, catalogosEnFallback,
+    cargarTipos, cargarDepartamentos, cargarDistritos,
     nombreDeTipo, colorDeTipo, iconoDeTipo, areaDeTipo,
-    buscarDepartamento, nombreDepartamento, direccionDepartamento
+    buscarDepartamento, nombreDepartamento, direccionDepartamento,
+    buscarDistrito, nombreDistrito
   };
 }
