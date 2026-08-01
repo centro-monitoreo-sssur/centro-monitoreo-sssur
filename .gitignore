@@ -38,6 +38,7 @@ out/
 .output/
 .vuepress/dist/
 .serverless/
+.claude/
 
 # Graphify (si lo llegas a usar localmente para documentar)
 graphify-out/
