@@ -35,72 +35,67 @@
   <nav class="flex-1 py-4 space-y-1"
     :class="sidebarColapsado ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'">
 
-    <p class="text-[9px] tracking-[0.2em] text-white/40 font-bold overflow-hidden whitespace-nowrap transition-all duration-300"
-      :class="sidebarColapsado ? 'h-0 opacity-0 mb-0' : 'h-[20px] px-5 opacity-100 mb-1 mt-1'">OPERACIÓN</p>
-
-    <div class="px-3" :class="sidebarColapsado ? 'overflow-visible' : ''">
-      <button v-for="item in navOperacion" :key="item.id" @click="irA(item.id)"
-        class="sidebar-nav-item group relative flex items-center transition-all duration-300 rounded-xl"
-        :class="[
-          sidebarColapsado ? 'w-10 h-10 justify-center mx-auto' : 'w-full px-3 py-2.5 gap-3',
-          vistaActual===item.id ? 'bg-white shadow-lg' : 'hover:bg-white/5'
-        ]"
-        :id="'nav-btn-' + item.id">
+    <!-- ══ COLAPSADO (76 px): lista plana. A este ancho no caben encabezados
+         de grupo, y un acordeón que no se puede leer solo añade clics. ══ -->
+    <div v-if="sidebarColapsado" class="px-3 overflow-visible">
+      <button v-for="item in navPlano" :key="item.id" @click="irA(item.id)"
+        class="sidebar-nav-item group relative flex items-center justify-center w-10 h-10 mx-auto transition-all duration-300 rounded-xl overflow-visible"
+        :class="vistaActual===item.id ? 'bg-white shadow-lg' : 'hover:bg-white/5'"
+        :id="'nav-btn-' + item.id" :aria-label="item.label">
 
         <i :class="['fas', item.icono, 'text-lg transition-colors shrink-0', vistaActual===item.id ? 'text-blue-600' : 'text-white/70 group-hover:text-white']"></i>
 
-        <span v-show="!sidebarColapsado" class="whitespace-nowrap transition-opacity duration-200 flex-1 text-left text-[13px]"
-          :class="[
-            vistaActual===item.id ? 'text-slate-900 font-bold' : 'text-white/80 font-medium group-hover:text-white'
-          ]">
-          {{ item.label }}
-        </span>
+        <!-- Punto rojo: con el texto oculto, el número del badge no cabe -->
+        <span v-if="item.badge && item.badge()"
+          class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_4px_#ef4444]"></span>
 
-        <span v-if="item.badge && item.badge() && !sidebarColapsado"
-          class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-sm shrink-0">
-          {{ item.badge() }}
-        </span>
-
-        <!-- Tooltip (solo en colapsado) -->
-        <div v-if="sidebarColapsado"
-          class="sidebar-tooltip absolute left-[76px] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-white text-slate-900 text-[13px] font-bold rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap flex items-center gap-2 border border-slate-100 pointer-events-none"
+        <div class="sidebar-tooltip absolute left-[76px] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-white text-slate-900 text-[13px] font-bold rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap flex items-center gap-2 border border-slate-100 pointer-events-none"
           style="z-index: 10002;">
           {{ item.label }}
-          <span v-if="item.badge && item.badge()" class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">{{
-            item.badge() }}</span>
+          <span v-if="item.badge && item.badge()" class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">{{ item.badge() }}</span>
         </div>
       </button>
     </div>
 
-    <div class="my-3 mx-3 border-t border-white/5"></div>
+    <!-- ══ EXPANDIDO: acordeón por grupos ══ -->
+    <div v-else class="px-3 space-y-1">
+      <div v-for="grupo in gruposVisibles" :key="grupo.id">
 
-    <p class="text-[9px] tracking-[0.2em] text-white/40 font-bold overflow-hidden whitespace-nowrap transition-all duration-300"
-      :class="sidebarColapsado ? 'h-0 opacity-0 mb-0' : 'h-[20px] px-5 opacity-100 mb-1 mt-1'">ADMINISTRACIÓN</p>
+        <button @click="toggleGrupo(grupo.id)"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-white/45 hover:text-white/80 hover:bg-white/5 transition-colors"
+          :aria-expanded="grupoVisible(grupo.id) ? 'true' : 'false'">
+          <i :class="['fas', grupo.icono, 'text-[11px] shrink-0 w-4 text-center']"></i>
+          <span class="flex-1 text-left text-[9px] tracking-[0.18em] font-bold uppercase whitespace-nowrap">{{ grupo.label }}</span>
+          <i class="fas fa-chevron-down text-[9px] transition-transform duration-200 shrink-0"
+             :class="grupoVisible(grupo.id) ? 'rotate-180' : ''"></i>
+        </button>
 
-    <div class="px-3 pb-2" :class="sidebarColapsado ? 'overflow-visible' : ''">
-      <button v-for="item in navAdmin" :key="item.id" @click="irA(item.id)"
-        class="sidebar-nav-item group relative flex items-center transition-all duration-300 rounded-xl"
-        :class="[
-          sidebarColapsado ? 'w-10 h-10 justify-center mx-auto overflow-visible' : 'w-full px-3 py-2.5 gap-3',
-          vistaActual===item.id ? 'bg-white shadow-lg' : 'hover:bg-white/5'
-        ]">
+        <div v-show="grupoVisible(grupo.id)" class="mt-0.5 space-y-0.5">
+          <button v-for="item in grupo.items" :key="item.id" @click="irA(item.id)"
+            class="sidebar-nav-item group relative flex items-center w-full pl-4 pr-3 py-2.5 gap-3 transition-all duration-200 rounded-xl"
+            :class="vistaActual===item.id ? 'bg-white shadow-lg' : 'hover:bg-white/5'"
+            :id="'nav-btn-' + item.id">
 
-        <i :class="['fas', item.icono, 'text-lg transition-colors shrink-0', vistaActual===item.id ? 'text-slate-800' : 'text-white/70 group-hover:text-white']"></i>
+            <i :class="['fas', item.icono, 'text-base transition-colors shrink-0 w-5 text-center', vistaActual===item.id ? 'text-blue-600' : 'text-white/70 group-hover:text-white']"></i>
 
-        <span v-show="!sidebarColapsado" class="whitespace-nowrap transition-opacity duration-200 flex-1 text-left text-[13px]"
-          :class="[
-            vistaActual===item.id ? 'text-slate-900 font-bold' : 'text-white/80 font-medium group-hover:text-white'
-          ]">
-          {{ item.label }}
-        </span>
+            <span class="whitespace-nowrap flex-1 text-left text-[13px]"
+              :class="vistaActual===item.id ? 'text-slate-900 font-bold' : 'text-white/80 font-medium group-hover:text-white'">
+              {{ item.label }}
+            </span>
 
-        <!-- Tooltip (solo en colapsado) -->
-        <div v-if="sidebarColapsado"
-          class="sidebar-tooltip absolute left-[76px] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-white text-slate-900 text-[13px] font-bold rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap border border-slate-100 pointer-events-none"
-          style="z-index: 10002;">
-          {{ item.label }}
+            <span v-if="item.badge && item.badge()"
+              class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-sm shrink-0">
+              {{ item.badge() }}
+            </span>
+          </button>
         </div>
-      </button>
+      </div>
+
+      <!-- Si los permisos dejaran el menú vacío, decirlo. En blanco parecería
+           que la app no terminó de cargar. -->
+      <p v-if="!gruposVisibles.length" class="px-3 py-6 text-[11px] text-white/40 leading-relaxed">
+        Tu rol no tiene módulos asignados. Contacta al administrador del sistema.
+      </p>
     </div>
   </nav>
 
@@ -110,17 +105,19 @@
       class="flex items-center rounded-xl bg-[#141d34] hover:bg-[#1a2542] transition-colors cursor-pointer group relative shadow-inner border border-white/5"
       :class="sidebarColapsado ? 'w-10 h-10 justify-center mx-auto' : 'px-3 py-2.5 gap-3'">
 
+      <!-- Estos datos estaban escritos a mano: todo el mundo veía "Admin
+           Sistema" / "RA" independientemente de con quién hubiera entrado. -->
       <div
         class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
-        RA
+        {{ iniciales }}
       </div>
 
       <div class="flex-1 min-w-0 overflow-hidden" v-show="!sidebarColapsado">
-        <p class="text-[12px] font-bold truncate text-white leading-tight">Admin Sistema</p>
+        <p class="text-[12px] font-bold truncate text-white leading-tight">{{ nombreMostrado }}</p>
         <p class="text-[9px] text-white/50 truncate flex items-center gap-1 mt-0.5">
           <span class="w-1.5 h-1.5 rounded-full"
             :class="conexionOk ? 'bg-emerald-500 shadow-[0_0_5px_#10b981]' : 'bg-red-500 shadow-[0_0_5px_#ef4444]'"></span>
-          {{ conexionOk ? 'En línea' : 'Modo offline' }}
+          <span class="truncate">{{ rolUsuario || (conexionOk ? 'En línea' : 'Modo offline') }}</span>
         </p>
       </div>
 
@@ -134,7 +131,7 @@
       <!-- Tooltip Perfil (solo en colapsado) -->
       <div v-if="sidebarColapsado"
         class="absolute left-12 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-900 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 whitespace-nowrap min-w-[140px] pointer-events-none">
-        <p class="text-[12px] font-bold">Admin Sistema</p>
+        <p class="text-[12px] font-bold">{{ nombreMostrado }}</p>
         <p class="text-[9px] text-slate-500 flex items-center gap-1.5 mt-1">
           <span class="w-1.5 h-1.5 rounded-full" :class="conexionOk ? 'bg-emerald-500' : 'bg-red-500'"></span>
           {{ conexionOk ? 'Conectado a Supabase' : 'Modo offline' }}

@@ -1,23 +1,27 @@
 <!-- ======================= VISTA: BITÁCORA DE AUDITORÍA ======================= -->
-<div class="h-full flex flex-col">
+<div class="h-full min-h-0 flex flex-col">
 <!-- CABECERA -->
 <div class="mb-6 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
   <div>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Bitácora de Auditoría</h1>
     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Registro inmutable de eventos y acciones en el sistema</p>
   </div>
+  <!-- Ambos botones estaban sin @click desde el primer día. Se marcan como
+       deshabilitados hasta que exista la exportación real. -->
   <div class="flex gap-2">
-    <button class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+    <button disabled title="Pendiente de implementar"
+            class="px-4 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-400 dark:text-gray-500 cursor-not-allowed">
       <i class="fa-solid fa-print mr-2"></i> Imprimir Reporte
     </button>
-    <button class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-emerald-500/20 transition-colors">
+    <button disabled title="Pendiente de implementar"
+            class="px-4 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-400 dark:text-gray-500 cursor-not-allowed">
       <i class="fa-solid fa-file-csv mr-2"></i> Exportar CSV
     </button>
   </div>
 </div>
 
 <!-- FILTROS -->
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end">
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end flex-shrink-0">
   <div class="flex-1 min-w-[250px]">
     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Búsqueda General</label>
     <div class="relative">
@@ -45,17 +49,19 @@
 </div>
 
 <!-- TABLA DE LOGS -->
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden">
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden flex-1 min-h-0">
   
   <div class="p-3 border-b border-gray-100 dark:border-gray-700 bg-blue-50/50 dark:bg-blue-900/10 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400">
     <i class="fa-solid fa-lock text-blue-500"></i> 
     <span><strong>Nota de seguridad:</strong> Los registros de esta bitácora son inmutables y no pueden ser modificados ni eliminados por ningún usuario.</span>
   </div>
 
-  <div class="overflow-x-auto">
+  <!-- `sticky` en el thead: con miles de registros de auditoría, perder los
+       encabezados al tercer scroll obliga a subir para saber qué columna es cuál. -->
+  <div class="overflow-x-auto flex-1 min-h-0 overflow-y-auto">
     <table class="w-full text-left border-collapse min-w-[900px]">
-      <thead>
-        <tr class="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+      <thead class="sticky top-0 z-10">
+        <tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
           <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-24">ID Evento</th>
           <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-40">Fecha y Hora</th>
           <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-48">Usuario</th>
@@ -92,12 +98,12 @@
     </table>
   </div>
   
-  <!-- Paginación Simplificada (Mock) -->
-  <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-between items-center text-xs text-gray-500">
+  <!-- Pie. La paginación por cursor sobre `bitacora_auditoria.id` queda
+       pendiente; hasta entonces no se pintan botones que no navegan.
+       OFFSET está prohibido por docs/arquitectura/CONTEXTO_CRITICO.md §2.2. -->
+  <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-between items-center text-xs text-gray-500 flex-shrink-0">
     <div>Mostrando <span class="font-bold">{{ logsFiltrados.length }}</span> registros de auditoría</div>
-    <div class="flex gap-2">
-      <button class="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">Anterior</button>
-      <button class="px-3 py-1 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 disabled:opacity-50">Siguiente</button>
-    </div>
   </div>
 </div>
+</div><!-- cierra el contenedor raíz: faltaba desde el original y solo no rompía
+           porque el compilador de Vue autocierra las etiquetas al final del template -->

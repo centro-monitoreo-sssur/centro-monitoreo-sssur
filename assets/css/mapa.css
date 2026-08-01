@@ -466,13 +466,19 @@
   color: var(--mv-text-sec);
   white-space: nowrap;
 }
-.mv-kpi--total     { --mv-kpi-color: var(--mv-text); }
-.mv-kpi--pend      { --mv-kpi-color: #dc2626; }
-.mv-kpi--curso     { --mv-kpi-color: #d97706; }
-.mv-kpi--resuelta  { --mv-kpi-color: #059669; }
-.dark .mv-kpi--pend     { --mv-kpi-color: #f87171; }
-.dark .mv-kpi--curso    { --mv-kpi-color: #fbbf24; }
-.dark .mv-kpi--resuelta { --mv-kpi-color: #34d399; }
+/* Enganchados a la paleta configurable (Configuración → Apariencia), con
+   respaldo para el arranque. Los mismos conceptos que el Dashboard y Reportes:
+   un solo color por concepto en todo el sistema.
+   Ya no hay variante `.dark` propia: `color-mix` aclara el mismo color en
+   modo oscuro, así que basta con configurar UN color por concepto en vez de
+   dos que había que acordarse de mantener sincronizados. */
+.mv-kpi--total     { --mv-kpi-color: var(--kpi-total, var(--mv-text)); }
+.mv-kpi--pend      { --mv-kpi-color: var(--kpi-pendiente, #dc2626); }
+.mv-kpi--curso     { --mv-kpi-color: var(--kpi-en-curso, #d97706); }
+.mv-kpi--resuelta  { --mv-kpi-color: var(--kpi-resuelta, #059669); }
+.dark .mv-kpi--pend     { --mv-kpi-color: color-mix(in srgb, var(--kpi-pendiente, #dc2626) 72%, white); }
+.dark .mv-kpi--curso    { --mv-kpi-color: color-mix(in srgb, var(--kpi-en-curso, #d97706) 72%, white); }
+.dark .mv-kpi--resuelta { --mv-kpi-color: color-mix(in srgb, var(--kpi-resuelta, #059669) 72%, white); }
 .mv-kpi__sep {
   width: 1px;
   margin: 7px 0;
@@ -1110,11 +1116,13 @@
 }
 .mv-dcard:focus-visible { outline: 2px solid #3b82f6; outline-offset: 1px; }
 
-.mv-dcard.is-ok       { --dcard-color: #10b981; }
-.mv-dcard.is-atencion { --dcard-color: #f59e0b; }
-.mv-dcard.is-alerta   { --dcard-color: #f97316; }
-.mv-dcard.is-critico  { --dcard-color: #ef4444; }
-.mv-dcard.is-neutro   { --dcard-color: #94a3b8; }
+/* Enganchados a la paleta configurable (Configuración → Apariencia). El
+   fallback tras la coma cubre el arranque, antes de que el store publique. */
+.mv-dcard.is-ok       { --dcard-color: var(--semaforo-ok, #10b981); }
+.mv-dcard.is-atencion { --dcard-color: var(--semaforo-atencion, #f59e0b); }
+.mv-dcard.is-alerta   { --dcard-color: var(--semaforo-alerta, #f97316); }
+.mv-dcard.is-critico  { --dcard-color: var(--semaforo-critico, #ef4444); }
+.mv-dcard.is-neutro   { --dcard-color: var(--kpi-neutro, #94a3b8); }
 
 .mv-dcard__head {
   display: flex;

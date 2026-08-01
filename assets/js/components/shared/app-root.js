@@ -23,7 +23,7 @@ export default {
     const { cargarIntervenciones } = useIntervenciones();
     const { cargarKpis } = useDashboard();
     const { registrarSW, mostrarModalInstalacion, instalarPWA, posponerInstalacion } = usePwa();
-    const { cargarAlcance } = usePermisos();
+    const { cargarAlcance, cargarPermisosModulo } = usePermisos();
 
     // Estado del modal de logout
     const mostrarModalLogout = ref(false);
@@ -193,6 +193,9 @@ export default {
         // Va antes de los casos para que la vista no arranque mostrando un
         // comparativo de 5 distritos a quien solo puede ver el suyo.
         await cargarAlcance();
+        // Los permisos de módulo van en paralelo al alcance: son consultas
+        // independientes y el menú no debe esperar a los casos para dibujarse.
+        cargarPermisosModulo();
         await cargarPoblacion();
         await cargarDenuncias();
         await cargarIntervenciones();

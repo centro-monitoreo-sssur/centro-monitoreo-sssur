@@ -1,9 +1,9 @@
 <!-- ============================================================
      VISTA: Población Registrada
      ============================================================ -->
-<div class="h-full flex flex-col">
+<div class="h-full min-h-0 flex flex-col">
   <!-- KPIs de alto nivel -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 flex-shrink-0">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Ciudadanos</h3>
@@ -50,7 +50,7 @@
   </div>
 
   <!-- Tabla principal -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
 
     <!-- Cabecera de la tabla -->
     <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50">
@@ -118,7 +118,7 @@
     </div>
 
     <!-- Tabla de ciudadanos -->
-    <div v-else class="overflow-x-auto">
+    <div v-else class="overflow-x-auto flex-1 min-h-0 overflow-y-auto">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50/50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -402,20 +402,28 @@
         </select>
       </div>
 
+      <div v-if="errorGuardado" class="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <i class="fas fa-circle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+        <p class="text-xs text-red-700 dark:text-red-300">{{ errorGuardado }}</p>
+      </div>
+
       <!-- Acciones -->
       <div class="flex justify-end gap-3 pt-2">
         <button
           type="button"
           @click="cerrarModalEditar"
-          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          :disabled="guardando"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           type="submit"
-          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+          :disabled="guardando"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <i class="fas fa-save mr-1.5"></i> Guardar Cambios
+          <i :class="guardando ? 'fas fa-spinner fa-spin' : 'fas fa-save'" class="mr-1.5"></i>
+          {{ guardando ? 'Guardando…' : 'Guardar Cambios' }}
         </button>
       </div>
     </form>
@@ -429,23 +437,37 @@
       <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
         <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
       </div>
-      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-2">Eliminar Ciudadano</h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        ¿Seguro que deseas eliminar a <strong class="text-gray-700 dark:text-gray-200">{{ ciudadanoSeleccionado.nombre }}</strong>?
-        Esta acción no se puede deshacer.
+      <!-- Baja lógica: sus denuncias apuntan a esta fila vía
+           `casos.creado_por_ciudadano_id`, y borrarla las dejaría huérfanas. -->
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-2">Desactivar Ciudadano</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+        <strong class="text-gray-700 dark:text-gray-200">{{ ciudadanoSeleccionado.nombre }}</strong>
+        no podrá acceder al portal ni registrar nuevas denuncias.
       </p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-6">
+        Las denuncias que ya presentó se conservan y siguen en curso.
+      </p>
+
+      <div v-if="errorGuardado" class="flex items-start gap-2 p-3 mb-4 text-left rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <i class="fas fa-circle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+        <p class="text-xs text-red-700 dark:text-red-300">{{ errorGuardado }}</p>
+      </div>
+
       <div class="flex justify-center gap-3">
         <button
           @click="cerrarModalEliminar"
-          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          :disabled="guardando"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           @click="eliminarCiudadano"
-          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors"
+          :disabled="guardando"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <i class="fas fa-trash-alt mr-1.5"></i> Eliminar
+          <i :class="guardando ? 'fas fa-spinner fa-spin' : 'fas fa-ban'" class="mr-1.5"></i>
+          {{ guardando ? 'Desactivando…' : 'Desactivar' }}
         </button>
       </div>
     </div>

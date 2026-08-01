@@ -1,10 +1,14 @@
 <!-- ============================================================
      VISTA: Departamentos / Unidades Administrativas
      ============================================================ -->
-<div class="h-full flex flex-col p-6 lg:p-8">
+<!-- `min-h-0` es obligatorio: un ítem flex tiene min-height:auto y se niega a
+     encogerse por debajo de su contenido. Sin esto la tarjeta de abajo desborda
+     y, como lleva `overflow-hidden`, recorta la lista sin dejar barra de scroll.
+     El padding lo pone <main> en app-root.html; repetirlo aquí lo duplicaba. -->
+<div class="h-full min-h-0 flex flex-col">
 
   <!-- KPIs rápidos -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 flex-shrink-0">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors flex items-center gap-4">
       <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
         <i class="fas fa-building text-blue-600 dark:text-blue-400"></i>
@@ -35,10 +39,10 @@
   </div>
 
   <!-- Tabla principal -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
 
     <!-- Cabecera de la tabla -->
-    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50 flex-shrink-0">
       <div class="flex-1">
         <h3 class="text-sm font-bold text-gray-800 dark:text-white">Lista de Departamentos</h3>
         <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
@@ -109,8 +113,9 @@
       <span class="text-sm text-gray-500 dark:text-gray-400">Cargando departamentos...</span>
     </div>
 
-    <!-- Lista de departamentos -->
-    <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+    <!-- Lista de departamentos — el scroll vive aquí, no en <main>: así la
+         cabecera con los filtros queda fija con 82 departamentos en la lista. -->
+    <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 flex-1 min-h-0 overflow-y-auto">
       <div
         v-for="departamento in departamentosFiltrados"
         :key="departamento.id"
@@ -153,11 +158,12 @@
               <i class="fas fa-edit text-xs"></i>
             </button>
             <button
+              v-if="departamento.estado === 'activo'"
               @click.stop="abrirModalEliminar(departamento)"
-              title="Eliminar departamento"
-              class="w-7 h-7 flex items-center justify-center rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+              title="Desactivar departamento"
+              class="w-7 h-7 flex items-center justify-center rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
             >
-              <i class="fas fa-trash-alt text-xs"></i>
+              <i class="fas fa-ban text-xs"></i>
             </button>
           </div>
         </div>
@@ -211,16 +217,21 @@
         >
       </div>
 
-      <!-- Nombre Dirección -->
+      <!-- Dirección. Antes era texto libre sobre `nombre_direccion`, columna que
+           no existe: la real es `direccion_id`, FK NOT NULL. -->
       <div>
         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Dirección Dependiente</label>
-        <!-- TODO: Cambiar por select de direcciones_administrativas -->
-        <input
-          v-model="departamentoSeleccionado.nombre_direccion"
-          type="text"
-          placeholder="Ej: Dirección de Gabinetes"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+        <select
+          v-model="departamentoSeleccionado.direccion_id"
+          required
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white"
         >
+          <option value="" disabled>Selecciona una dirección…</option>
+          <option v-for="dir in direcciones" :key="dir.id" :value="dir.id">{{ dir.nombre }}</option>
+        </select>
+        <p v-if="!direcciones.length" class="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+          No hay direcciones cargadas. Ejecuta el seed del organigrama antes de crear departamentos.
+        </p>
       </div>
 
       <!-- Estado -->
@@ -235,21 +246,30 @@
         </select>
       </div>
 
+      <!-- Error de la base. El modal NO se cierra si falla: cerrarlo perdería
+           lo escrito y daría a entender que se guardó. -->
+      <div v-if="errorGuardado" class="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <i class="fas fa-circle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+        <p class="text-xs text-red-700 dark:text-red-300">{{ errorGuardado }}</p>
+      </div>
+
       <!-- Acciones -->
       <div class="flex justify-end gap-3 pt-2">
         <button
           type="button"
           @click="cerrarModalEditar"
-          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          :disabled="guardando"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           type="submit"
-          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+          :disabled="guardando"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <i class="fas fa-save mr-1.5"></i>
-          {{ departamentoSeleccionado.id ? 'Guardar Cambios' : 'Crear Departamento' }}
+          <i :class="guardando ? 'fas fa-spinner fa-spin' : 'fas fa-save'" class="mr-1.5"></i>
+          {{ guardando ? 'Guardando…' : (departamentoSeleccionado.id ? 'Guardar Cambios' : 'Crear Departamento') }}
         </button>
       </div>
     </form>
@@ -263,23 +283,38 @@
       <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
         <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
       </div>
-      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-2">Eliminar Departamento</h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        ¿Seguro que deseas eliminar a <strong class="text-gray-700 dark:text-gray-200">{{ departamentoSeleccionado.nombre }}</strong>?
-        Esta acción no se puede deshacer.
+      <!-- El texto decía "eliminar" y "no se puede deshacer". Ninguna de las dos
+           cosas es cierta: se desactiva, y se puede reactivar. Los departamentos
+           no se borran porque casos, categorías y usuarios los referencian. -->
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-2">Desactivar Departamento</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+        <strong class="text-gray-700 dark:text-gray-200">{{ departamentoSeleccionado.nombre }}</strong>
+        dejará de aparecer al asignar casos y usuarios.
       </p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-6">
+        Su historial se conserva y puedes reactivarlo cuando quieras desde el formulario de edición.
+      </p>
+
+      <div v-if="errorGuardado" class="flex items-start gap-2 p-3 mb-4 text-left rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <i class="fas fa-circle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+        <p class="text-xs text-red-700 dark:text-red-300">{{ errorGuardado }}</p>
+      </div>
+
       <div class="flex justify-center gap-3">
         <button
           @click="cerrarModalEliminar"
-          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          :disabled="guardando"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           @click="eliminarDepartamento"
-          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors"
+          :disabled="guardando"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <i class="fas fa-trash-alt mr-1.5"></i> Eliminar
+          <i :class="guardando ? 'fas fa-spinner fa-spin' : 'fas fa-ban'" class="mr-1.5"></i>
+          {{ guardando ? 'Desactivando…' : 'Desactivar' }}
         </button>
       </div>
     </div>

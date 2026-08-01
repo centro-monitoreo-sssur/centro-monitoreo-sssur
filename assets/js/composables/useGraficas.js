@@ -6,6 +6,7 @@
 import { watch, nextTick } from '../core/vue.js';
 import { useReportes } from '../stores/reportes.js';
 import { useCatalogos } from '../stores/catalogos.js';
+import { useConfiguracion } from '../stores/configuracion.js';
 import { graficarBarrasHorizontales, graficarDistribucion, graficarLineaTiempo } from '../services/graficas.js';
 
 let chartBarrasHorizontales = null;
@@ -17,6 +18,7 @@ let chartLineaTiempo = null;
 export function useGraficas(canvasBarrasHorizontalesRef, canvasDonaDistritoRef, canvasLineaTiempoRef) {
   const { denunciasParaReporte } = useReportes();
   const { tiposDenuncia } = useCatalogos();
+  const { config } = useConfiguracion();
 
   function redibujar() {
     const lista = denunciasParaReporte.value;
@@ -40,8 +42,11 @@ export function useGraficas(canvasBarrasHorizontalesRef, canvasDonaDistritoRef, 
     // Obtener array ordenado de distritos por cantidad (opcional) o alfabético
     const nombresDistritos = Object.keys(distritosMap).sort();
     const datosPorDistrito = nombresDistritos.map(d => distritosMap[d]);
-    // Colores dinámicos generados
-    const coloresBase = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6', '#f43f5e'];
+    // Paleta de series configurable (Configuración → Apariencia). El respaldo
+    // cubre el arranque, antes de que el store haya resuelto la configuración.
+    const coloresBase = config.value.colores?.graficos?.length
+      ? config.value.colores.graficos
+      : ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1'];
     const coloresDistrito = nombresDistritos.map((_, i) => coloresBase[i % coloresBase.length]);
 
     // Datos para línea de tiempo (últimos 7 días)
@@ -87,7 +92,13 @@ export function useGraficas(canvasBarrasHorizontalesRef, canvasDonaDistritoRef, 
     });
   }
 
-  watch(denunciasParaReporte, () => redibujar());
+  // Se observa también la paleta: los tres <canvas> ya están pintados cuando
+  // cambia el color, así que sin redibujar conservarían el anterior.
+  watch(
+    [denunciasParaReporte, () => config.value.colores?.graficos],
+    () => redibujar(),
+    { deep: true }
+  );
 
   return { redibujar };
 }

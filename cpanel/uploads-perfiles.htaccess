@@ -1,0 +1,43 @@
+# ============================================================================
+# Protección del directorio de fotos de perfil
+# Copiar como  /public_html/uploads/perfiles/.htaccess
+# ----------------------------------------------------------------------------
+# Es la red de seguridad del endpoint de subida: si algún día se colara un
+# archivo ejecutable pese a la validación por contenido, aquí queda inerte.
+# Un directorio de subidas donde el servidor ejecuta PHP es ejecución remota
+# de código a un paso.
+# ============================================================================
+
+# 1. Nada se ejecuta: ni PHP ni CGI.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phps .cgi .pl .py
+RemoveType    .php .phtml .php3 .php4 .php5 .php7 .php8 .phps
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Cualquier intento de pedir un script devuelve 403, aunque exista.
+    RewriteRule \.(php|phtml|php[0-9]|phps|cgi|pl|py|sh|htaccess)$ - [F,L,NC]
+</IfModule>
+
+# 2. Solo se sirven imágenes, y siempre como descarga inerte.
+<FilesMatch "\.(jpg|jpeg|png|webp)$">
+    ForceType application/octet-stream
+    Header set Content-Disposition "inline"
+    # Nombre de archivo con sufijo aleatorio en cada subida ⇒ se puede cachear
+    # de forma agresiva sin riesgo de servir una foto obsoleta.
+    Header set Cache-Control "public, max-age=31536000, immutable"
+    # Evita que un navegador reinterprete el contenido como otra cosa.
+    Header set X-Content-Type-Options "nosniff"
+</FilesMatch>
+
+# 3. Sin listado de directorio: los nombres incluyen el UUID del usuario.
+Options -Indexes -ExecCGI

@@ -69,9 +69,74 @@ async function cargarAlcance() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Permisos de módulo (public.roles_permisos)
+//
+// Responde "¿qué pantallas tiene sentido ofrecerle a este usuario?", que es
+// una pregunta distinta de "¿qué filas puede leer?" (eso es `alcance`).
+//
+// Mismo aviso que arriba: NO es seguridad. Sirve para que el menú deje de
+// listar módulos donde el usuario solo se va a encontrar una tabla vacía —
+// hoy un jefe_area ve "Roles y Permisos", entra, la RLS le devuelve nada y
+// concluye que el sistema perdió datos.
+// ─────────────────────────────────────────────────────────────
+
+// codigo_modulo → { ver, crear, editar, borrar, exportar }
+const permisosModulo = ref({});
+const permisosResueltos = ref(false);
+
+async function cargarPermisosModulo() {
+  if (!db) {
+    permisosResueltos.value = true;
+    return;
+  }
+  try {
+    // getSession() lee de memoria/localStorage; getUser() haría un round-trip
+    // extra al servidor para un dato que ya tenemos.
+    const { data: { session } } = await db.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error('sin sesión activa');
+
+    const { data: perfil, error: errPerfil } = await db
+      .from('usuarios').select('rol_id').eq('id', uid).single();
+    if (errPerfil) throw errPerfil;
+    if (!perfil?.rol_id) throw new Error('el usuario no tiene rol_id asignado');
+
+    const { data, error } = await db
+      .from('roles_permisos')
+      .select('ver, crear, editar, borrar, exportar, permisos_modulos ( codigo_modulo )')
+      .eq('rol_id', perfil.rol_id);
+    if (error) throw error;
+
+    const mapa = {};
+    for (const fila of data || []) {
+      const codigo = fila.permisos_modulos?.codigo_modulo;
+      if (!codigo) continue;
+      mapa[codigo] = {
+        ver: !!fila.ver, crear: !!fila.crear, editar: !!fila.editar,
+        borrar: !!fila.borrar, exportar: !!fila.exportar,
+      };
+    }
+    permisosModulo.value = mapa;
+  } catch (e) {
+    // Se deja el mapa vacío a propósito. Ver `puedeVer`: sin datos resueltos
+    // el menú se muestra completo. Cerrar el menú ante un fallo de red dejaría
+    // al usuario sin poder trabajar, y la RLS sigue protegiendo los datos.
+    console.error(
+      '[permisos] No se pudieron leer los permisos de módulo: ' + e.message +
+      ' — el menú se mostrará completo y la RLS seguirá filtrando los datos.'
+    );
+    permisosModulo.value = {};
+  } finally {
+    permisosResueltos.value = true;
+  }
+}
+
 function limpiarAlcance() {
   alcance.value = { ...ALCANCE_VACIO };
   alcanceResuelto.value = false;
+  permisosModulo.value = {};
+  permisosResueltos.value = false;
 }
 
 export function usePermisos() {
@@ -98,12 +163,34 @@ export function usePermisos() {
     distritoUnico.value !== null ? String(distritoUnico.value) : ''
   );
 
+  // Falla en abierto: mientras no haya un mapa de permisos resuelto y no vacío,
+  // se concede. Un menú de más es una molestia; un menú de menos por un error
+  // de red es un usuario bloqueado sin explicación. La RLS es la que protege.
+  const hayMapaDePermisos = computed(() => Object.keys(permisosModulo.value).length > 0);
+
+  const puedeAccion = (modulo, accion) => {
+    if (!modulo) return true;                 // ítem sin módulo asociado
+    if (!hayMapaDePermisos.value) return true;
+    return permisosModulo.value[modulo]?.[accion] === true;
+  };
+
+  const puedeVer      = (modulo) => puedeAccion(modulo, 'ver');
+  const puedeCrear    = (modulo) => puedeAccion(modulo, 'crear');
+  const puedeEditar   = (modulo) => puedeAccion(modulo, 'editar');
+  const puedeBorrar   = (modulo) => puedeAccion(modulo, 'borrar');
+  const puedeExportar = (modulo) => puedeAccion(modulo, 'exportar');
+
   return {
     alcance,
     cargandoAlcance,
     alcanceResuelto,
     cargarAlcance,
     limpiarAlcance,
+    permisosModulo,
+    permisosResueltos,
+    cargarPermisosModulo,
+    hayMapaDePermisos,
+    puedeVer, puedeCrear, puedeEditar, puedeBorrar, puedeExportar,
     veTodoElMunicipio,
     distritosVisibles,
     distritoUnico,

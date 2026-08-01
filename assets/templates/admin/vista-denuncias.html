@@ -1,24 +1,28 @@
 <!-- ======================= VISTA: GESTIÓN DE DENUNCIAS ======================= -->
-<div class="h-full flex flex-col">
-  
+<div class="h-full min-h-0 flex flex-col">
+
   <!-- CABECERA -->
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-4">
+  <div class="mb-6 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
     <div>
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Gestión de Denuncias</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Administración y seguimiento de todas las incidencias registradas</p>
     </div>
     <div class="flex gap-2">
-      <button class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <button @click="exportarCSV" :disabled="!denunciasFiltradas.length"
+              class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
         <i class="fa-solid fa-file-export mr-2"></i> Exportar
       </button>
-      <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-500/20 transition-colors">
+      <!-- El alta de denuncias desde el escritorio aún no tiene formulario; hoy
+           entran por la PWA de empleados y por la de población. -->
+      <button disabled title="El alta desde escritorio llega en la siguiente entrega"
+              class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold cursor-not-allowed">
         <i class="fa-solid fa-plus mr-2"></i> Nueva Denuncia
       </button>
     </div>
   </div>
 
   <!-- FILTROS -->
-  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end flex-shrink-0">
     <div class="flex-1 min-w-[200px]">
       <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Búsqueda</label>
       <div class="relative">
@@ -31,11 +35,11 @@
     <div class="w-[180px]">
       <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Estado</label>
       <select v-model="filtroEstado" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 dark:text-white transition-all">
+        <!-- Se recorre `estadosPosibles` en vez de listar a mano: la lista fija
+             omitía `en_revision`, así que las denuncias en ese estado no se
+             podían filtrar desde ningún lado. -->
         <option value="todos">Todos los estados</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="en_obra">En Curso (Obra)</option>
-        <option value="resuelta">Resuelta</option>
-        <option value="rechazada">Rechazada</option>
+        <option v-for="e in estadosPosibles" :key="e" :value="e">{{ etiquetaEstado(e) }}</option>
       </select>
     </div>
 
@@ -49,8 +53,8 @@
   </div>
 
   <!-- TABLA -->
-  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex-1 flex flex-col overflow-hidden">
-    <div class="overflow-x-auto flex-1">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
+    <div class="overflow-x-auto flex-1 min-h-0 overflow-y-auto">
       <table class="w-full text-left border-collapse min-w-[800px]">
         <thead>
           <tr class="bg-gray-50/50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">

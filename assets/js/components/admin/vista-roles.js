@@ -50,23 +50,36 @@ export default {
       exportar: ['exportar'],
     };
 
+    // Orden de las columnas de la matriz. La plantilla lo recorre en vez de
+    // repetir cuatro bloques de toggle idénticos.
+    const ACCIONES = Object.keys(COLUMNAS_POR_ACCION);
+
     async function cargarData() {
       cargando.value = true;
       const colors = ['text-purple-600', 'text-blue-600', 'text-emerald-600', 'text-gray-600'];
       const bgs = ['bg-purple-100', 'bg-blue-100', 'bg-emerald-100', 'bg-gray-100'];
 
       if (db) {
-        const [resRoles, resModulos, resPermisos] = await Promise.all([
+        const [resRoles, resModulos, resPermisos, resUsuarios] = await Promise.all([
           db.from('roles').select('*').order('id'),
           db.from('permisos_modulos').select('*').order('id'),
-          db.from('roles_permisos').select('*')
+          db.from('roles_permisos').select('*'),
+          // El conteo por rol venía hardcodeado a 0, así que la tarjeta decía
+          // "0 usu" incluso con usuarios asignados. Se agrupa en cliente porque
+          // son decenas de filas: un `group by` por RPC no compensa.
+          db.from('usuarios').select('rol_id').eq('activo', true)
         ]);
+
+        const usuariosPorRol = new Map();
+        for (const u of resUsuarios.data || []) {
+          usuariosPorRol.set(u.rol_id, (usuariosPorRol.get(u.rol_id) || 0) + 1);
+        }
 
         roles.value = (resRoles.data || ROLES_DEFAULT).map((r, idx) => ({
           ...r,
           color: colors[idx % colors.length],
           bg: bgs[idx % bgs.length],
-          usuarios: 0
+          usuarios: usuariosPorRol.get(r.id) || 0
         }));
 
         // `dbId` conserva el id numérico porque roles_permisos referencia
@@ -132,7 +145,7 @@ export default {
     onMounted(cargarData);
 
     return {
-      roles, modulos, rolSeleccionado, seleccionarRol, tienePermiso, cargando
+      roles, modulos, rolSeleccionado, seleccionarRol, tienePermiso, cargando, ACCIONES
     };
   }
 };

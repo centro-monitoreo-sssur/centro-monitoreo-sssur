@@ -1,21 +1,27 @@
 <!-- ======================= VISTA: ROLES Y PERMISOS ======================= -->
-<div class="h-full flex flex-col max-w-7xl mx-auto w-full">
+<!-- `min-h-0` en toda la cadena: sin él los paneles con `overflow-hidden`
+     pierden su tamaño mínimo automático, se encogen y recortan tanto la lista
+     de roles como las últimas filas de la matriz. -->
+<div class="h-full min-h-0 flex flex-col max-w-7xl mx-auto w-full">
 
   <!-- CABECERA -->
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-4">
+  <div class="mb-6 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
     <div>
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Roles y Permisos</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Control de acceso basado en roles (RBAC)</p>
     </div>
-    <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-blue-500/20 transition-colors">
+    <!-- Sin handler todavía. Se deja `disabled` en vez de simular que funciona:
+         un botón que responde al hover y no hace nada se reporta como bug. -->
+    <button disabled title="El editor de roles llega en la siguiente entrega"
+            class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold cursor-not-allowed">
       <i class="fa-solid fa-plus mr-2"></i> Crear Rol
     </button>
   </div>
 
-  <div class="flex flex-col md:flex-row gap-6">
-    
+  <div class="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
+
     <!-- LISTA DE ROLES (Sidebar izq) -->
-    <div class="w-full md:w-80 flex-shrink-0 space-y-3">
+    <div class="w-full md:w-80 flex-shrink-0 space-y-3 min-h-0 overflow-y-auto pr-1">
       <div v-for="rol in roles" :key="rol.id" 
            @click="seleccionarRol(rol)"
            class="p-4 rounded-2xl border-2 cursor-pointer transition-all relative overflow-hidden group"
@@ -35,10 +41,10 @@
     </div>
 
     <!-- MATRIZ DE PERMISOS (Panel principal) -->
-    <div v-if="rolSeleccionado" class="flex-1 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden">
-      
+    <div v-if="rolSeleccionado" class="flex-1 min-h-0 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden">
+
       <!-- Header del rol seleccionado -->
-      <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+      <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex-shrink-0">
         <div class="flex justify-between items-start">
           <div>
             <div class="flex items-center gap-3 mb-2">
@@ -51,45 +57,40 @@
               </div>
             </div>
           </div>
-          <button class="px-4 py-2 rounded-xl text-sm font-semibold border-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            Editar Rol
-          </button>
+          <span class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+            <i class="fa-solid fa-eye mr-1.5"></i> Solo lectura
+          </span>
         </div>
       </div>
 
       <!-- Tabla de matriz -->
-      <div class="p-6 overflow-x-auto">
+      <div class="p-6 overflow-x-auto flex-1 min-h-0 overflow-y-auto">
         <h3 class="text-sm font-bold text-gray-800 dark:text-white mb-4 uppercase tracking-wide">Matriz de Acceso por Módulo</h3>
         
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="border-b-2 border-gray-200 dark:border-gray-700">
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/2">Módulo del Sistema</th>
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-1/6">Leer</th>
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-1/6">Escribir</th>
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center w-1/6">Borrar</th>
+              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-2/5">Módulo del Sistema</th>
+              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Leer</th>
+              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Escribir</th>
+              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Borrar</th>
+              <!-- `roles_permisos.exportar` existe en BD desde schema.sql:122 y la
+                   matriz nunca lo mostró: se concedía o negaba sin que se viera. -->
+              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Exportar</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+            <!-- Las cuatro columnas eran cuatro bloques idénticos copiados; al
+                 recorrer ACCIONES, añadir "exportar" fue una sola línea. -->
             <tr v-for="mod in modulos" :key="mod.id" class="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
               <td class="py-4 px-4">
                 <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ mod.label }}</span>
               </td>
-              <td class="py-4 px-4 text-center">
-                <label class="relative inline-block w-9 h-5 cursor-pointer opacity-70 hover:opacity-100 transition-opacity">
-                  <input type="checkbox" class="sr-only peer" :checked="tienePermiso(rolSeleccionado.id, mod.id, 'leer')" disabled>
-                  <div class="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
-                </label>
-              </td>
-              <td class="py-4 px-4 text-center">
-                <label class="relative inline-block w-9 h-5 cursor-pointer opacity-70 hover:opacity-100 transition-opacity">
-                  <input type="checkbox" class="sr-only peer" :checked="tienePermiso(rolSeleccionado.id, mod.id, 'escribir')" disabled>
-                  <div class="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
-                </label>
-              </td>
-              <td class="py-4 px-4 text-center">
-                <label class="relative inline-block w-9 h-5 cursor-pointer opacity-70 hover:opacity-100 transition-opacity">
-                  <input type="checkbox" class="sr-only peer" :checked="tienePermiso(rolSeleccionado.id, mod.id, 'borrar')" disabled>
+              <td v-for="accion in ACCIONES" :key="accion" class="py-4 px-4 text-center">
+                <!-- `cursor-default`, no `cursor-pointer`: el toggle está disabled
+                     y prometer interacción que no existe es peor que no ofrecerla. -->
+                <label class="relative inline-block w-9 h-5 cursor-default" :title="'Solo lectura · ' + accion">
+                  <input type="checkbox" class="sr-only peer" :checked="tienePermiso(rolSeleccionado.id, mod.id, accion)" disabled>
                   <div class="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
                 </label>
               </td>

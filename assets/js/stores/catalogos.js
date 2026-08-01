@@ -13,6 +13,10 @@ const departamentos = ref(departamentosFallback);
 // fallback de demo: en una consola territorial, un distrito inventado es peor
 // que una lista vacía — llevaría a leer cifras de un territorio que no existe.
 const distritos = ref([]);
+// Nivel gerencial superior del organigrama. Sin fallback por el mismo motivo
+// que los distritos: una dirección inventada rompería la asignación de
+// departamentos, que es una FK not null.
+const direcciones = ref([]);
 const cargandoCatalogos = ref(false);
 
 // Un catálogo vacío en Supabase NO lanza excepción: la query responde []. Sin
@@ -120,6 +124,90 @@ async function cargarDistritos() {
   }
 }
 
+async function cargarDirecciones() {
+  if (!db) return;
+  try {
+    const { data, error } = await db
+      .from('direcciones_administrativas')
+      .select('id, codigo, nombre, activo')
+      .eq('activo', true)
+      .order('nombre');
+    if (error) throw error;
+    direcciones.value = data || [];
+    if (!direcciones.value.length) {
+      console.error(
+        '[catalogos] `direcciones_administrativas` está VACÍA. No se podrán ' +
+        'crear departamentos: `departamentos.direccion_id` es NOT NULL.'
+      );
+    }
+  } catch (e) {
+    console.error('[catalogos] Falló la carga de direcciones:', e.message);
+  }
+}
+
+// ── Escritura de departamentos ───────────────────────────────
+// Devuelven { ok, error } en vez de lanzar: la vista necesita mostrar el
+// mensaje en el modal, no romper el render con una excepción sin capturar.
+
+// Traduce los errores de Postgres a algo que un administrador municipal pueda
+// accionar. `error.message` en crudo menciona nombres de constraint que no
+// significan nada fuera del esquema.
+function mensajeDeError(error, contexto) {
+  const codigo = error?.code;
+  if (codigo === '23505') return 'Ya existe un registro con ese código. Los códigos deben ser únicos.';
+  if (codigo === '23503') return 'La dirección seleccionada no existe o fue eliminada.';
+  if (codigo === '23502') return 'Faltan campos obligatorios.';
+  if (codigo === '42501' || /row-level security/i.test(error?.message || '')) {
+    return 'Tu rol no tiene permiso para esta operación.';
+  }
+  console.error(`[catalogos] ${contexto}:`, error);
+  return error?.message || 'Error desconocido al guardar.';
+}
+
+async function guardarDepartamento(dep) {
+  if (!db) return { ok: false, error: 'Sin conexión a la base de datos.' };
+
+  const payload = {
+    codigo: (dep.codigo || '').trim(),
+    nombre: (dep.nombre || '').trim(),
+    direccion_id: dep.direccion_id ? Number(dep.direccion_id) : null,
+    estado: dep.estado === 'inactivo' ? 'inactivo' : 'activo',
+  };
+
+  if (!payload.codigo)      return { ok: false, error: 'El código es obligatorio.' };
+  if (!payload.nombre)      return { ok: false, error: 'El nombre es obligatorio.' };
+  if (!payload.direccion_id) return { ok: false, error: 'Selecciona la dirección a la que pertenece.' };
+
+  try {
+    // `departamentos.id` es `generated always as identity`: no se puede enviar
+    // en el insert, y en el update va en el filtro, nunca en el cuerpo.
+    const { error } = dep.id
+      ? await db.from('departamentos').update(payload).eq('id', dep.id)
+      : await db.from('departamentos').insert(payload);
+    if (error) throw error;
+    await cargarDepartamentos();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e, 'guardarDepartamento') };
+  }
+}
+
+// No hay borrado físico y no lo habrá: `departamentos.id` es FK desde
+// `categorias_caso`, `casos`, `usuarios` y `departamento_categorias`. Un delete
+// real o falla por la FK o se lleva por delante casos históricos.
+async function desactivarDepartamento(id) {
+  if (!db) return { ok: false, error: 'Sin conexión a la base de datos.' };
+  try {
+    const { error } = await db.from('departamentos')
+      .update({ estado: 'inactivo' }).eq('id', id);
+    if (error) throw error;
+    await cargarDepartamentos();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e, 'desactivarDepartamento') };
+  }
+}
+
 export function useCatalogos() {
   const buscar = (id) => tiposDenuncia.value.find((t) => t.id === id) || {};
   const nombreDeTipo = (id) => buscar(id).nombre || id;
@@ -141,9 +229,15 @@ export function useCatalogos() {
   const buscarDistrito = (id) => distritos.value.find((d) => d.id === id) || {};
   const nombreDistrito = (id) => buscarDistrito(id).nombre || '';
 
+  const buscarDireccion = (id) => direcciones.value.find((d) => d.id === id) || {};
+  const nombreDireccion = (id) => buscarDireccion(id).nombre || '';
+
   return {
-    tiposDenuncia, departamentos, distritos, cargandoCatalogos, catalogosEnFallback,
-    cargarTipos, cargarDepartamentos, cargarDistritos,
+    tiposDenuncia, departamentos, distritos, direcciones,
+    cargandoCatalogos, catalogosEnFallback,
+    cargarTipos, cargarDepartamentos, cargarDistritos, cargarDirecciones,
+    guardarDepartamento, desactivarDepartamento,
+    buscarDireccion, nombreDireccion,
     nombreDeTipo, colorDeTipo, iconoDeTipo, areaDeTipo,
     buscarDepartamento, nombreDepartamento, direccionDepartamento,
     buscarDistrito, nombreDistrito

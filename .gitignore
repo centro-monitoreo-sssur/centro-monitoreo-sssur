@@ -11,6 +11,7 @@ node_modules/
 # Archivos de SO
 .DS_Store
 Thumbs.db
+screenshots/
 
 # Configuración de IDEs
 .vscode/

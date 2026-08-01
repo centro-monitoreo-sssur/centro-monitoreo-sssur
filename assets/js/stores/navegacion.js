@@ -67,10 +67,64 @@ const setAutenticado = async (valor, usuario = '', rol = '') => {
   return { ok: true };
 };
 
-// Inicio de sesión real via Supabase Auth
-const iniciarSesion = async (email, password) => {
+// Traduce lo que el usuario escribió al correo con el que Supabase Auth puede
+// autenticar. Supabase SOLO acepta correo o teléfono: un `usuarios.username`
+// enviado tal cual falla siempre con "Invalid login credentials", que es el
+// mismo mensaje que una contraseña equivocada.
+//
+// Degrada sin romper: si `resolver_identificador_login` no existe todavía
+// (migration_v17 sin aplicar), se usa lo escrito tal cual y el acceso por
+// correo sigue funcionando exactamente como antes.
+const resolverIdentificador = async (identificador) => {
+  const texto = String(identificador || '').trim();
+  if (!db) return { email: texto };
+
+  try {
+    const { data, error } = await db.rpc('resolver_identificador_login', {
+      p_identificador: texto,
+    });
+    if (error) throw error;
+
+    if (!data) {
+      // Sin coincidencia. Si escribió un correo puede ser de auth.users sin
+      // perfil en public.usuarios, así que se deja pasar y decide Supabase.
+      return texto.includes('@')
+        ? { email: texto }
+        : { email: null, motivo: 'No existe ningún usuario con ese nombre de usuario.' };
+    }
+    if (data.activo === false) {
+      return { email: null, motivo: 'Esta cuenta está desactivada. Contacta al administrador.' };
+    }
+    if (data.tiene_cuenta === false) {
+      // El perfil se sembró por SQL sin crear la cuenta de acceso. Con
+      // cualquier contraseña habría dado "credenciales incorrectas".
+      return {
+        email: null,
+        motivo: 'Este usuario tiene perfil pero no tiene cuenta de acceso creada. ' +
+                'Debe darse de alta desde Administración → Usuarios.',
+      };
+    }
+    return { email: data.email || texto };
+  } catch (e) {
+    const faltaLaFuncion = /function|does not exist|not find/i.test(e.message || '');
+    if (!faltaLaFuncion) console.error('[navegacion] Fallo al resolver el identificador:', e.message);
+    else if (!texto.includes('@')) {
+      console.warn(
+        '[navegacion] `resolver_identificador_login` no existe: el acceso por ' +
+        'nombre de usuario requiere database/migration_v17_login_por_username.sql. ' +
+        'Mientras tanto solo funciona el correo institucional.'
+      );
+    }
+    return { email: texto };
+  }
+};
+
+// Inicio de sesión real via Supabase Auth. `identificador` puede ser el correo
+// institucional o el username.
+const iniciarSesion = async (identificador, password) => {
   errorAuth.value = '';
   cargandoAuth.value = true;
+  const email = identificador;
   try {
     if (!db) {
       // Fallback demo: buscar en credenciales locales
@@ -85,19 +139,37 @@ const iniciarSesion = async (email, password) => {
       vistaActual.value = match.vista;
       return { ok: true };
     }
-    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    const resuelto = await resolverIdentificador(identificador);
+    if (!resuelto.email) {
+      // Motivo concreto en vez del genérico de Supabase.
+      errorAuth.value = resuelto.motivo || 'Usuario no encontrado.';
+      return { ok: false, error: new Error(errorAuth.value) };
+    }
+
+    const { data, error } = await db.auth.signInWithPassword({
+      email: resuelto.email,
+      password,
+    });
     if (error) throw error;
     // El rol y el perfil se leen en el listener onAuthStateChange
     return { ok: true, data };
   } catch (e) {
-    errorAuth.value = e.message || 'Error al iniciar sesión';
+    // El mensaje de Supabase llega en inglés y es el mismo para contraseña
+    // incorrecta y correo inexistente; aquí ya sabemos que el usuario existe.
+    const credencialesMal = /invalid login credentials/i.test(e.message || '');
+    const sinConfirmar = /email not confirmed/i.test(e.message || '');
+    errorAuth.value = credencialesMal
+      ? 'Contraseña incorrecta.'
+      : sinConfirmar
+        ? 'La cuenta existe pero el correo no ha sido confirmado. Desactiva "Confirm email" en Supabase o confirma desde el enlace enviado.'
+        : (e.message || 'Error al iniciar sesión');
     return { ok: false, error: e };
   } finally {
     cargandoAuth.value = false;
   }
 };
 
-const { limpiarAlcance } = usePermisos();
+const { limpiarAlcance, puedeVer } = usePermisos();
 
 const cerrarSesion = async () => {
   if (db) await db.auth.signOut();
@@ -210,23 +282,101 @@ const toggleSidebar = () => {
 
 const { denunciasPendientesCount } = useDenuncias();
 
-const navOperacion = [
-  { id: 'dashboard',       label: 'Dashboard',            icono: 'fa-chart-pie' },
-  { id: 'mapa',            label: 'Mapa en Vivo',         icono: 'fa-map-marked-alt' },
-  { id: 'denuncias',       label: 'Gestión de Denuncias', icono: 'fa-clipboard-list', badge: () => denunciasPendientesCount.value || null },
-  { id: 'intervenciones',  label: 'Intervenciones',       icono: 'fa-hard-hat' },
-  { id: 'cartograma',      label: 'Cartograma',           icono: 'fa-map' },
-  { id: 'reportes',        label: 'Reportes',             icono: 'fa-chart-line' },
+// ── Menú por grupos ──────────────────────────────────────────
+// `modulo` es el `codigo_modulo` de public.permisos_modulos, que es lo que
+// evalúan tanto las policies como `roles_permisos`. Es la clave que conecta el
+// menú con el modelo de permisos; sin ella el sidebar era una lista fija que
+// ofrecía módulos donde el usuario solo encontraba tablas vacías.
+//
+// Ojo: el módulo de denuncias se llama 'casos' en la BD aunque la UI lo muestre
+// como "Gestión de Denuncias". Cartograma comparte módulo con el mapa.
+const gruposNav = [
+  {
+    id: 'operacion',
+    label: 'Operación',
+    icono: 'fa-tower-broadcast',
+    items: [
+      { id: 'dashboard',      label: 'Dashboard',            icono: 'fa-chart-pie',       modulo: 'dashboard' },
+      { id: 'mapa',           label: 'Mapa en Vivo',         icono: 'fa-map-marked-alt',  modulo: 'mapa' },
+      { id: 'cartograma',     label: 'Cartograma',           icono: 'fa-map',             modulo: 'mapa' },
+      { id: 'denuncias',      label: 'Gestión de Denuncias', icono: 'fa-clipboard-list',  modulo: 'casos',
+        badge: () => denunciasPendientesCount.value || null },
+      { id: 'intervenciones', label: 'Intervenciones',       icono: 'fa-hard-hat',        modulo: 'intervenciones' },
+      { id: 'reportes',       label: 'Reportes',             icono: 'fa-chart-line',      modulo: 'reportes' },
+    ],
+  },
+  {
+    id: 'organizacion',
+    label: 'Organización',
+    icono: 'fa-sitemap',
+    // Direcciones, Distritos y Cuadrillas entran en este grupo cuando existan
+    // sus vistas. No se listan todavía: una entrada de menú que no abre nada
+    // es peor que una ausencia.
+    items: [
+      { id: 'departamentos', label: 'Departamentos', icono: 'fa-building',    modulo: 'config' },
+      { id: 'usuarios',      label: 'Usuarios',      icono: 'fa-user-shield', modulo: 'usuarios' },
+    ],
+  },
+  {
+    id: 'ciudadania',
+    label: 'Ciudadanía',
+    icono: 'fa-people-roof',
+    items: [
+      { id: 'poblacion',            label: 'Población Registrada', icono: 'fa-users', modulo: 'poblacion' },
+      { id: 'vista-notificaciones', label: 'Notificaciones',       icono: 'fa-bell',  modulo: 'config' },
+    ],
+  },
+  {
+    id: 'seguridad',
+    label: 'Seguridad y Sistema',
+    icono: 'fa-shield-halved',
+    items: [
+      { id: 'roles',    label: 'Roles y Permisos',      icono: 'fa-lock',    modulo: 'usuarios' },
+      { id: 'bitacora', label: 'Bitácora de Auditoría', icono: 'fa-history', modulo: 'config' },
+      { id: 'config',   label: 'Configuración',         icono: 'fa-cog',     modulo: 'config' },
+    ],
+  },
 ];
-const navAdmin = [
-  { id: 'usuarios',     label: 'Usuarios',               icono: 'fa-user-shield' },
-  { id: 'poblacion',    label: 'Población Registrada',   icono: 'fa-users' },
-  { id: 'departamentos',label: 'Departamentos',          icono: 'fa-building' },
-  { id: 'roles',        label: 'Roles y Permisos',       icono: 'fa-lock' },
-  { id: 'bitacora',     label: 'Bitácora de Auditoría',  icono: 'fa-history' },
-  { id: 'vista-notificaciones',label: 'Notificaciones',         icono: 'fa-bell' },
-  { id: 'config',       label: 'Configuración',          icono: 'fa-cog' },
-];
+
+// Grupos con al menos un ítem visible. Un grupo que se queda sin hijos
+// desaparece entero: dejar el encabezado de un acordeón vacío sugiere que
+// falta cargar algo.
+const gruposVisibles = computed(() =>
+  gruposNav
+    .map((g) => ({ ...g, items: g.items.filter((i) => puedeVer(i.modulo)) }))
+    .filter((g) => g.items.length > 0)
+);
+
+// Plano y ya filtrado. Lo usa el sidebar colapsado, donde no hay acordeón
+// porque a 76 px no caben los encabezados de grupo.
+const navPlano = computed(() => gruposVisibles.value.flatMap((g) => g.items));
+
+// ── Estado del acordeón ──────────────────────────────────────
+const CLAVE_GRUPOS = 'sidebar_grupos_abiertos';
+const leerGruposAbiertos = () => {
+  try {
+    const guardado = JSON.parse(localStorage.getItem(CLAVE_GRUPOS));
+    if (Array.isArray(guardado)) return guardado;
+  } catch { /* JSON corrupto: se ignora y se usa el valor por defecto */ }
+  return ['operacion'];   // el grupo de trabajo diario arranca abierto
+};
+const gruposAbiertos = ref(leerGruposAbiertos());
+
+const toggleGrupo = (id) => {
+  const i = gruposAbiertos.value.indexOf(id);
+  if (i === -1) gruposAbiertos.value.push(id);
+  else gruposAbiertos.value.splice(i, 1);
+  localStorage.setItem(CLAVE_GRUPOS, JSON.stringify(gruposAbiertos.value));
+};
+
+const grupoAbierto = (id) => gruposAbiertos.value.includes(id);
+
+// El grupo que contiene la vista activa siempre se dibuja abierto, aunque el
+// usuario lo hubiera cerrado: si no, al navegar el menú no refleja dónde está.
+const grupoDeVista = computed(() =>
+  gruposNav.find((g) => g.items.some((i) => i.id === vistaActual.value))?.id || null
+);
+const grupoVisible = (id) => grupoAbierto(id) || grupoDeVista.value === id;
 
 const titulos = {
   dashboard: 'Panel Principal', mapa: 'Mapa en Vivo', denuncias: 'Gestión de Denuncias',
@@ -235,6 +385,7 @@ const titulos = {
   bitacora: 'Bitácora de Auditoría', config: 'Configuración General',
   departamentos: 'Departamentos y Unidades', poblacion: 'Población Registrada',
   'vista-notificaciones': 'Gestión de Notificaciones',
+  cartograma: 'Cartograma Territorial',   // faltaba: la topbar mostraba el genérico
 };
 const tituloVista = computed(() => titulos[vistaActual.value] || 'Centro de Monitoreo');
 
@@ -248,6 +399,7 @@ export function useNavegacion() {
     autenticado, perfilCargado, usuarioActual, nombreUsuario, rolUsuario, usuarioId,
     errorAuth, cargandoAuth,
     setAutenticado, iniciarSesion, cerrarSesion,
-    navOperacion, navAdmin, titulos, tituloVista, irA,
+    gruposVisibles, navPlano, grupoVisible, toggleGrupo,
+    titulos, tituloVista, irA,
   };
 }

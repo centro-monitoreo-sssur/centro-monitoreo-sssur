@@ -15,9 +15,18 @@ export default {
     const departamentoSeleccionado = ref(null);
     const modalEditar = ref(false);
     const modalEliminar = ref(false);
-    
+    // Estado de la escritura. Sin `guardando` el usuario puede pulsar dos veces
+    // y crear el departamento duplicado; sin `errorGuardado` un fallo de RLS se
+    // traga en silencio y el modal se cierra como si hubiera funcionado.
+    const guardando = ref(false);
+    const errorGuardado = ref('');
+
     /* ─── Stores ─── */
-    const { departamentos, cargarDepartamentos } = useCatalogos();
+    const {
+      departamentos, direcciones,
+      cargarDepartamentos, cargarDirecciones,
+      guardarDepartamento, desactivarDepartamento,
+    } = useCatalogos();
 
     /* ─── Computeds ─── */
     const departamentosFiltrados = computed(() => {
@@ -40,13 +49,17 @@ export default {
     const departamentosActivos = computed(() => departamentos.value.filter(d => d.estado === 'activo').length);
     const departamentosInactivos = computed(() => departamentos.value.filter(d => d.estado === 'inactivo').length);
     
-    const direccionesDisponibles = computed(() => {
-      const direcciones = new Set();
-      departamentos.value.forEach(d => {
-        if (d.direcciones_administrativas?.nombre) direcciones.add(d.direcciones_administrativas.nombre);
-      });
-      return Array.from(direcciones).sort();
-    });
+    // El filtro salía de los nombres presentes en la lista cargada, así que una
+    // dirección sin departamentos no aparecía. Ahora sale del catálogo real.
+    const direccionesDisponibles = computed(() =>
+      direcciones.value.length
+        ? direcciones.value.map((d) => d.nombre)
+        : Array.from(new Set(
+            departamentos.value
+              .map((d) => d.direcciones_administrativas?.nombre)
+              .filter(Boolean)
+          )).sort()
+    );
 
     /* ─── Funciones ─── */
     const limpiarFiltros = () => {
@@ -56,17 +69,17 @@ export default {
     };
 
     const abrirModalEditar = (departamento) => {
-      departamentoSeleccionado.value = departamento ? { ...departamento } : {
-        id: null,
-        codigo: '',
-        nombre: '',
-        codigo_direccion: '',
-        estado: 'activo'
-      };
+      errorGuardado.value = '';
+      // El formulario editaba `codigo_direccion`, un campo que no existe: la
+      // columna real es `direccion_id` (FK a direcciones_administrativas).
+      departamentoSeleccionado.value = departamento
+        ? { ...departamento, direccion_id: departamento.direccion_id ?? '' }
+        : { id: null, codigo: '', nombre: '', direccion_id: '', estado: 'activo' };
       modalEditar.value = true;
     };
 
     const abrirModalEliminar = (departamento) => {
+      errorGuardado.value = '';
       departamentoSeleccionado.value = { ...departamento };
       modalEliminar.value = true;
     };
@@ -81,28 +94,34 @@ export default {
       departamentoSeleccionado.value = null;
     };
 
-    const guardarCambiosDepartamento = () => {
-      // En un sistema real, esto actualizaría en Supabase
-      const indice = departamentos.value.findIndex(d => d.id === departamentoSeleccionado.value.id);
-      if (indice !== -1) {
-        departamentos.value[indice] = { ...departamentoSeleccionado.value };
-      } else {
-        // Nuevo departamento
-        departamentoSeleccionado.value.id = departamentos.value.length + 1;
-        departamentos.value.push(departamentoSeleccionado.value);
-      }
-      cerrarModalEditar();
+    const guardarCambiosDepartamento = async () => {
+      if (guardando.value) return;          // doble clic = departamento duplicado
+      guardando.value = true;
+      errorGuardado.value = '';
+      const res = await guardarDepartamento(departamentoSeleccionado.value);
+      guardando.value = false;
+      if (res.ok) cerrarModalEditar();
+      else errorGuardado.value = res.error;  // el modal sigue abierto con los datos
     };
 
-    const eliminarDepartamento = () => {
-      // En un sistema real, esto eliminaría de Supabase
-      departamentos.value = departamentos.value.filter(d => d.id !== departamentoSeleccionado.value.id);
-      cerrarModalEliminar();
+    // "Eliminar" es desactivar. Ver el comentario de `desactivarDepartamento`
+    // en el store: hay cuatro tablas con FK hacia departamentos.
+    const eliminarDepartamento = async () => {
+      if (guardando.value) return;
+      guardando.value = true;
+      errorGuardado.value = '';
+      const res = await desactivarDepartamento(departamentoSeleccionado.value.id);
+      guardando.value = false;
+      if (res.ok) cerrarModalEliminar();
+      else errorGuardado.value = res.error;
     };
 
     /* ─── Ciclo de vida ─── */
     onMounted(() => {
-      cargarDepartamentos().then(() => cargando.value = false);
+      // Las direcciones alimentan el selector del modal y el filtro; se piden en
+      // paralelo porque ninguna depende de la otra.
+      Promise.all([cargarDepartamentos(), cargarDirecciones()])
+        .finally(() => { cargando.value = false; });
     });
 
     return {
@@ -114,10 +133,13 @@ export default {
       departamentoSeleccionado,
       modalEditar,
       modalEliminar,
-      
+      guardando,
+      errorGuardado,
+
       // Stores
       departamentos,
-      
+      direcciones,
+
       // Computeds
       departamentosFiltrados,
       totalDepartamentos,

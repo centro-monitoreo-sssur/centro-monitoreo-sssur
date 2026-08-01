@@ -88,7 +88,13 @@
     <!-- TOPBAR -->
     <app-topbar v-show="!ocultarShell"></app-topbar>
 
-    <main :class="['flex-1 w-full mx-auto overflow-hidden', vistaActual === 'mapa' || vistaActual === 'cartograma' || vistaActual === 'reportes' ? 'overflow-hidden' : 'overflow-auto px-4 lg:px-8 py-6 max-w-[1600px]']">
+    <!-- `overflow-hidden` estaba TAMBIÉN en la clase base, así que las vistas
+         que debían scrollear recibían las dos utilidades sobre el mismo
+         elemento y ganaba la que el CDN de Tailwind hubiera emitido después
+         — no determinista. Es la razón de que Configuración no scrollease.
+         Las vistas con lienzo propio (mapa, cartograma, reportes) gestionan su
+         scroll internamente; el resto lo delega en <main>. -->
+    <main :class="['flex-1 w-full mx-auto min-h-0', vistaActual === 'mapa' || vistaActual === 'cartograma' || vistaActual === 'reportes' ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden px-4 lg:px-8 py-6 max-w-[1600px]']">
       <vista-dashboard v-if="vistaActual==='dashboard'"></vista-dashboard>
       <vista-mapa v-else-if="vistaActual==='mapa'"></vista-mapa>
       <vista-cartograma v-else-if="vistaActual==='cartograma'"></vista-cartograma>

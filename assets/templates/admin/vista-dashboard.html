@@ -7,16 +7,20 @@
     <p class="text-gray-500 dark:text-gray-400 mt-1">Centro de Monitoreo Municipal · {{ fechaHoraActual }}</p>
   </div>
 
-  <!-- KPIs PRINCIPALES -->
+  <!-- KPIs PRINCIPALES
+       Los colores salen de las variables --kpi-* (Configuración → Apariencia),
+       no de clases fijas de Tailwind: Tailwind no puede generar utilidades a
+       partir de una variable en tiempo de ejecución, así que la paleta
+       configurable nunca habría llegado a estas tarjetas. -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Total</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ dashboardMetricas.total }}</p>
+          <p class="text-2xl font-bold mt-1 kpi-color--total">{{ dashboardMetricas.total }}</p>
         </div>
-        <div class="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-          <i class="fas fa-inbox text-blue-600 dark:text-blue-400"></i>
+        <div class="p-2 rounded-lg kpi-fondo--total">
+          <i class="fas fa-inbox kpi-color--total"></i>
         </div>
       </div>
     </div>
@@ -25,10 +29,10 @@
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Pendientes</p>
-          <p class="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{{ dashboardMetricas.pendientes }}</p>
+          <p class="text-2xl font-bold mt-1 kpi-color--pendiente">{{ dashboardMetricas.pendientes }}</p>
         </div>
-        <div class="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-          <i class="fas fa-clock text-red-600 dark:text-red-400"></i>
+        <div class="p-2 rounded-lg kpi-fondo--pendiente">
+          <i class="fas fa-clock kpi-color--pendiente"></i>
         </div>
       </div>
     </div>
@@ -37,10 +41,10 @@
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-normal text-gray-500 dark:text-gray-400">En Curso</p>
-          <p class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ dashboardMetricas.enCurso }}</p>
+          <p class="text-2xl font-bold mt-1 kpi-color--en-curso">{{ dashboardMetricas.enCurso }}</p>
         </div>
-        <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-          <i class="fas fa-hard-hat text-amber-600 dark:text-amber-400"></i>
+        <div class="p-2 rounded-lg kpi-fondo--en-curso">
+          <i class="fas fa-hard-hat kpi-color--en-curso"></i>
         </div>
       </div>
     </div>
@@ -49,10 +53,10 @@
       <div class="flex items-center justify-between">
         <div>
           <p class="text-sm font-normal text-gray-500 dark:text-gray-400">Resolución</p>
-          <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ dashboardMetricas.tasaResolucion }}%</p>
+          <p class="text-2xl font-bold mt-1 kpi-color--resuelta">{{ dashboardMetricas.tasaResolucion }}%</p>
         </div>
-        <div class="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-          <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-400"></i>
+        <div class="p-2 rounded-lg kpi-fondo--resuelta">
+          <i class="fas fa-check-circle kpi-color--resuelta"></i>
         </div>
       </div>
     </div>

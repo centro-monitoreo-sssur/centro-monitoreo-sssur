@@ -21,12 +21,15 @@
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 flex-shrink-0">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
-          <i class="fas fa-layer-group text-indigo-500"></i>
+        <!-- Mismos conceptos y mismos colores que el Dashboard: definirlos por
+             concepto y no por pantalla es lo que evita que "pendiente" sea rojo
+             aquí y naranja allá. -->
+        <div class="w-10 h-10 rounded-lg kpi-fondo--total flex items-center justify-center shrink-0">
+          <i class="fas fa-layer-group kpi-color--total"></i>
         </div>
         <div>
           <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total</p>
-          <p class="text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">{{ reporteMetricas.total }}</p>
+          <p class="text-2xl font-extrabold leading-tight kpi-color--total">{{ reporteMetricas.total }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400">Registros filtrados</p>
         </div>
       </div>
@@ -34,12 +37,12 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-          <i class="fas fa-hard-hat text-amber-500"></i>
+        <div class="w-10 h-10 rounded-lg kpi-fondo--en-curso flex items-center justify-center shrink-0">
+          <i class="fas fa-hard-hat kpi-color--en-curso"></i>
         </div>
         <div>
           <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Activas</p>
-          <p class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-tight">{{ reporteMetricas.enObra }}</p>
+          <p class="text-2xl font-extrabold leading-tight kpi-color--en-curso">{{ reporteMetricas.enObra }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400">En intervención</p>
         </div>
       </div>
@@ -47,12 +50,12 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-          <i class="fas fa-check-circle text-emerald-500"></i>
+        <div class="w-10 h-10 rounded-lg kpi-fondo--resuelta flex items-center justify-center shrink-0">
+          <i class="fas fa-check-circle kpi-color--resuelta"></i>
         </div>
         <div>
           <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Resolución</p>
-          <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 leading-tight">{{ reporteMetricas.tasaResolucion }}%</p>
+          <p class="text-2xl font-extrabold leading-tight kpi-color--resuelta">{{ reporteMetricas.tasaResolucion }}%</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ reporteMetricas.resueltas }} resueltas</p>
         </div>
       </div>
@@ -60,12 +63,12 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-          <i class="fas fa-clock text-red-500"></i>
+        <div class="w-10 h-10 rounded-lg kpi-fondo--pendiente flex items-center justify-center shrink-0">
+          <i class="fas fa-clock kpi-color--pendiente"></i>
         </div>
         <div>
           <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Pendientes</p>
-          <p class="text-2xl font-extrabold text-red-600 dark:text-red-400 leading-tight">{{ reporteMetricas.pendientes }}</p>
+          <p class="text-2xl font-extrabold leading-tight kpi-color--pendiente">{{ reporteMetricas.pendientes }}</p>
           <p class="text-[11px] text-gray-500 dark:text-gray-400">Sin atender</p>
         </div>
       </div>

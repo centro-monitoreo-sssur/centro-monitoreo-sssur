@@ -7,4 +7,55 @@
   --brand-light:#274bd6;
   --gold:#ffcc00;       /* acento institucional (Protección Civil) */
   --surface:#f3f4f8;    /* fondo general */
+
+  /* ── Paleta operativa (configurable) ─────────────────────────────────────
+     Estos valores son el PUNTO DE PARTIDA. El store de configuración los
+     sobrescribe en :root cuando el administrador cambia la paleta desde
+     Configuración → Apariencia (ver publicarVariablesCSS en
+     assets/js/stores/configuracion.js).
+
+     Declararlos aquí no es redundante: garantiza que las vistas tengan color
+     antes de que el store cargue, y que sigan teniéndolo si la carga falla.
+     Sin esto habría un parpadeo con elementos sin color al arrancar.
+
+     Un color por CONCEPTO operativo, no por pantalla: es lo que impide que
+     "pendiente" sea rojo en el Dashboard y naranja en Reportes. */
+  --kpi-total:#3b82f6;
+  --kpi-pendiente:#ef4444;
+  --kpi-en-curso:#f59e0b;
+  --kpi-resuelta:#10b981;
+  --kpi-vencida:#dc2626;
+  --kpi-neutro:#64748b;
+
+  /* Semáforo del tablero territorial, por cumplimiento de SLA. */
+  --semaforo-ok:#10b981;
+  --semaforo-atencion:#f59e0b;
+  --semaforo-alerta:#f97316;
+  --semaforo-critico:#ef4444;
+
+  /* Series de gráficos, en orden de asignación. */
+  --serie-1:#3b82f6;  --serie-2:#10b981;  --serie-3:#f59e0b;  --serie-4:#8b5cf6;
+  --serie-5:#ef4444;  --serie-6:#06b6d4;  --serie-7:#ec4899;  --serie-8:#84cc16;
+  --serie-9:#f97316;  --serie-10:#6366f1;
 }
+
+/* ── Utilidades de KPI ──────────────────────────────────────────────────────
+   Sustituyen a las clases fijas de Tailwind (text-red-600, bg-amber-100…) en
+   los indicadores. Tailwind no puede generar clases a partir de una variable
+   en tiempo de ejecución, así que la única forma de que la paleta configurable
+   llegue a la pantalla es un puñado de clases propias.
+
+   `color-mix` da el fondo tenue a partir del mismo color, en vez de exigir una
+   segunda variable por cada concepto. */
+.kpi-color        { color: var(--kpi-neutro); }
+.kpi-color--total     { color: var(--kpi-total); }
+.kpi-color--pendiente { color: var(--kpi-pendiente); }
+.kpi-color--en-curso  { color: var(--kpi-en-curso); }
+.kpi-color--resuelta  { color: var(--kpi-resuelta); }
+.kpi-color--vencida   { color: var(--kpi-vencida); }
+
+.kpi-fondo--total     { background: color-mix(in srgb, var(--kpi-total)     14%, transparent); }
+.kpi-fondo--pendiente { background: color-mix(in srgb, var(--kpi-pendiente) 14%, transparent); }
+.kpi-fondo--en-curso  { background: color-mix(in srgb, var(--kpi-en-curso)  14%, transparent); }
+.kpi-fondo--resuelta  { background: color-mix(in srgb, var(--kpi-resuelta)  14%, transparent); }
+.kpi-fondo--vencida   { background: color-mix(in srgb, var(--kpi-vencida)   14%, transparent); }

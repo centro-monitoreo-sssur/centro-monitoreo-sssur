@@ -1,7 +1,7 @@
 <!-- ======================= VISTA: USUARIOS DEL SISTEMA ======================= -->
-<div class="h-full flex flex-col">
+<div class="h-full min-h-0 flex flex-col">
   <!-- KPIs de alto nivel -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 flex-shrink-0">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Usuarios</h3>
@@ -48,7 +48,7 @@
   </div>
 
   <!-- Tabla principal -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
 
     <!-- Cabecera de la tabla -->
     <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50">
@@ -105,9 +105,8 @@
           <i class="fas fa-sync-alt text-xs"></i>
         </button>
 
-        <!-- Nuevo usuario -->
         <button
-          @click="modalEditar = true; usuarioSeleccionado = { nombre: '', email: '', rol: 'operador', estado: 'activo' }"
+          @click="abrirModalCrear"
           class="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--brand)] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
         >
           <i class="fas fa-user-plus"></i> Nuevo usuario
@@ -131,7 +130,7 @@
     </div>
 
     <!-- Tabla de usuarios -->
-    <div v-else class="overflow-x-auto">
+    <div v-else class="overflow-x-auto flex-1 min-h-0 overflow-y-auto">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-gray-50/50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -212,84 +211,386 @@
 
 <!-- ─── Modal Editar / Crear ─── -->
 <div v-if="modalEditar" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
-  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
+  <!-- `max-h-[90vh]` + scroll interno: el formulario completo no cabe en un
+       portátil de 768 px de alto y sin esto los botones quedaban fuera. -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
 
-    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 flex items-center justify-between">
-      <h2 class="text-base font-bold text-gray-900 dark:text-white">
-        {{ usuarioSeleccionado.id ? 'Editar usuario' : 'Nuevo usuario' }}
-      </h2>
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 flex items-center justify-between flex-shrink-0">
+      <div>
+        <h2 class="text-base font-bold text-gray-900 dark:text-white">
+          {{ usuarioSeleccionado.id ? 'Editar usuario' : 'Nuevo usuario' }}
+        </h2>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+          {{ usuarioSeleccionado.id ? usuarioSeleccionado.email : 'Se creará su cuenta de acceso y su perfil institucional' }}
+        </p>
+      </div>
       <button @click="cerrarModalEditar" class="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
         <i class="fas fa-times text-sm"></i>
       </button>
     </div>
 
-    <form @submit.prevent="guardarCambiosUsuario" class="p-6 flex flex-col gap-4">
-      <!-- Nombre -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Nombre completo</label>
-        <input
-          v-model="usuarioSeleccionado.nombre"
-          type="text"
-          required
-          placeholder="Ej: Carlos Alberto López"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
-        >
-      </div>
+    <form @submit.prevent="guardarCambiosUsuario" class="p-6 flex flex-col gap-6 flex-1 min-h-0 overflow-y-auto">
 
-      <!-- Email -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Correo electrónico</label>
-        <input
-          v-model="usuarioSeleccionado.email"
-          type="email"
-          required
-          placeholder="usuario@sssur.gob.sv"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
-        >
-      </div>
+      <!-- ══ IDENTIDAD ══ -->
+      <section>
+        <h3 class="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-3">Identidad</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Nombres <span class="text-red-500">*</span></label>
+            <input v-model="usuarioSeleccionado.nombres" type="text" required placeholder="Carlos Alberto"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+          </div>
+          <div>
+            <!-- Separados, no un "nombre completo" partido por el último
+                 espacio: eso destroza los apellidos dobles, que aquí son norma. -->
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Apellidos <span class="text-red-500">*</span></label>
+            <input v-model="usuarioSeleccionado.apellidos" type="text" required placeholder="López Martínez"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">DUI</label>
+            <input v-model="usuarioSeleccionado.dui" type="text" placeholder="00000000-0"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Teléfono</label>
+            <input v-model="usuarioSeleccionado.telefono" type="tel" placeholder="7000-0000"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+          </div>
+          <!-- Foto de perfil. Se comprime a 512×512 en el navegador y se sube a
+               cPanel; el 1 GB de Supabase Storage queda para las fotos de
+               denuncia, que son muchas más y se purgan periódicamente. -->
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Foto de perfil</label>
+            <div class="flex items-center gap-4">
+              <div class="w-16 h-16 rounded-full shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center">
+                <img v-if="usuarioSeleccionado.fotoPerfilUrl" :src="usuarioSeleccionado.fotoPerfilUrl"
+                  alt="Foto de perfil" class="w-full h-full object-cover">
+                <i v-else class="fas fa-user text-2xl text-gray-300 dark:text-gray-500"></i>
+              </div>
 
-      <!-- Rol -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Rol de usuario</label>
-        <select
-          v-model="usuarioSeleccionado.rol"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-        >
-          <option value="admin">Administrador</option>
-          <option value="supervisor">Supervisor</option>
-          <option value="operador">Operador</option>
-          <option value="cuadrilla">Cuadrilla</option>
-          <option value="solo_lectura">Solo lectura</option>
-        </select>
-      </div>
+              <div class="flex-1 min-w-0">
+                <template v-if="almacenamientoConfigurado">
+                  <div class="flex items-center gap-2">
+                    <label class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-700 hover:bg-slate-800 cursor-pointer transition-colors"
+                      :class="subiendoFoto ? 'opacity-60 pointer-events-none' : ''">
+                      <i :class="subiendoFoto ? 'fas fa-spinner fa-spin' : 'fas fa-upload'" class="mr-1.5"></i>
+                      {{ subiendoFoto ? 'Subiendo…' : 'Subir imagen' }}
+                      <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden"
+                        @change="seleccionarFoto" :disabled="subiendoFoto">
+                    </label>
+                    <button v-if="usuarioSeleccionado.fotoPerfilUrl" type="button" @click="quitarFoto"
+                      class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      Quitar
+                    </button>
+                  </div>
+                  <p class="mt-1.5 text-[10px] text-gray-400">JPG, PNG o WebP. Se recorta a 512×512 automáticamente.</p>
+                </template>
 
-      <!-- Estado -->
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Estado</label>
-        <select
-          v-model="usuarioSeleccionado.estado"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
-        >
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-        </select>
+                <!-- Sin endpoint configurado se degrada al campo de URL en vez
+                     de ofrecer un botón que siempre fallaría. -->
+                <template v-else>
+                  <input v-model="usuarioSeleccionado.fotoPerfilUrl" type="url" placeholder="https://…"
+                    class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+                  <p class="mt-1.5 text-[10px] text-amber-600 dark:text-amber-400">
+                    Subida directa no configurada. Instala <code class="font-mono">cpanel/subir_foto_perfil.php</code> y rellena
+                    <code class="font-mono">ENDPOINT_FOTOS</code>.
+                  </p>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ ACCESO ══ -->
+      <section>
+        <h3 class="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-3">Acceso al sistema</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Correo institucional <span class="text-red-500">*</span></label>
+            <!-- Bloqueado al editar: `email_institucional` debe seguir a
+                 auth.users; cambiarlo solo aquí impediría iniciar sesión. -->
+            <input v-model="usuarioSeleccionado.email" type="email" required
+              :disabled="!!usuarioSeleccionado.id" placeholder="usuario@sansalvadorsur.gob.sv"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-500">
+            <p v-if="usuarioSeleccionado.id" class="mt-1 text-[10px] text-gray-400">
+              El correo se cambia desde Supabase Auth, no aquí.
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Usuario (username)</label>
+            <input v-model="usuarioSeleccionado.username" type="text" placeholder="clopez"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+          </div>
+          <div v-if="!usuarioSeleccionado.id" class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Contraseña inicial <span class="text-red-500">*</span></label>
+            <input v-model="usuarioSeleccionado.password" type="text" minlength="8" required
+              placeholder="Mínimo 8 caracteres"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+            <p class="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
+              Se muestra en claro a propósito: tienes que poder comunicársela. Indícale que la cambie al primer ingreso.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ ADSCRIPCIÓN ══ -->
+      <section>
+        <h3 class="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-3">Adscripción institucional</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Rol <span class="text-red-500">*</span></label>
+            <!-- Del catálogo real. Antes las opciones estaban escritas a mano y
+                 ninguna (supervisor, operador, cuadrilla…) existía en public.roles. -->
+            <select v-model="usuarioSeleccionado.rol_id" required
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white">
+              <option value="" disabled>Selecciona un rol…</option>
+              <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.nombre }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Cargo / puesto</label>
+            <input v-model="usuarioSeleccionado.cargo" type="text" placeholder="Jefe de Unidad"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white placeholder-gray-400">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Departamento</label>
+            <select v-model="usuarioSeleccionado.departamento_id"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white">
+              <option value="">Sin asignar</option>
+              <option v-for="d in departamentos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Distrito</label>
+            <select v-model="usuarioSeleccionado.distrito_id"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white">
+              <option value="">Sin asignar</option>
+              <option v-for="d in distritos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">Estado</label>
+            <select v-model="usuarioSeleccionado.estado"
+              class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Estos dos campos son los que deciden qué ve el usuario cuando su rol
+             tiene alcance 'distrito_propio' o 'departamento_propio'. Dejarlos
+             vacíos no da acceso total: da CERO filas. -->
+        <div class="mt-3 flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+          <i class="fa-solid fa-circle-info text-blue-500 mt-0.5 shrink-0"></i>
+          <p class="text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
+            Departamento y distrito no son solo informativos: son el punto de partida del alcance de datos.
+            Un rol con alcance <strong>distrito propio</strong> y sin distrito asignado no verá <strong>ningún</strong> caso.
+          </p>
+        </div>
+      </section>
+
+      <!-- ══ PERMISOS GRANULARES ══ -->
+      <section v-if="puedeEditarAmbitos">
+        <h3 class="text-[11px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-1">Permisos granulares de datos</h3>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+          Excepciones sobre el alcance que ya da el rol: conceder un distrito extra, o excluir un departamento.
+          Se aplican en la base de datos (RLS), no solo en la interfaz. <strong>Denegar siempre gana sobre conceder.</strong>
+        </p>
+
+        <div v-if="!usuarioSeleccionado.id" class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-dashed border-gray-300 dark:border-gray-600">
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">
+            Guarda el usuario primero. Los ámbitos se asocian a su identificador, que aún no existe.
+          </p>
+        </div>
+
+        <template v-else>
+          <!-- Selector de ámbito -->
+          <div class="flex gap-1.5 p-1 rounded-xl bg-gray-100 dark:bg-gray-900/60 mb-3">
+            <button v-for="t in TIPOS_AMBITO" :key="t.id" type="button"
+              @click="tipoAmbito = t.id"
+              class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all"
+              :class="tipoAmbito === t.id
+                ? 'bg-white dark:bg-gray-700 text-slate-800 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'">
+              <i :class="['fas', t.icono, 'text-[10px]']"></i> {{ t.etiqueta }}
+            </button>
+          </div>
+
+          <!-- Atajos de selección -->
+          <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+            <div class="flex items-center gap-3">
+              <button type="button" @click="alternarTodos"
+                class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                {{ todosSeleccionados ? 'Quitar selección' : 'Seleccionar todos' }}
+              </button>
+              <button type="button" @click="seleccionarConExcepcion"
+                class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                Solo los que ya tienen excepción
+              </button>
+            </div>
+            <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400">
+              {{ seleccion.length }} seleccionado{{ seleccion.length === 1 ? '' : 's' }}
+            </span>
+          </div>
+
+          <!-- Rejilla de conmutadores. Cada elemento muestra su estado vigente,
+               así que no hay que cruzar mentalmente la lista de excepciones. -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 max-h-60 overflow-y-auto pr-1">
+            <button v-for="o in opcionesAmbito" :key="o.id" type="button"
+              @click="alternarSeleccion(o.id)"
+              class="flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 text-left transition-all"
+              :class="estaSeleccionado(o.id)
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/25'
+                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'">
+
+              <!-- Casilla de selección -->
+              <span class="w-4 h-4 rounded shrink-0 border-2 flex items-center justify-center transition-colors"
+                :class="estaSeleccionado(o.id)
+                  ? 'bg-blue-600 border-blue-600'
+                  : 'border-gray-300 dark:border-gray-600'">
+                <i v-if="estaSeleccionado(o.id)" class="fas fa-check text-[8px] text-white"></i>
+              </span>
+
+              <span class="flex-1 min-w-0 text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+                {{ o.nombre }}
+              </span>
+
+              <!-- Estado vigente -->
+              <span v-if="estadoDe(o.id) === 'conceder'"
+                class="shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 uppercase">
+                Concedido
+              </span>
+              <span v-else-if="estadoDe(o.id) === 'denegar'"
+                class="shrink-0 text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 uppercase">
+                Denegado
+              </span>
+              <span v-else
+                class="shrink-0 text-[9px] font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 uppercase">
+                Heredado
+              </span>
+            </button>
+
+            <p v-if="!opcionesAmbito.length" class="sm:col-span-2 text-[11px] text-gray-400 py-4 text-center">
+              No hay elementos de este tipo en el catálogo.
+            </p>
+          </div>
+
+          <!-- Acción a aplicar sobre lo seleccionado -->
+          <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Acción</label>
+                <!-- Conmutador de dos estados: es una decisión binaria y con un
+                     <select> había que abrirlo para saber cuál estaba activa. -->
+                <div class="flex gap-1 p-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600">
+                  <button type="button" @click="loteAmbito.modo = 'conceder'"
+                    class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    :class="loteAmbito.modo === 'conceder'
+                      ? 'bg-emerald-500 text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                    <i class="fas fa-check mr-1"></i> Conceder
+                  </button>
+                  <button type="button" @click="loteAmbito.modo = 'denegar'"
+                    class="flex-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all"
+                    :class="loteAmbito.modo === 'denegar'
+                      ? 'bg-red-500 text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'">
+                    <i class="fas fa-ban mr-1"></i> Denegar
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Vigente hasta</label>
+                <input v-model="loteAmbito.vigenteHasta" type="date"
+                  class="w-full px-2.5 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-xs dark:text-white">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Motivo <span class="text-red-500">*</span></label>
+              <input v-model="loteAmbito.motivo" type="text"
+                placeholder="Ej: cubre Panchimalco durante incapacidad del jefe titular"
+                class="w-full px-2.5 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-xs dark:text-white placeholder-gray-400">
+              <p class="mt-1 text-[10px] text-gray-400">
+                Se aplica a todos los seleccionados y queda registrado para auditoría.
+                Sin fecha final, la excepción es permanente.
+              </p>
+            </div>
+
+            <div class="flex gap-2">
+              <button type="button" @click="aplicarLote" :disabled="guardando || !seleccion.length"
+                class="flex-1 px-3 py-2 rounded-lg text-xs font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                :class="loteAmbito.modo === 'denegar' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'">
+                <i class="fas fa-check mr-1.5"></i>
+                {{ loteAmbito.modo === 'denegar' ? 'Denegar' : 'Conceder' }} a {{ seleccion.length }}
+              </button>
+              <!-- Retirar la excepción NO es lo mismo que denegar: devuelve al
+                   alcance que da el rol, en vez de bloquear explícitamente. -->
+              <button type="button" @click="restablecerLote" :disabled="guardando || !seleccion.length"
+                title="Quitar la excepción y volver al alcance del rol"
+                class="px-3 py-2 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                <i class="fas fa-rotate-left mr-1.5"></i> Heredar
+              </button>
+            </div>
+          </div>
+
+          <!-- Excepciones vigentes, con su motivo -->
+          <div v-if="ambitosUsuario.length" class="mt-4">
+            <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+              Excepciones activas ({{ resumenAmbitos.concedidos }} concedidas · {{ resumenAmbitos.denegados }} denegadas)
+            </p>
+            <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              <div v-for="a in ambitosUsuario" :key="a.id"
+                class="flex items-center gap-2.5 px-3 py-2 rounded-lg border text-[11px]"
+                :class="a.modo === 'denegar'
+                  ? 'bg-red-50 dark:bg-red-900/15 border-red-200 dark:border-red-800'
+                  : 'bg-emerald-50 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800'">
+                <i class="fas shrink-0"
+                  :class="a.modo === 'denegar' ? 'fa-ban text-red-500' : 'fa-check text-emerald-600'"></i>
+                <div class="min-w-0 flex-1">
+                  <span class="font-semibold text-gray-800 dark:text-gray-200">{{ etiquetaAmbito(a) }}</span>
+                  <span class="text-gray-400"> · {{ a.tipo }} · {{ vigenciaAmbito(a) }}</span>
+                  <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate">{{ a.motivo }}</p>
+                </div>
+                <button type="button" @click="quitarAmbito(a.id)" :disabled="guardando"
+                  title="Quitar esta excepción"
+                  class="w-6 h-6 shrink-0 flex items-center justify-center rounded text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-40">
+                  <i class="fas fa-xmark text-[11px]"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <p v-else class="text-[11px] text-gray-400 mt-4">
+            Sin excepciones. El usuario opera con el alcance que le da su rol.
+          </p>
+        </template>
+      </section>
+
+      <div v-if="errorGuardado" class="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <i class="fas fa-circle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+        <p class="text-xs text-red-700 dark:text-red-300 leading-relaxed">{{ errorGuardado }}</p>
       </div>
 
       <!-- Acciones -->
-      <div class="flex justify-end gap-3 pt-2">
+      <div class="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700 -mx-6 px-6 pb-0">
         <button
           type="button"
           @click="cerrarModalEditar"
-          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          :disabled="guardando"
+          class="mt-4 px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           type="submit"
-          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+          :disabled="guardando"
+          class="mt-4 px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <i class="fas fa-save mr-1.5"></i>
-          {{ usuarioSeleccionado.id ? 'Guardar cambios' : 'Crear usuario' }}
+          <i :class="guardando ? 'fas fa-spinner fa-spin' : 'fas fa-save'" class="mr-1.5"></i>
+          {{ guardando ? 'Guardando…' : (usuarioSeleccionado.id ? 'Guardar cambios' : 'Crear usuario') }}
         </button>
       </div>
     </form>
@@ -303,23 +604,37 @@
       <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
         <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
       </div>
-      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-2">Eliminar usuario</h2>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        ¿Seguro que deseas eliminar a <strong class="text-gray-700 dark:text-gray-200">{{ usuarioSeleccionado.nombre }}</strong>?
-        Esta acción no se puede deshacer.
+      <!-- Baja lógica: borrar la fila haría cascade sobre auth.users y dejaría
+           casos históricos sin responsable. -->
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-2">Desactivar usuario</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+        <strong class="text-gray-700 dark:text-gray-200">{{ usuarioSeleccionado.nombre }}</strong>
+        no podrá acceder al sistema ni recibir asignaciones.
       </p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-6">
+        Los casos e intervenciones que atendió se conservan. Puedes reactivarlo desde el formulario de edición.
+      </p>
+
+      <div v-if="errorGuardado" class="flex items-start gap-2 p-3 mb-4 text-left rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+        <i class="fas fa-circle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+        <p class="text-xs text-red-700 dark:text-red-300">{{ errorGuardado }}</p>
+      </div>
+
       <div class="flex justify-center gap-3">
         <button
           @click="cerrarModalEliminar"
-          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+          :disabled="guardando"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
         >
           Cancelar
         </button>
         <button
           @click="eliminarUsuario"
-          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors"
+          :disabled="guardando"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <i class="fas fa-trash-alt mr-1.5"></i> Eliminar
+          <i :class="guardando ? 'fas fa-spinner fa-spin' : 'fas fa-ban'" class="mr-1.5"></i>
+          {{ guardando ? 'Desactivando…' : 'Desactivar' }}
         </button>
       </div>
     </div>

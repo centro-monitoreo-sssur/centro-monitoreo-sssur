@@ -21,3 +21,29 @@ try {
 } catch (e) {
   console.error('Error inicializando Supabase:', e);
 }
+
+// ============================================================
+// Cliente aislado — SOLO para dar de alta usuarios
+//
+// `db.auth.signUp()` inicia sesión con la cuenta recién creada y sobrescribe
+// la del administrador: quien registra a un empleado acabaría dentro del
+// sistema como ese empleado. Con `persistSession: false` y
+// `autoRefreshToken: false` este cliente no escribe en localStorage ni emite
+// eventos de auth, así que la sesión del administrador queda intacta.
+//
+// Sigue usando la anon key. La service_role NUNCA entra al navegador: quien
+// necesite `auth.admin.createUser` tiene que hacerlo desde una Edge Function.
+// ============================================================
+export function crearClienteAislado() {
+  if (!conexionOk) return null;
+  return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      // Sin clave propia, el cliente aislado compartiría el mismo slot de
+      // almacenamiento aunque no persista, y podría pisar la sesión activa.
+      storageKey: 'sb-alta-usuarios-efimero',
+    },
+  });
+}

@@ -18,8 +18,14 @@ export default {
     const modalEliminar = ref(false);
     const modalVerDetalles = ref(false);
     
+    const guardando = ref(false);
+    const errorGuardado = ref('');
+
     /* ─── Stores ─── */
-    const { poblacion, cargarPoblacion } = usePoblacion();
+    const {
+      poblacion, cargarPoblacion,
+      actualizarCiudadano, cambiarEstadoCiudadano,
+    } = usePoblacion();
 
     /* ─── Computeds ─── */
     const poblacionFiltrada = computed(() => {
@@ -82,27 +88,37 @@ export default {
       ciudadanoSeleccionado.value = null;
     };
 
-    const verificarCiudadano = (ciudadano) => {
-      const indice = poblacion.value.findIndex(c => c.id === ciudadano.id);
-      if (indice !== -1) {
-        poblacion.value[indice].verificado = true;
-        poblacion.value[indice].estado = 'activo';
-      }
+    // Reactiva la cuenta. No hay verificación de identidad en la BD —
+    // `ciudadanos` no tiene columna `verificado` — así que lo único que este
+    // botón puede hacer de verdad es poner `activo = true`.
+    const verificarCiudadano = async (ciudadano) => {
+      if (guardando.value) return;
+      guardando.value = true;
+      const res = await cambiarEstadoCiudadano(ciudadano.id, true);
+      guardando.value = false;
+      if (!res.ok) errorGuardado.value = res.error;
     };
 
-    const guardarCambiosCiudadano = () => {
-      // En un sistema real, esto actualizaría en Supabase
-      const indice = poblacion.value.findIndex(c => c.id === ciudadanoSeleccionado.value.id);
-      if (indice !== -1) {
-        poblacion.value[indice] = { ...ciudadanoSeleccionado.value };
-      }
-      cerrarModalEditar();
+    const guardarCambiosCiudadano = async () => {
+      if (guardando.value) return;
+      guardando.value = true;
+      errorGuardado.value = '';
+      const res = await actualizarCiudadano(ciudadanoSeleccionado.value);
+      guardando.value = false;
+      if (res.ok) cerrarModalEditar();
+      else errorGuardado.value = res.error;
     };
 
-    const eliminarCiudadano = () => {
-      // En un sistema real, esto eliminaría de Supabase
-      poblacion.value = poblacion.value.filter(c => c.id !== ciudadanoSeleccionado.value.id);
-      cerrarModalEliminar();
+    // Baja lógica: `ciudadanos.id` es FK a auth.users y sus denuncias apuntan
+    // a esta fila vía `casos.creado_por_ciudadano_id`.
+    const eliminarCiudadano = async () => {
+      if (guardando.value) return;
+      guardando.value = true;
+      errorGuardado.value = '';
+      const res = await cambiarEstadoCiudadano(ciudadanoSeleccionado.value.id, false);
+      guardando.value = false;
+      if (res.ok) cerrarModalEliminar();
+      else errorGuardado.value = res.error;
     };
 
     /* ─── Ciclo de vida ─── */
@@ -120,7 +136,9 @@ export default {
       modalEditar,
       modalEliminar,
       modalVerDetalles,
-      
+      guardando,
+      errorGuardado,
+
       // Stores
       poblacion,
       

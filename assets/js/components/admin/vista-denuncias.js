@@ -6,6 +6,10 @@
 import { ref, computed } from '../../core/vue.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+// badge.js es la fuente única de estados. Esta vista tenía su propia copia y en
+// ella faltaba `en_revision`, así que ese estado se pintaba como "Desconocido".
+// `colorEstado` y no `badgeEstado`: la plantilla ya pone su propio tamaño.
+import { colorEstado as badgeEstado, etiquetaEstado, estadosPosibles } from '../../utils/badge.js';
 
 export default {
   name: 'vista-denuncias',
@@ -71,27 +75,49 @@ export default {
     // Helpers
     function getCategoria(tipo_id) {
       const cat = (tiposDenuncia.value || []).find(t => t.id === tipo_id);
-      return cat || { nombre: 'Desconocido', color_hex: '#gray-500', icono: 'fa-question' };
+      // '#gray-500' no es un color CSS válido: el `backgroundColor` inline se
+      // descartaba y el icono quedaba sin fondo. Se usa el gris real.
+      return cat || { nombre: 'Desconocido', color_hex: '#6b7280', icono: 'fa-question' };
     }
 
-    function badgeEstado(estado) {
-      const badges = {
-        'pendiente': 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400',
-        'en_obra': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
-        'resuelta': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
-        'rechazada': 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-      };
-      return badges[estado] || badges['pendiente'];
-    }
+    // Exporta lo que el usuario está viendo: los filtros aplicados, no la tabla
+    // completa. Es la expectativa del botón, y evita volcar casos que la RLS
+    // recortó del listado.
+    function exportarCSV() {
+      const filas = denunciasFiltradas.value;
+      if (!filas.length) {
+        alert('No hay denuncias que exportar con los filtros actuales.');
+        return;
+      }
 
-    function etiquetaEstado(estado) {
-      const labels = {
-        'pendiente': 'Pendiente',
-        'en_obra': 'En curso',
-        'resuelta': 'Resuelta',
-        'rechazada': 'Rechazada'
-      };
-      return labels[estado] || 'Desconocido';
+      // Cualquier campo puede traer comas, comillas o saltos de línea escritos
+      // por un ciudadano: se entrecomilla siempre y se duplican las comillas.
+      const csv = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+      const cabeceras = ['ID', 'Correlativo', 'Fecha', 'Categoria', 'Estado', 'Distrito', 'Direccion', 'Descripcion'];
+      const cuerpo = filas.map((d) => [
+        d.id,
+        d.correlativo || '',
+        d.created_at ? new Date(d.created_at).toLocaleString('es-SV') : '',
+        getCategoria(d.tipo_id).nombre,
+        etiquetaEstado(d.estado),
+        d.distrito || '',
+        d.direccion || '',
+        d.descripcion || '',
+      ].map(csv).join(','));
+
+      // El BOM es lo que hace que Excel en español abra el archivo en UTF-8;
+      // sin él, las tildes de los nombres de distrito salen corruptas.
+      const blob = new Blob(['﻿' + [cabeceras.map(csv).join(','), ...cuerpo].join('\r\n')],
+                            { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `denuncias_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      document.body.removeChild(enlace);
+      URL.revokeObjectURL(url);   // sin esto el blob queda retenido en memoria
     }
 
     function formatearFecha(isoStr) {
@@ -116,7 +142,7 @@ export default {
       paginaActual, paginasTotales, paginaDenuncias, cambiarPagina,
       itemsPorPagina, cambiarTamanoPagina,
       getCategoria, badgeEstado, etiquetaEstado, formatearFecha,
-      denunciaSeleccionada, abrirDetalle, cerrarDetalle
+      denunciaSeleccionada, abrirDetalle, cerrarDetalle, exportarCSV, estadosPosibles
     };
   }
 };

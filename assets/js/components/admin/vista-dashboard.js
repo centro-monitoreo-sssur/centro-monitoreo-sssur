@@ -5,6 +5,16 @@ import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useDashboard } from '../../stores/dashboard.js';
+import { useConfiguracion } from '../../stores/configuracion.js';
+
+// Chart.js necesita el color como valor, no como `var(--serie-1)`: pinta sobre
+// un <canvas>, donde las variables CSS no se resuelven. Se leen del elemento
+// raíz en el momento de dibujar.
+function colorDeVariable(nombre, respaldo) {
+  if (typeof window === 'undefined') return respaldo;
+  const valor = getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
+  return valor || respaldo;
+}
 
 export default {
   setup() {
@@ -12,6 +22,7 @@ export default {
     const { iconoDeTipo } = useCatalogos();
     const { isDarkMode } = useNavegacion();
     const { kpis, cargarKpis } = useDashboard();
+    const { config } = useConfiguracion();
 
     const canvasTendencia = ref(null);
     const canvasTendenciaMobile = ref(null);
@@ -95,6 +106,8 @@ export default {
 
       const textColor = isDarkMode.value ? '#9ca3af' : '#6b7280';
       const gridColor = isDarkMode.value ? '#374151' : '#f3f4f6';
+      // Primera serie de la paleta configurable.
+      const serie = colorDeVariable('--serie-1', '#001ba0');
 
       return new Chart(canvasRef.value, {
         type: 'line',
@@ -103,11 +116,13 @@ export default {
           datasets: [{
             label: 'Incidentes',
             data,
-            borderColor: '#001ba0',
-            backgroundColor: isDarkMode.value ? 'rgba(39, 75, 214, 0.2)' : 'rgba(0, 27, 160, 0.1)',
+            borderColor: serie,
+            // Relleno derivado del mismo color en vez de un rgba fijo: si no,
+            // al cambiar la paleta la línea y su sombra dejarían de casar.
+            backgroundColor: `color-mix(in srgb, ${serie} ${isDarkMode.value ? 20 : 12}%, transparent)`,
             borderWidth: 3,
             pointBackgroundColor: isDarkMode.value ? '#1f2937' : '#fff',
-            pointBorderColor: isDarkMode.value ? '#3b82f6' : '#001ba0',
+            pointBorderColor: serie,
             pointBorderWidth: 2,
             pointRadius: 4,
             pointHoverRadius: 6,
@@ -150,9 +165,14 @@ export default {
       if (chartTendenciaMobile) chartTendenciaMobile.destroy();
     });
 
-    watch([() => denuncias.value.length, isDarkMode], () => {
-      nextTick(() => dibujarGraficas());
-    });
+    // Se incluye la paleta: el <canvas> ya está pintado cuando cambia el color,
+    // así que sin redibujar el gráfico conservaría el color anterior hasta que
+    // algo más lo forzara. `nextTick` deja que el store publique las variables
+    // CSS antes de leerlas.
+    watch(
+      [() => denuncias.value.length, isDarkMode, () => config.value.colores?.graficos?.[0]],
+      () => { nextTick(() => dibujarGraficas()); }
+    );
 
     return {
       dashboardMetricas, incidentesPrioritarios, kpis,
