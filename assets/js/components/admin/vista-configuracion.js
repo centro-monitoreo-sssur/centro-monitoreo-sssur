@@ -9,6 +9,12 @@ import { useCatalogos } from '../../stores/catalogos.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useDiagnostico } from '../../stores/diagnostico.js';
 import { db } from '../../core/supabase.js';
+// Catálogos declarativos del Mapa en Vivo. La pestaña "Mapa" configura el
+// estado inicial de la consola, así que lee del mismo sitio que la consola
+// para que las dos no puedan divergir.
+import { HERRAMIENTAS } from '../../config/mapa/herramientas-mapa.js';
+import { ESTADOS_FILTRO, VENTANAS_TIEMPO, COLUMNAS_COMPARATIVO }
+  from '../../config/mapa/filtros-territoriales.js';
 
 export default {
   name: 'vista-configuracion',
@@ -123,6 +129,24 @@ export default {
       'fa-street-view', 'fa-triangle-exclamation', 'fa-circle-info',
     ];
 
+    // ── Mapa en Vivo ─────────────────────────────────────────
+    // Etiquetas de los paneles. Las claves coinciden con `config.mapa` y con
+    // lo que lee `estadoInicialPaneles()` en config/mapa/paneles-mapa.js.
+    const AJUSTES_PANELES = [
+      { clave: 'panelFeedAbierto',      etiqueta: 'Feed de incidencias abierto', ayuda: 'Panel izquierdo con la cola priorizada' },
+      { clave: 'panelCapasAbierto',     etiqueta: 'Panel de capas abierto',      ayuda: 'Panel derecho con tipos, tramos e intervenciones' },
+      { clave: 'kpisVisiblesMovil',     etiqueta: 'Franja de KPIs en móvil',     ayuda: 'En escritorio siempre está visible' },
+      { clave: 'acordeonTipos',         etiqueta: 'Desplegar «Tipos de denuncia»', ayuda: 'Sección del panel de capas' },
+      { clave: 'acordeonTramos',        etiqueta: 'Desplegar «Tramos en obra»',    ayuda: 'Sección del panel de capas' },
+      { clave: 'acordeonIntervenciones', etiqueta: 'Desplegar «Intervenciones»',   ayuda: 'Sección del panel de capas' },
+    ];
+
+    // Solo las herramientas configurables: las de dibujo tienen `claveConfig`
+    // en null porque no pueden arrancar encendidas.
+    const AJUSTES_HERRAMIENTAS = HERRAMIENTAS
+      .filter((h) => h.claveConfig)
+      .map((h) => ({ clave: h.claveConfig, etiqueta: h.nombre, icono: h.icono, ayuda: h.ayuda }));
+
     // ── Notificaciones ───────────────────────────────────────
     const tonoPreview = ref('');
     function previewTono(t) {
@@ -231,6 +255,12 @@ export default {
       errorImport, onFileImport,
       confirmarReset, resetear, exportarJSON,
       estilosMapaOpciones,
+      // Mapa en Vivo. Con sufijo _CFG los que comparten nombre con algo de la
+      // consola, para que no se confundan al leer la plantilla.
+      AJUSTES_PANELES, AJUSTES_HERRAMIENTAS,
+      ESTADOS_FILTRO_CFG: ESTADOS_FILTRO,
+      VENTANAS_TIEMPO_CFG: VENTANAS_TIEMPO,
+      COLUMNAS_COMPARATIVO_CFG: COLUMNAS_COMPARATIVO,
       guardarYNotificar,
       isDarkMode, toggleDarkMode,
     };

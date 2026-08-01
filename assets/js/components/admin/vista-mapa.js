@@ -18,9 +18,31 @@ import { formatoFecha } from '../../utils/formato.js';
 import { badgeEstado, etiquetaEstado } from '../../utils/badge.js';
 import { marcadorDenuncia, marcadorIntervencion } from '../../services/marcadores.js';
 import { popupDenuncia, popupIntervencion } from '../../services/mapa-monitoreo.js';
+import { useConfiguracion } from '../../stores/configuracion.js';
+// Estructura de la consola, extraída a tres módulos declarativos. La vista
+// ejecuta los efectos; el catálogo de paneles, herramientas y filtros vive
+// fuera para poder cambiarlo sin bucear en este archivo.
+import { PANELES, SECCIONES_CAPAS, SECCIONES_MENU_CAPAS, TABS_MOVIL, estadoInicialPaneles }
+  from '../../config/mapa/paneles-mapa.js';
+import {
+  TILES, TILE_POR_DEFECTO, HERRAMIENTAS, GRUPOS_HERRAMIENTAS, BOTONES_FLOTANTES,
+  CONTROLES_NAVEGACION, MODOS_MEDICION, estadoInicialHerramientas, exclusionesDe,
+} from '../../config/mapa/herramientas-mapa.js';
+import {
+  ESTADOS_FILTRO, VENTANAS_TIEMPO, COLUMNAS_COMPARATIVO,
+  filtrosIniciales, politicaComparativo,
+} from '../../config/mapa/filtros-territoriales.js';
 
 export default {
   setup() {
+    const { config } = useConfiguracion();
+    // Instantánea al montar: si se leyera de forma reactiva, cambiar un ajuste
+    // en Configuración reabriría paneles y reiniciaría filtros mientras alguien
+    // está trabajando sobre el mapa. Es el estado INICIAL, no un enlace vivo.
+    const cfgMapa = { ...(config.value.mapa || {}) };
+    const inicialPaneles = estadoInicialPaneles(cfgMapa);
+    const comparativo = politicaComparativo(cfgMapa);
+
     const { denuncias, nombreDeTipo } = useDenuncias();
     const { tiposDenuncia, buscarDepartamento, distritos } = useCatalogos();
     const { distritoPorDefecto, puedeCompararDistritos, alcanceResuelto } = usePermisos();
@@ -32,8 +54,8 @@ export default {
     const { mapaFullscreen, toggleMapaFullscreen, isDarkMode, sidebarColapsado } = useNavegacion();
 
     /* ─── Estado de UI (efímero, vive en ref) ─── */
-    const kpisOpen = ref(false); // Solo para móviles
-    const mobileTab = ref('feed'); // 'feed' | 'capas' — pestaña activa en Bottom Sheet móvil
+    const kpisOpen = ref(inicialPaneles.kpisOpen); // Solo para móviles
+    const mobileTab = ref(inicialPaneles.mobileTab); // 'feed' | 'capas' — pestaña activa en Bottom Sheet móvil
     const isLgUp = ref(window.innerWidth >= 1024); // breakpoint Tailwind lg
     const _kpiResizeHandler = () => { isLgUp.value = window.innerWidth >= 1024; };
     const clock = ref('');
@@ -46,7 +68,8 @@ export default {
       if (altMeters >= 1000) return (altMeters / 1000).toFixed(1) + ' km';
       return altMeters + ' m';
     });
-    const estiloTile = ref('google'); // 'google' | 'osm' | 'satellite' | 'cartomap'
+    // Capa base inicial. El catálogo de tiles vive en config/mapa/herramientas-mapa.js
+    const estiloTile = ref(cfgMapa.estilo || TILE_POR_DEFECTO);
     const ubicacionActiva = ref(false);
     const ubicacionCargando = ref(false);
     // ⚠ Los objetos de Leaflet NUNCA deben vivir dentro de un ref/reactive.
@@ -59,8 +82,8 @@ export default {
     // "Cannot read properties of null (reading '_latLngToNewLayerPoint')".
     // Nada del template lee este marcador, así que va en una variable simple.
     let marcadorUbicacion = null;
-    const feedOpen = ref(true);
-    const rpanelOpen = ref(true);
+    const feedOpen = ref(inicialPaneles.feedOpen);
+    const rpanelOpen = ref(inicialPaneles.rpanelOpen);
     const selectedCat = ref(null);
     const hasNewFeed = ref(false);
     const pillFlash = ref(false);
@@ -71,32 +94,13 @@ export default {
 
     // ── Estado de filtros del mapa ──────────────────────────────────────────────
     const mostrarPanelFiltros = ref(false);
-    const filtros = reactive({
-      distrito: '',   // id del distrito (smallint) o '' para todos
-      tipoIncidencia: '',   // tipo_id o '' para todos
-      // 'pendiente' | 'en_revision' | 'en_obra' | 'resuelta' | '' ó el estado
-      // agregado 'en_curso' (= en_revision + en_obra) que dispara la franja de KPIs.
-      estadoIncidencia: '',
-      historicoActivo: false, // false = todas o solo las de hoy (depende de lógica de negocio)
-      fechaInicio: '',
-      fechaFin: ''
-    });
+    // Valores iniciales y vocabulario de estados: config/mapa/filtros-territoriales.js.
+    // `distrito` lo fija después el store de permisos, que sabe cuáles ve el usuario.
+    const filtros = reactive(filtrosIniciales(cfgMapa));
 
-    // Opciones del selector de estado en el panel de filtros. Se declara aquí
-    // (y no inline en el template) para que la franja de KPIs y el panel usen
-    // exactamente el mismo vocabulario de estados.
-    const ESTADOS_FILTRO = [
-      { v: '', l: 'Todos', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' },
-      { v: 'pendiente', l: 'Pendiente', cls: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' },
-      { v: 'en_curso', l: 'En curso', cls: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' },
-      { v: 'en_revision', l: 'En revisión', cls: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' },
-      { v: 'en_obra', l: 'En obra', cls: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
-      { v: 'resuelta', l: 'Resuelta', cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' },
-    ];
-
-    const acordeonTipos = ref(true);
-    const acordeonTramos = ref(true);
-    const acordeonIntervenciones = ref(true);
+    const acordeonTipos = ref(inicialPaneles.acordeonTipos);
+    const acordeonTramos = ref(inicialPaneles.acordeonTramos);
+    const acordeonIntervenciones = ref(inicialPaneles.acordeonIntervenciones);
 
     // Los distritos salen de `public.distritos` vía el store de catálogos.
     // Estaban hardcodeados como una lista de nombres, lo que además de
@@ -105,18 +109,10 @@ export default {
 
     // Nuevas variables para el Menú de Capas
     const mostrarMenuCapas = ref(false);
-    const seccionesCapas = reactive({
-      tipoMapa: true,
-      herramientas: true,
-    });
+    const seccionesCapas = reactive(inicialPaneles.seccionesCapas);
 
-    const herramientasActivas = reactive({
-      clustering: true,
-      heatmap: false,
-      medicion: false,
-      poligonos: false,
-      distritos: true
-    });
+    // Catálogo y estado inicial: config/mapa/herramientas-mapa.js
+    const herramientasActivas = reactive(estadoInicialHerramientas(cfgMapa));
     const medicionModo = ref('linea'); // 'linea' | 'ruta'
     const medicionTerminada = ref(false); // true cuando ya se calculó resultado
     const medicionPuntosCount = ref(0);  // num de puntos trazados (0 ó 1)
@@ -556,6 +552,20 @@ export default {
 
     function toggleHerramienta(herramienta) {
       herramientasActivas[herramienta] = !herramientasActivas[herramienta];
+
+      // Exclusión mutua declarada en el catálogo (`excluyeA`), no en una cadena
+      // de `if`. Al encender una herramienta de dibujo se apagan las demás
+      // ANTES de aplicar su efecto, para que no queden dos capturando clics
+      // sobre el mismo lienzo.
+      if (herramientasActivas[herramienta]) {
+        for (const otra of exclusionesDe(herramienta)) {
+          if (herramientasActivas[otra]) {
+            herramientasActivas[otra] = false;
+            if (otra === 'medicion') detenerMedicion();
+            if (otra === 'poligonos') detenerPoligono();
+          }
+        }
+      }
 
       if (herramienta === 'clustering' || herramienta === 'heatmap') {
         // Al encender heatmap, apagamos los marcadores regulares/clusters
@@ -1241,7 +1251,9 @@ export default {
         cambiarDistrito(distritoPorDefecto.value);
       }
       // El comparativo solo se ofrece —y solo se abre— si hay algo que comparar.
-      if (!puedeCompararDistritos.value) tableroAbierto.value = false;
+      // `autoAbrir` sale de Configuración → Mapa, pero nunca puede forzarlo a
+      // una jefatura distrital: no tiene con qué compararse.
+      tableroAbierto.value = puedeCompararDistritos.value && comparativo.autoAbrir;
     }, { immediate: true });
 
     onMounted(() => {
@@ -1288,6 +1300,14 @@ export default {
       // Filtros
       mostrarPanelFiltros, filtros, filtrosActivos, conteoFiltros, filtrarPorEstado,
       ESTADOS_FILTRO, distritos, hoy,
+      // Catálogos declarativos (assets/js/config/mapa/). Se exponen para que la
+      // plantilla pueda recorrerlos en lugar de repetir el marcado por cada
+      // tile, herramienta o botón: añadir uno nuevo pasa a ser una línea de
+      // datos y no un bloque de HTML copiado.
+      PANELES, SECCIONES_CAPAS, SECCIONES_MENU_CAPAS, TABS_MOVIL,
+      TILES, HERRAMIENTAS, GRUPOS_HERRAMIENTAS, BOTONES_FLOTANTES,
+      CONTROLES_NAVEGACION, MODOS_MEDICION,
+      VENTANAS_TIEMPO, COLUMNAS_COMPARATIVO,
       // Consola territorial
       tableroAbierto, cambiarDistrito,
       leyendaCategorias, hayCapasEspeciales, mostrarLeyenda,

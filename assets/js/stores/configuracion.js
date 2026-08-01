@@ -9,12 +9,46 @@ import { db } from '../core/supabase.js';
 const LS_KEY = 'cm_config';
 
 const DEFAULTS = {
-  // Mapa
+  // ── Mapa en Vivo ───────────────────────────────────────────
+  // Estado con el que arranca la consola. Lo consumen los módulos de
+  // assets/js/config/mapa/, no la vista directamente.
   mapa: {
+    // Encuadre
     lat: 13.7035, lng: -89.2, zoom: 15,
-    estilo: 'google',   // google | satellite | cartomap | darkmap | osm
-    tamanoMarcador: 18, // px del diámetro base
+    estilo: 'google',       // google | satellite | cartomap | darkmap | osm
+    tamanoMarcador: 18,     // px del diámetro base
     radioCluster: 40,
+
+    // Paneles laterales
+    panelFeedAbierto: true,
+    panelCapasAbierto: true,
+    kpisVisiblesMovil: false,
+    tabMovilInicial: 'feed',    // feed | capas
+    acordeonTipos: true,
+    acordeonTramos: true,
+    acordeonIntervenciones: true,
+    seccionTipoMapa: true,
+    seccionHerramientas: true,
+
+    // Herramientas de visualización. Las de dibujo (medición, polígonos) no se
+    // configuran: arrancar en modo dibujo haría que el primer clic sobre el
+    // mapa creara un punto en vez de seleccionar una incidencia.
+    clustering: true,
+    heatmap: false,
+    mostrarDistritos: true,
+    // Por encima de este número de puntos visibles el navegador se atasca
+    // dibujando marcadores individuales; conviene forzar el mapa de calor.
+    umbralHeatmap: 2000,
+
+    // Filtros y comparativo
+    estadoInicial: '',          // '' | pendiente | en_curso | en_revision | en_obra | resuelta
+    ventanaDiasPorDefecto: 0,   // 0 = todo el histórico
+    autoAbrirComparativo: false,
+    ordenComparativo: 'fuera_de_objetivo',
+
+    // Comportamiento
+    animarNuevas: true,         // destello al llegar una incidencia por Realtime
+    segundosResaltado: 2.2,     // cuánto dura ese destello
   },
   // Notificaciones
   notificaciones: {
