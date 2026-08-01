@@ -152,13 +152,60 @@ function mapearCasoADenuncia(caso, catalogo = {}) {
   };
 }
 
-// Realtime: se activa automáticamente si hay conexión con Supabase.
-// Reemplaza el simularDenuncia() con setInterval que había antes.
-function suscribirRealtime() {
-  if (!db) return;
-  db.channel('casos-live')
+// ── Realtime ───────────────────────────────────────────────────────────────
+//
+// El canal se guarda en una variable de módulo —`let` plano, NUNCA un `ref`:
+// un objeto de Supabase dentro de un proxy reactivo de Vue es el mismo patrón
+// que ya rompió el mapa de Leaflet— para poder cumplir dos garantías:
+//
+//   1. UNA sola suscripción. `suscribirRealtime()` se llama desde dos sitios
+//      (app-root al montar con sesión viva, y vista-login tras autenticar).
+//      Sin el guardia, `db.channel('casos-live')` creaba DOS canales con el
+//      mismo topic y cada cambio en la base disparaba `cargarDenuncias()` dos
+//      veces: 400 filas releídas por cada caso que alguien tocara.
+//
+//   2. Cierre limpio al salir. Sin él, la suscripción del usuario anterior
+//      seguía viva y el siguiente heredaba un canal abierto con un token que
+//      ya no es el suyo.
+let canalCasos = null;
+
+async function suscribirRealtime() {
+  if (!db || canalCasos) return;
+
+  // Esperar a que el SDK haya terminado de restaurar la sesión.
+  //
+  // Esto es lo que producía el aviso «WebSocket is closed before the connection
+  // is established» en consola. `autenticado` se pinta de forma optimista desde
+  // el almacén local, así que app-root llamaba aquí ANTES de que Supabase
+  // hubiera aplicado el JWT del usuario: el socket arrancaba con la clave anon
+  // —se veía en la URL del aviso, `"role":"anon"`— y milisegundos después el
+  // SDK lo derribaba para reconectar ya autenticado. Además de ruido, durante
+  // esa ventana el canal escuchaba como anónimo, así que la RLS filtraba todo.
+  const { data: { session } } = await db.auth.getSession();
+  if (!session) return;   // sin sesión no hay nada que escuchar
+
+  canalCasos = db
+    .channel('casos-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'casos' }, () => cargarDenuncias())
-    .subscribe();
+    .subscribe((estado) => {
+      // El estado del canal es información operativa en un centro de
+      // monitoreo: si el tiempo real se cae, el operador está mirando datos
+      // congelados sin saberlo.
+      if (estado === 'SUBSCRIBED')   console.info('[realtime] Escuchando cambios en casos.');
+      if (estado === 'CHANNEL_ERROR') console.error('[realtime] Canal en error; el SDK reintentará.');
+      if (estado === 'TIMED_OUT')     console.warn('[realtime] Tiempo de espera agotado al suscribir.');
+    });
+}
+
+async function desuscribirRealtime() {
+  if (!db || !canalCasos) return;
+  const canal = canalCasos;
+  canalCasos = null;         // antes del await: evita una doble baja si se llama dos veces
+  try {
+    await db.removeChannel(canal);
+  } catch (e) {
+    console.warn('[realtime] Falló el cierre del canal:', e.message);
+  }
 }
 
 const { nombreDeTipo, colorDeTipo, nombreDistrito } = useCatalogos();
@@ -187,6 +234,7 @@ export function useDenuncias() {
     cargandoDenuncias,
     cargarDenuncias,
     suscribirRealtime,
+    desuscribirRealtime,
     nombreDeTipo,
     colorDeTipo,
   };

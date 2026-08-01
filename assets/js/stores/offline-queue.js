@@ -16,6 +16,8 @@ import eventBus from '../core/event-bus.js';
 import { EVENTOS_OFFLINE } from '../core/eventos-offline.js';
 import { db } from '../core/supabase.js';
 import { almacen } from '../core/almacen.js';
+import { registrarCasoEnCampo } from '../services/casos-campo.js';
+import { useMisCasos } from './mis-casos.js';
 
 const CLAVE_COLA = 'offline_queue';
 
@@ -174,81 +176,138 @@ const contadorPendientes = computed(() => {
   return operacionesPendientes.value.length;
 });
 
-// Despachar operación real a Supabase según tipo
-const despacharOperacion = async (operacion) => {
-  const { tipo, datos } = operacion;
+// ── Manejadores por tipo de operación ──────────────────────────────────────
+//
+// Registro en vez del `switch` que había antes. Dos motivos, y ninguno es
+// estético:
+//   · Despacho O(1) por clave, en lugar de recorrer ramas.
+//   · Abierto a extensión, cerrado a modificación: añadir un tipo de operación
+//     es añadir una entrada, sin tocar el motor que reintenta y persiste. Ese
+//     motor es la parte delicada; cuanto menos se edite, mejor.
+//
+// Cada manejador devuelve `{ permanente }` cuando el servidor RECHAZA la
+// operación. Distinguirlo importa: un rechazo (categoría inexistente, punto
+// fuera del municipio) va a fallar igual las tres veces, así que gastar
+// reintentos en él solo retrasa a las operaciones que sí podrían pasar.
+const MANEJADORES = {
+  // Alta de un caso levantado en territorio.
+  //
+  // El id de la operación viaja como `referencia_cliente`, y ahí está la clave
+  // de todo: si la red se cortó DESPUÉS de que la base insertara pero antes de
+  // que llegara la respuesta, este reintento no crea un segundo caso — la base
+  // reconoce la referencia y devuelve el que ya existe.
+  async [TIPOS_OPERACION.LEVANTAR_DENUNCIA](operacion) {
+    const { datos } = operacion;
+    const resultado = await registrarCasoEnCampo({
+      categoriaId: datos.categoriaId,
+      descripcion: datos.descripcion,
+      direccionReferencia: datos.direccionReferencia,
+      lat: datos.lat,
+      lng: datos.lng,
+      titulo: datos.titulo,
+      canal: datos.canal || 'pwa_empleado',
+      referenciaCliente: datos.referenciaCliente || operacion.id,
+      adjuntos: datos.adjuntos,
+    });
 
-  if (!db) throw new Error('Sin conexión a Supabase');
+    if (!resultado.ok) {
+      const e = new Error(resultado.mensaje);
+      e.permanente = !resultado.esDeRed;
+      throw e;
+    }
+  },
 
-  switch (tipo) {
-    case TIPOS_OPERACION.CREAR_DENUNCIA:
-    case TIPOS_OPERACION.LEVANTAR_DENUNCIA: {
-      // Insertar caso en la tabla 'casos'
-      const payload = {
-        titulo: datos.titulo || datos.categoriaNombre || 'Denuncia',
-        descripcion: datos.descripcion,
-        categoria_id: datos.categoriaId || datos.categoria_id,
-        coordenadas: datos.coordenadas,
-        es_anonima: datos.anonima || false,
-        origen: datos.origen || 'empleado',
-        estado_codigo: 'recibida',
-        created_at: datos.fecha || new Date().toISOString()
-      };
-      const { error } = await db.from('casos').insert([payload]);
-      if (error) throw error;
-      break;
+  // Cierre de una intervención. Va por el RPC `cerrar_caso_campo` y no por un
+  // `update` directo: el cierre son cuatro escrituras —estado, fecha, evidencia
+  // e historial— y desde el navegador no hay forma de hacerlas atómicas.
+  //
+  // Es idempotente por naturaleza: un caso ya cerrado responde `ya_cerrado` sin
+  // sobrescribir la resolución ni la fecha originales, así que reintentar es
+  // seguro aunque el primer intento sí llegara a aplicarse.
+  async [TIPOS_OPERACION.CERRAR_INCIDENTE](operacion) {
+    const { casoId, resolucion, observaciones, adjuntos } = operacion.datos;
+    const { cerrarCaso } = useMisCasos();
+
+    const r = await cerrarCaso({ casoId, resolucion, observaciones, adjuntos });
+    if (!r.ok) {
+      const e = new Error(r.mensaje);
+      e.permanente = !r.esDeRed;
+      throw e;
     }
-    case TIPOS_OPERACION.ACTUALIZAR_INTERVENCION: {
-      const { id, ...cambios } = datos;
-      const { error } = await db.from('casos').update(cambios).eq('id', id);
-      if (error) throw error;
-      break;
-    }
-    case TIPOS_OPERACION.CERRAR_INCIDENTE: {
-      const { id, resolucion, estado_codigo } = datos;
-      const { error } = await db.from('casos')
-        .update({ estado_codigo: estado_codigo || 'resuelta', resolucion, fecha_cierre: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
-      break;
-    }
-    case TIPOS_OPERACION.SUBIR_FOTO: {
-      // Las fotos se guardan como base64 en datos_extra (sin Storage por ahora)
-      const { caso_id, dataUrl, nombre } = datos;
-      const { data: caso, error: errGet } = await db.from('casos').select('datos_extra').eq('id', caso_id).single();
-      if (errGet) throw errGet;
-      const extras = caso?.datos_extra || {};
-      if (!extras.fotos) extras.fotos = [];
-      extras.fotos.push({ nombre, dataUrl, fecha: new Date().toISOString() });
-      const { error } = await db.from('casos').update({ datos_extra: extras }).eq('id', caso_id);
-      if (error) throw error;
-      break;
-    }
-    default:
-      // Tipo no implementado — marcar como completada para no bloquear la cola
-      console.warn('[OfflineQueue] Tipo no implementado:', tipo);
-  }
+  },
+
+  async [TIPOS_OPERACION.ACTUALIZAR_INTERVENCION](operacion) {
+    const { id, ...cambios } = operacion.datos;
+    const { error } = await db.from('casos').update(cambios).eq('id', id);
+    if (error) { const e = new Error(error.message); e.permanente = Boolean(error.code); throw e; }
+  },
 };
 
-// Procesar una operación con retry y backoff
-const procesarOperacion = async (operacion) => {
-  marcarEnProceso(operacion.id);
+// `CREAR_DENUNCIA` comparte manejador con `LEVANTAR_DENUNCIA`: es el mismo
+// alta, solo cambia quién la origina.
+MANEJADORES[TIPOS_OPERACION.CREAR_DENUNCIA] = MANEJADORES[TIPOS_OPERACION.LEVANTAR_DENUNCIA];
 
-  try {
-    await despacharOperacion(operacion);
-    marcarCompletada(operacion.id);
-    return { success: true };
-  } catch (error) {
-    if (operacion.intentos >= operacion.maxIntentos) {
-      marcarFallida(operacion.id, error.message);
-    } else {
-      // Reintentar con backoff exponencial
-      const backoffMs = Math.pow(2, operacion.intentos) * 1000;
-      setTimeout(() => {
-        procesarOperacion(operacion);
-      }, backoffMs);
+// SUBIR_FOTO ya no existe como operación suelta. Escribía las imágenes en
+// `casos.datos_extra`, columna que NUNCA ha existido en el esquema, así que
+// fallaba siempre. Las fotografías se suben ahora a cPanel y viajan como URLs
+// dentro del propio alta, que es además lo que la hace atómica: no hay estado
+// intermedio de "caso creado, evidencia perdida".
+
+const despacharOperacion = async (operacion) => {
+  if (!db) {
+    // Transitorio por definición: sin cliente no se ha intentado nada.
+    throw new Error('Sin conexión a Supabase');
+  }
+
+  const manejador = MANEJADORES[operacion.tipo];
+  if (!manejador) {
+    // Una operación que nadie sabe atender no debe quedarse bloqueando la cola
+    // para siempre. Se marca permanente para que salga del ciclo de reintentos
+    // y quede visible en el buzón.
+    const e = new Error(`Tipo de operación no soportado: ${operacion.tipo}`);
+    e.permanente = true;
+    throw e;
+  }
+
+  return manejador(operacion);
+};
+
+const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Procesa una operación hasta agotarla: éxito, rechazo definitivo o reintentos
+// consumidos.
+//
+// Antes el reintento se lanzaba con un `setTimeout` suelto y la función volvía
+// de inmediato. Eso dejaba el reintento corriendo POR FUERA del bucle de
+// `sincronizar()`, así que la misma operación podía estar despachándose dos
+// veces a la vez —y una segunda llamada a `sincronizar()`, que dispara el
+// evento 'online' en cuanto la red parpadea, multiplicaba el efecto—. Ahora la
+// espera se aguarda dentro, y la cola vuelve a ser estrictamente secuencial.
+const procesarOperacion = async (operacion) => {
+  for (;;) {
+    marcarEnProceso(operacion.id);   // incrementa `intentos`
+
+    try {
+      await despacharOperacion(operacion);
+      marcarCompletada(operacion.id);
+      return { ok: true };
+    } catch (error) {
+      // Rechazo del servidor: fallará igual las tres veces. Gastar reintentos
+      // aquí solo retrasa a las operaciones que sí podrían pasar.
+      if (error.permanente) {
+        marcarFallida(operacion.id, error.message);
+        return { ok: false, error: error.message, permanente: true };
+      }
+
+      if (operacion.intentos >= operacion.maxIntentos) {
+        marcarFallida(operacion.id, error.message);
+        return { ok: false, error: error.message, permanente: false };
+      }
+
+      // Retroceso exponencial con techo de 30 s: sin él, al cuarto intento un
+      // teléfono estaría esperando minutos con el reporte sin enviar.
+      await esperar(Math.min(2 ** operacion.intentos * 1000, 30_000));
     }
-    return { success: false, error: error.message };
   }
 };
 

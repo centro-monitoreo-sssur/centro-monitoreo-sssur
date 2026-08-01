@@ -8,6 +8,24 @@
   
   <!-- PWA & Mobile Install -->
   <link rel="manifest" href="./manifest.json">
+  <script>
+    // Un manifest POR CONTEXTO. Con uno solo, `start_url: "./"` hacía que un
+    // empleado que instalara la PWA de campo la abriera en el Centro de
+    // Monitoreo: el acceso directo perdía el `?contexto=empleados` y la app
+    // arrancaba en la aplicación equivocada.
+    //
+    // Va aquí, en línea y justo detrás del <link>, porque el navegador lee el
+    // manifiesto muy pronto —antes de que se evalúe ningún módulo ES— para
+    // decidir si ofrece instalar.
+    (function () {
+      var contexto = new URLSearchParams(location.search).get('contexto');
+      var instalables = { empleados: 1, poblacion: 1 };
+      if (contexto && instalables[contexto]) {
+        var etiqueta = document.querySelector('link[rel="manifest"]');
+        if (etiqueta) etiqueta.href = './manifest-' + contexto + '.json';
+      }
+    })();
+  </script>
   <meta name="theme-color" content="#001ba0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -74,10 +92,10 @@
      modulares en assets/templates/. app.js carga todo y monta aquí. -->
   <div id="app" v-cloak></div>
 
-  <!-- GeoJSON del municipio (expuesto como función global) -->
-  <script src="assets/js/services/geo-json/limites-municipio.js"></script>
-  <!-- GeoJSON de distritos municipales (Panchimalco, Rosario de Mora, etc.) -->
-  <script src="assets/js/services/geo-json/limites-poligonos.js"></script>
+  <!-- Los GeoJSON del municipio y de los distritos ya se cargan en el <head>,
+       antes de validacion-limites.js, que es quien los consume. Aquí estaban
+       repetidos: ~290 KB descargados dos veces en cada arranque, que en un
+       teléfono con datos móviles en territorio no es un detalle. -->
   <!-- Bootstrap de la aplicación (módulos ES). Debe servirse por HTTP. -->
   <script type="module" src="assets/js/app.js"></script>
 </body>

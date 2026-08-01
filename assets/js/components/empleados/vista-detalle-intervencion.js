@@ -1,126 +1,108 @@
-﻿// Vista: Detalle de Intervención (Empleado)
-import { ref, onMounted, nextTick } from '../../core/vue.js';
+// ============================================================================
+// VISTA: detalle de una intervención (PWA de empleado)
+//
+// El caso llega por el store, no serializado en localStorage. Aquello guardaba
+// una COPIA que envejecía: si alguien cambiaba el caso desde el Centro de
+// Monitoreo, el empleado seguía viendo —y podía cerrar— la versión que tenía
+// cuando pulsó la fila.
+//
+// El mapa tampoco es ya decorativo: pintaba SIEMPRE el centro del municipio
+// con un comentario que lo admitía ("Simulamos que todas las incidencias están
+// por San Salvador Sur"). Ahora usa la coordenada real del caso, y si no la
+// tiene no dibuja nada en lugar de señalar un punto falso.
+// ============================================================================
+import { ref, computed, onMounted, onUnmounted, nextTick } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { useMisCasos } from '../../stores/mis-casos.js';
 import { L } from '../../core/libs.js';
+import { colorEstado, etiquetaEstado } from '../../utils/badge.js';
+import { colorPrioridad, formatearFechaHora } from '../../utils/presentacion-campo.js';
 
 export default {
   setup() {
     const { irA } = useNavegacion();
-    
-    const intervencion = ref(null);
+    const { casoSeleccionado, refrescarCaso } = useMisCasos();
+
     const cargando = ref(true);
+
+    // `let` plano y NUNCA un `ref`: un objeto de Leaflet dentro de un proxy
+    // reactivo de Vue es el patrón que ya produjo el
+    // `TypeError: ... '_latLngToNewLayerPoint'` en la consola del Mapa en Vivo.
     let mapa = null;
-    
-    // Helpers para UI
-    const getPrioridadColor = (prioridad) => {
-      const colores = {
-        alta: 'bg-red-500',
-        media: 'bg-yellow-500',
-        baja: 'bg-green-500'
-      };
-      return colores[prioridad] || 'bg-gray-500';
-    };
-    
-    const getEstadoColor = (estado) => {
-      const colores = {
-        pendiente: 'bg-red-100 text-red-800',
-        en_proceso: 'bg-blue-100 text-blue-800',
-        completada: 'bg-green-100 text-green-800'
-      };
-      return colores[estado] || 'bg-gray-100 text-gray-800';
-    };
-    
-    const getEstadoLabel = (estado) => {
-      const labels = {
-        pendiente: 'Pendiente',
-        en_proceso: 'En Proceso',
-        completada: 'Completada'
-      };
-      return labels[estado] || 'Desconocido';
-    };
-    
-    const formatDate = (fecha) => {
-      const date = new Date(fecha);
-      return date.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    };
 
-    const initMap = (coords) => {
-      if (mapa) {
-        mapa.remove();
-      }
-      const mapEl = document.getElementById('map-detalle-intervencion');
-      if (!mapEl) return;
+    const intervencion = casoSeleccionado;
 
-      mapa = L.map(mapEl, {
-        zoomControl: false,
-        dragging: false,
-        touchZoom: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false
-      }).setView(coords, 16);
+    // Solo se ofrece cerrar lo que sigue abierto. La plantilla comparaba
+    // `estado !== 'completada'`, un valor que no existe entre los códigos
+    // reales, así que el botón salía incluso en casos ya resueltos.
+    const puedeCerrarse = computed(() => Boolean(intervencion.value) && !intervencion.value.esFinal);
 
-      L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    const tieneUbicacion = computed(() =>
+      Number.isFinite(intervencion.value?.lat) && Number.isFinite(intervencion.value?.lng)
+    );
+
+    const iniciarMapa = () => {
+      if (!tieneUbicacion.value) return;
+      const contenedor = document.getElementById('map-detalle-intervencion');
+      if (!contenedor || mapa) return;
+
+      const punto = [intervencion.value.lat, intervencion.value.lng];
+
+      // Mapa de solo lectura: es una miniatura de referencia, no un control.
+      mapa = L.map(contenedor, {
+        zoomControl: false, dragging: false, touchZoom: false,
+        scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false,
+      }).setView(punto, 17);
+
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+        maxZoom: 20, subdomains: '0123', attribution: '&copy; Google',
       }).addTo(mapa);
 
-      const markerHtml = `
-        <div style="background-color: #ef4444; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); border: 3px solid white;">
-          <i class="fa-solid fa-map-pin" style="color: white; font-size: 16px;"></i>
-        </div>
-      `;
-      const customIcon = L.divIcon({
-        html: markerHtml,
-        className: 'custom-marker',
-        iconSize: [40, 40],
-        iconAnchor: [20, 40]
-      });
+      const color = intervencion.value.color || '#ef4444';
+      L.marker(punto, {
+        icon: L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background:${color};width:38px;height:38px;border-radius:50%;
+                 display:flex;align-items:center;justify-content:center;border:3px solid #fff;
+                 box-shadow:0 4px 12px rgba(0,0,0,.35);">
+                 <i class="fa-solid fa-map-pin" style="color:#fff;font-size:15px;"></i></div>`,
+          iconSize: [38, 38], iconAnchor: [19, 38],
+        }),
+      }).addTo(mapa);
 
-      L.marker(coords, { icon: customIcon }).addTo(mapa);
+      // El contenedor suele medir 0 px cuando Leaflet se monta dentro de una
+      // vista que acaba de aparecer; sin esto el mapa sale en gris.
+      setTimeout(() => mapa && mapa.invalidateSize(), 150);
     };
 
-    onMounted(() => {
-      // Simular carga
-      setTimeout(() => {
-        const intervencionStr = localStorage.getItem('intervencion_activa');
-        if (intervencionStr) {
-          intervencion.value = JSON.parse(intervencionStr);
-          cargando.value = false;
-          
-          nextTick(() => {
-            // Simulamos que todas las incidencias están por San Salvador Sur
-            initMap([13.61229, -89.17036]); 
-          });
-        } else {
-          irA('mis-intervenciones');
-        }
-      }, 400);
+    onMounted(async () => {
+      if (!intervencion.value) {
+        // Entrada directa a la vista sin pasar por la lista (recarga con la
+        // vista abierta). No hay nada que mostrar: se vuelve al listado.
+        irA('mis-intervenciones');
+        return;
+      }
+      // Releer del servidor: puede haber cambiado desde que se pulsó la fila.
+      await refrescarCaso(intervencion.value.id);
+      cargando.value = false;
+      nextTick(iniciarMapa);
     });
 
-    const volver = () => {
-      irA('mis-intervenciones');
-    };
-
-    const irACierre = () => {
-      irA('cierre-incidente');
-    };
+    onUnmounted(() => {
+      if (mapa) { mapa.remove(); mapa = null; }
+    });
 
     return {
       intervencion,
       cargando,
-      getPrioridadColor,
-      getEstadoColor,
-      getEstadoLabel,
-      formatDate,
-      volver,
-      irACierre
+      puedeCerrarse,
+      tieneUbicacion,
+      getPrioridadColor: colorPrioridad,
+      getEstadoColor: colorEstado,
+      getEstadoLabel: etiquetaEstado,
+      formatDate: formatearFechaHora,
+      volver: () => irA('mis-intervenciones'),
+      irACierre: () => irA('cierre-incidente'),
     };
-  }
+  },
 };

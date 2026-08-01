@@ -87,7 +87,10 @@
             <p class="text-[11px] text-gray-500 mt-0.5">Asignada: {{ formatDate(item.fecha) }}</p>
           </div>
           <span class="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0" :class="getEstadoColor(item.estado)">
-            <i :class="'fa-solid ' + getEstadoIcon(item.estado)" class="mr-1 text-[9px]"></i>
+            <!-- El icono va por `situacion` (por atender / en curso / terminada)
+                 y no por el código real: son tres iconos para cinco estados, y
+                 lo que comunica de un vistazo es si el caso sigue abierto. -->
+            <i :class="'fa-solid ' + getEstadoIcon(item.situacion)" class="mr-1 text-[9px]"></i>
             {{ getEstadoLabel(item.estado) }}
           </span>
         </div>

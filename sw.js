@@ -1,11 +1,16 @@
-const CACHE_VERSION = 'v1.0.11';
+const CACHE_VERSION = 'v1.1.0';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
-// Recursos estáticos mínimos requeridos para la app offline
+// Recursos estáticos mínimos requeridos para la app offline.
+// Hay un manifiesto por contexto: sin ellos, un empleado que instale la PWA de
+// campo la abriría en el Centro de Monitoreo (ver el script en línea de
+// index.html).
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './manifest-empleados.json',
+  './manifest-poblacion.json'
 ];
 
 // En desarrollo (Live Server, http-server, etc.) el SW NO cachea nada. Con la

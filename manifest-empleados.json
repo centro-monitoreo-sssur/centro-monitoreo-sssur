@@ -1,0 +1,23 @@
+{
+  "name": "SSSur Campo · Empleados",
+  "short_name": "SSSur Campo",
+  "description": "Reporte de incidencias en territorio para el personal municipal de San Salvador Sur",
+  "start_url": "./?contexto=empleados",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#047857",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

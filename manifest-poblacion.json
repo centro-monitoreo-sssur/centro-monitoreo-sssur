@@ -1,0 +1,23 @@
+{
+  "name": "SSSur Ciudadano · Denuncias",
+  "short_name": "SSSur Ciudadano",
+  "description": "Portal de denuncias ciudadanas de San Salvador Sur",
+  "start_url": "./?contexto=poblacion",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

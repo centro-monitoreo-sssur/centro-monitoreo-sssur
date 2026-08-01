@@ -46,6 +46,11 @@ const nombreUsuario = ref(almacen.leerTexto(CLAVES.NOMBRE));
 const rolUsuario = ref(almacen.leerTexto(CLAVES.ROL));
 // UUID de Supabase Auth — necesario para filtrar casos por usuario_responsable_id
 const usuarioId = ref(almacen.leerTexto(CLAVES.USUARIO_ID));
+// Adscripción organizacional y territorial del perfil. No se persisten: se
+// releen en cada `onAuthStateChange`, así que un cambio de departamento surte
+// efecto en la siguiente sesión sin arrastrar un valor rancio del almacén.
+const departamentoUsuario = ref(null);
+const distritoUsuario = ref(null);
 
 // `autenticado` pasa a true en cuanto Supabase confirma la sesión, pero el ROL
 // llega después: hay que consultar public.usuarios. Quien decida a qué vista
@@ -227,9 +232,13 @@ if (db) {
       almacen.escribirTexto(CLAVES.USUARIO, session.user.email);
       try {
         // Leer rol desde la tabla `usuarios` usando el UUID de Supabase Auth
+        // `departamento_id` y `distrito_id` alimentan la adscripción que muestra
+        // la PWA de campo. Sin ellos, la pantalla de inicio del empleado decía
+        // "Municipalidad" y "No asignada" para todo el mundo, porque los leía de
+        // una clave de localStorage que no escribía nadie.
         const { data: perfil, error } = await db
           .from('usuarios')
-          .select('rol_id, nombres, apellidos, roles(codigo)')
+          .select('rol_id, nombres, apellidos, departamento_id, distrito_id, roles(codigo)')
           .eq('id', session.user.id)
           .single();
         if (error) throw error;
@@ -254,6 +263,9 @@ if (db) {
         // terminaba saludando con el correo institucional completo.
         nombreUsuario.value = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(' ').trim();
         if (nombreUsuario.value) almacen.escribirTexto(CLAVES.NOMBRE, nombreUsuario.value);
+
+        departamentoUsuario.value = perfil?.departamento_id ?? null;
+        distritoUsuario.value = perfil?.distrito_id ?? null;
       } catch (e) {
         console.error('[navegacion] Falló la carga del perfil del usuario:', e.message);
       } finally {
@@ -264,6 +276,10 @@ if (db) {
     } else {
       perfilCargado.value = false;
       autenticado.value = false;
+      // Cerrar el canal de tiempo real aquí y no en `cerrarSesion()`: esta rama
+      // cubre TODAS las formas de perder la sesión —botón de salir, caducidad
+      // del token, cierre desde otro dispositivo—, no solo la voluntaria.
+      desuscribirRealtime();
       limpiarAlcance();
       usuarioActual.value = '';
       rolUsuario.value = '';
@@ -303,7 +319,7 @@ const toggleSidebar = () => {
   }
 };
 
-const { denunciasPendientesCount } = useDenuncias();
+const { denunciasPendientesCount, desuscribirRealtime } = useDenuncias();
 
 // ── Menú por grupos ──────────────────────────────────────────
 // `modulo` es el `codigo_modulo` de public.permisos_modulos, que es lo que
@@ -418,6 +434,7 @@ export function useNavegacion() {
     mapaFullscreen, toggleMapaFullscreen,
     isDarkMode, toggleDarkMode,
     autenticado, perfilCargado, usuarioActual, nombreUsuario, rolUsuario, usuarioId,
+    departamentoUsuario, distritoUsuario,
     errorAuth, cargandoAuth,
     setAutenticado, iniciarSesion, cerrarSesion,
     gruposVisibles, navPlano, grupoVisible, toggleGrupo,

@@ -17,6 +17,10 @@ const distritos = ref([]);
 // que los distritos: una dirección inventada rompería la asignación de
 // departamentos, que es una FK not null.
 const direcciones = ref([]);
+// Prioridades con su SLA (`tiempo_objetivo_horas`). No se cargaban, así que las
+// vistas traducían el id a mano —y mal: la bitácora del empleado daba por
+// "media" la prioridad 2, que en el catálogo es "Alta".
+const prioridades = ref([]);
 const cargandoCatalogos = ref(false);
 
 // Un catálogo vacío en Supabase NO lanza excepción: la query responde []. Sin
@@ -36,7 +40,13 @@ async function cargarTipos() {
         // (utils/grupos-categorias.js): su prefijo — VIA, RIE, COM… — define
         // el macro-grupo. Sin él la agrupación cae a las palabras clave del
         // nombre, que es menos preciso.
-        .select('id, codigo, nombre, descripcion, color_hex, icono, departamento_responsable_id, activo')
+        // `estados_flujo` y `estado_inicial` definen el ciclo de vida de los
+        // casos de cada categoría. Sin ellos, las vistas deducían el estado con
+        // tablas fijas escritas a mano —y ninguna coincidía con el flujo que
+        // siembra migration_v9, así que todo caía en el valor por defecto.
+        .select(`id, codigo, nombre, descripcion, color_hex, icono,
+                 departamento_responsable_id, prioridad_default_id,
+                 estados_flujo, estado_inicial, requiere_ubicacion, activo`)
         .eq('activo', true)
         .order('nombre');
       if (error) throw error;
@@ -121,6 +131,26 @@ async function cargarDistritos() {
     console.error('[catalogos] Falló la carga de distritos:', e.message);
   } finally {
     cargandoCatalogos.value = false;
+  }
+}
+
+async function cargarPrioridades() {
+  if (!db) return;
+  try {
+    const { data, error } = await db
+      .from('prioridades')
+      .select('id, codigo, nombre, nivel, color_hex, tiempo_objetivo_horas')
+      .order('nivel');
+    if (error) throw error;
+    prioridades.value = data || [];
+    if (!prioridades.value.length) {
+      console.error(
+        '[catalogos] `prioridades` está VACÍA. Sin ella no hay SLA ni semáforo, ' +
+        'y `casos.prioridad_id` es NOT NULL. Ejecuta migration_v11.'
+      );
+    }
+  } catch (e) {
+    console.error('[catalogos] Falló la carga de prioridades:', e.message);
   }
 }
 
@@ -232,14 +262,67 @@ export function useCatalogos() {
   const buscarDireccion = (id) => direcciones.value.find((d) => d.id === id) || {};
   const nombreDireccion = (id) => buscarDireccion(id).nombre || '';
 
+  // ── Prioridades ────────────────────────────────────────────────────────
+  const buscarPrioridad   = (id) => prioridades.value.find((p) => p.id === id) || {};
+  const nombrePrioridad   = (id) => buscarPrioridad(id).nombre || '';
+  const codigoPrioridad   = (id) => buscarPrioridad(id).codigo || '';
+  const colorPrioridad    = (id) => buscarPrioridad(id).color_hex || '#6b7280';
+  // `nivel` va de 1 (Crítica) a 5 (Informativa). Es el criterio de orden del
+  // feed operativo, no el id: los ids son de catálogo y podrían reordenarse.
+  const nivelPrioridad    = (id) => buscarPrioridad(id).nivel ?? 99;
+  const horasObjetivo     = (id) => buscarPrioridad(id).tiempo_objetivo_horas ?? null;
+
+  // ── Flujo de estados ───────────────────────────────────────────────────
+  // La verdad está en `categorias_caso.estados_flujo`: cada categoría define su
+  // propio ciclo. Las vistas tenían tablas fijas escritas a mano con códigos
+  // (`recibida`, `asignada`, `en_atencion`, `cerrada`, `anulada`) que NO
+  // existen en el flujo sembrado por migration_v9, así que todo caso caía en el
+  // valor por defecto y el estado que veía el empleado era siempre el mismo.
+  const flujoDeCategoria = (categoriaId) => {
+    const flujo = buscar(categoriaId).estados_flujo;
+    return Array.isArray(flujo) ? flujo : [];
+  };
+
+  const estadoDelFlujo = (categoriaId, codigo) =>
+    flujoDeCategoria(categoriaId).find((e) => e.id === codigo) || null;
+
+  const esEstadoFinal = (categoriaId, codigo) => {
+    const estado = estadoDelFlujo(categoriaId, codigo);
+    // Sin flujo cargado se usa el final del flujo por defecto de migration_v9.
+    if (!estado) return codigo === 'resuelta' || codigo === 'rechazada';
+    return estado.es_final === true;
+  };
+
+  /**
+   * Agrupa el estado real en las tres situaciones que entiende alguien en
+   * campo: por hacer, en curso, terminado.
+   *
+   * No es una simplificación gratuita. El vocabulario completo —"En revisión"
+   * frente a "En obra"— es lenguaje del Centro de Monitoreo; a quien está en la
+   * calle solo le cambia el comportamiento si el caso sigue abierto o no. El
+   * código REAL se conserva aparte y es el que viaja a la base.
+   */
+  const situacionDeEstado = (categoriaId, codigo) => {
+    if (esEstadoFinal(categoriaId, codigo)) return 'completada';
+    const inicial = buscar(categoriaId).estado_inicial || 'pendiente';
+    return codigo === inicial ? 'pendiente' : 'en_proceso';
+  };
+
+  /** Primer estado final declarado por la categoría; 'resuelta' si no hay flujo. */
+  const estadoDeCierre = (categoriaId) =>
+    flujoDeCategoria(categoriaId).find((e) => e.es_final === true)?.id || 'resuelta';
+
   return {
-    tiposDenuncia, departamentos, distritos, direcciones,
+    tiposDenuncia, departamentos, distritos, direcciones, prioridades,
     cargandoCatalogos, catalogosEnFallback,
-    cargarTipos, cargarDepartamentos, cargarDistritos, cargarDirecciones,
+    cargarTipos, cargarDepartamentos, cargarDistritos, cargarDirecciones, cargarPrioridades,
     guardarDepartamento, desactivarDepartamento,
     buscarDireccion, nombreDireccion,
     nombreDeTipo, colorDeTipo, iconoDeTipo, areaDeTipo,
     buscarDepartamento, nombreDepartamento, direccionDepartamento,
-    buscarDistrito, nombreDistrito
+    buscarDistrito, nombreDistrito,
+    buscarPrioridad, nombrePrioridad, codigoPrioridad, colorPrioridad,
+    nivelPrioridad, horasObjetivo,
+    flujoDeCategoria, estadoDelFlujo, esEstadoFinal, situacionDeEstado, estadoDeCierre,
   };
 }

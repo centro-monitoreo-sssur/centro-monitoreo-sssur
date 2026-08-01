@@ -381,6 +381,114 @@
         </div>
       </div>
 
+      <!-- Campo: Referencia del lugar
+           `casos.direccion_referencia` es obligatoria en la base y es lo que
+           usa la cuadrilla para llegar: una coordenada no dice "frente al
+           portón del mercado". -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div class="px-4 pt-4 pb-2 flex items-center gap-2">
+          <i class="fa-solid fa-location-crosshairs text-emerald-500 text-sm"></i>
+          <label class="text-sm font-semibold text-gray-900">Referencia del lugar</label>
+          <span class="ml-auto text-[10px] font-medium text-red-400 bg-red-50 px-1.5 py-0.5 rounded-md">Requerido</span>
+        </div>
+        <div class="px-4 pb-4">
+          <input v-model="formulario.direccionReferencia" type="text" maxlength="300"
+            placeholder="Ej: Calle principal, frente al portón del mercado"
+            class="w-full text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all duration-200">
+          <p class="text-[10px] text-gray-400 mt-2">
+            Un punto de referencia que ayude a la cuadrilla a encontrar el sitio.
+          </p>
+        </div>
+      </div>
+
+      <!-- ── Quién reporta ────────────────────────────────────────────────
+           Distinto de quién registra: el empleado queda siempre guardado como
+           autor del registro, lo fije o no el vecino sus datos.
+
+           Anónimo por defecto y a propósito: pedir el nombre a quien denuncia
+           el promontorio de basura de al lado tiene un coste que no siempre
+           compensa. Dar los datos es el paso extra, no lo contrario. -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div class="px-4 pt-4 pb-2 flex items-center gap-2">
+          <i class="fa-solid fa-user-group text-emerald-500 text-sm"></i>
+          <label class="text-sm font-semibold text-gray-900">Quién reporta</label>
+          <span class="ml-auto text-[10px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md">Opcional</span>
+        </div>
+
+        <div class="px-4 pb-4 space-y-3">
+          <!-- Conmutador anónimo / identificado -->
+          <div class="flex gap-2">
+            <button type="button" @click="alternarAnonimo(true)"
+              class="flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-all"
+              :class="denunciante.anonimo
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'">
+              <i class="fa-solid fa-user-secret mr-1.5"></i>Anónimo
+            </button>
+            <button type="button" @click="alternarAnonimo(false)"
+              class="flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-all"
+              :class="!denunciante.anonimo
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'">
+              <i class="fa-solid fa-id-card mr-1.5"></i>Con sus datos
+            </button>
+          </div>
+
+          <p v-if="denunciante.anonimo" class="text-[10px] text-gray-400">
+            No se guardará ningún dato personal. Tu registro sí queda a tu nombre.
+          </p>
+
+          <template v-else>
+            <!-- Búsqueda en el padrón: por DUI o teléfono, nunca por nombre.
+                 Dos vecinos comparten nombre con facilidad; el documento o el
+                 número, prácticamente nunca. -->
+            <div>
+              <label class="text-[11px] font-semibold text-gray-600">Buscar en el padrón</label>
+              <div class="flex gap-2 mt-1">
+                <input v-model="denunciante.identificador" type="text" inputmode="numeric"
+                  placeholder="DUI o teléfono"
+                  @keyup.enter="buscarEnPadron"
+                  class="flex-1 text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+                <button type="button" @click="buscarEnPadron" :disabled="denunciante.buscando"
+                  class="px-4 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 disabled:opacity-50">
+                  <i class="fa-solid" :class="denunciante.buscando ? 'fa-circle-notch fa-spin' : 'fa-magnifying-glass'"></i>
+                </button>
+              </div>
+
+              <p v-if="denunciante.resultadoBusqueda" class="text-[11px] mt-1.5 flex items-center gap-1.5"
+                :class="denunciante.resultadoBusqueda.encontrado ? 'text-emerald-600' : 'text-gray-500'">
+                <i class="fa-solid"
+                  :class="denunciante.resultadoBusqueda.encontrado ? 'fa-circle-check' : 'fa-circle-info'"></i>
+                {{ denunciante.resultadoBusqueda.texto }}
+              </p>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold text-gray-600">Nombre</label>
+              <input v-model="denunciante.nombre" type="text" maxlength="150"
+                placeholder="Nombre de quien reporta"
+                class="w-full mt-1 text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold text-gray-600">Teléfono</label>
+              <input v-model="denunciante.telefono" type="tel" inputmode="tel" maxlength="20"
+                placeholder="7712-3456"
+                class="w-full mt-1 text-sm text-gray-900 placeholder-gray-400 border border-gray-200 rounded-xl p-3 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+              <p class="text-[10px] text-gray-400 mt-1">
+                Sirve para avisarle cuando el caso se resuelva.
+              </p>
+            </div>
+
+            <p v-if="ciudadanoVinculado"
+              class="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-2">
+              <i class="fa-solid fa-link mr-1"></i>
+              Vinculado a su ficha del portal ciudadano. Sus denuncias quedarán agrupadas.
+            </p>
+          </template>
+        </div>
+      </div>
+
       <!-- Campo: Fotografía -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-4 pt-4 pb-2 flex items-center gap-2">
@@ -511,13 +619,37 @@
       class="w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm">
       <i class="fa-solid fa-arrow-left text-sm"></i>
     </button>
-    <button @click="guardarDenuncia" :disabled="formulario.descripcion.length < 10"
-      class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="formulario.descripcion.length >= 10
+    <button @click="guardarDenuncia" :disabled="!puedeEnviar"
+      class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="puedeEnviar
         ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700'
         : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
-      <span v-if="formulario.descripcion.length < 10">Escribe una descripción para enviar</span>
+      <span v-if="guardando"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Enviando…</span>
+      <span v-else-if="faltaParaEnviar">{{ faltaParaEnviar }}</span>
       <span v-else>Enviar denuncia <i class="fa-solid fa-paper-plane ml-2"></i></span>
     </button>
+  </div>
+
+  <!-- ── Resultado del envío ──────────────────────────────────────────────
+       Sustituye a los `alert()` del navegador. Un cuadro modal nativo en un
+       teléfono, a pleno sol y con guantes, es la peor forma de confirmar que
+       un parte quedó registrado; además bloquea el hilo hasta que se pulsa. -->
+  <div v-if="resultadoEnvio" class="fixed bottom-24 left-0 right-0 z-50 px-4">
+    <div class="rounded-2xl px-4 py-3 shadow-lg flex items-start gap-3 text-sm font-medium" :class="{
+        'bg-emerald-600 text-white': resultadoEnvio.tipo === 'ok',
+        'bg-amber-500 text-white':   resultadoEnvio.tipo === 'encolado',
+        'bg-red-600 text-white':     resultadoEnvio.tipo === 'error'
+      }">
+      <i class="mt-0.5 fa-solid" :class="{
+          'fa-circle-check':         resultadoEnvio.tipo === 'ok',
+          'fa-cloud-arrow-up':       resultadoEnvio.tipo === 'encolado',
+          'fa-triangle-exclamation': resultadoEnvio.tipo === 'error'
+        }"></i>
+      <span class="flex-1">{{ resultadoEnvio.texto }}</span>
+      <button v-if="resultadoEnvio.tipo === 'error'" @click="resultadoEnvio = null"
+        class="opacity-80 hover:opacity-100" aria-label="Cerrar aviso">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
   </div>
 
   <!-- Bottom Tab Bar Reutilizable -->

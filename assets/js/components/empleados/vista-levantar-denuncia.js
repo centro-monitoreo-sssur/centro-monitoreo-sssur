@@ -1,14 +1,28 @@
-// Vista: Levantar Denuncia (Empleado) - Diseño Stepper Material 3
-// DEMO: Funcionalidad simulada - reemplazar con API real
+// ============================================================================
+// VISTA: levantar denuncia desde territorio (PWA de empleado)
+//
+// El alta ya NO se arma aquí. Se delega en `services/casos-campo.js`, que llama
+// al RPC `crear_caso_campo` (migration_v18). El motivo es que esta vista no
+// puede saber a qué distrito ni a qué departamento pertenece un punto, y la
+// versión anterior lo resolvía inventándose columnas: enviaba `coordenadas`,
+// `es_anonima` y `origen` —ninguna existe— y omitía cinco columnas obligatorias.
+// Ningún reporte de campo llegó nunca a la base.
+// ============================================================================
 import { ref, computed, watch, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
-import { db } from '../../core/supabase.js';
+import { almacen } from '../../core/almacen.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
+import {
+  registrarCasoEnCampo, nuevaReferenciaCliente, buscarCiudadano,
+} from '../../services/casos-campo.js';
 import { agruparCategorias, normalizarTexto } from '../../utils/grupos-categorias.js';
+
+// Categoría preseleccionada desde el menú principal de la PWA.
+const CLAVE_CATEGORIA = 'tipo_denuncia_seleccionado';
 
 export default {
   setup() {
@@ -18,8 +32,13 @@ export default {
     const { tiposDenuncia, areaDeTipo } = useCatalogos();
 
     const formulario = ref({
-      categoriaId: localStorage.getItem('tipo_denuncia_seleccionado') || '',
+      categoriaId: almacen.leerTexto(CLAVE_CATEGORIA),
       descripcion: '',
+      // `casos.direccion_referencia` es NOT NULL con un mínimo de 5 caracteres.
+      // El formulario no la pedía, así que ni siquiera un insert bien formado
+      // habría pasado. Y es el dato que usa la cuadrilla para llegar al punto:
+      // una coordenada no dice "frente al portón del mercado".
+      direccionReferencia: '',
       anonima: false,
       fotos: [],
       fotoProcesando: false
@@ -401,7 +420,8 @@ export default {
     };
 
     const hayDatosIngresados = () =>
-      formulario.value.categoriaId || formulario.value.descripcion || coordenadasSeleccionadas.value;
+      formulario.value.categoriaId || formulario.value.descripcion ||
+      formulario.value.direccionReferencia || coordenadasSeleccionadas.value;
 
     const cancelarDenuncia = () => {
       if (hayDatosIngresados()) {
@@ -412,74 +432,225 @@ export default {
     };
 
     const confirmarCancelacion = () => {
-      localStorage.removeItem('tipo_denuncia_seleccionado');
+      almacen.borrar(CLAVE_CATEGORIA);
       irA('pwa-empleado');
       mostrarConfirmacionCancelar.value = false;
     };
 
     const cerrarModalFueraJurisdiccion = () => {
       mostrarModalFueraJurisdiccion.value = false;
-      localStorage.removeItem('tipo_denuncia_seleccionado');
+      almacen.borrar(CLAVE_CATEGORIA);
       irA('pwa-empleado');
     };
 
+    // Mensaje de resultado, para poder mostrarlo en la vista en vez de en un
+    // `alert()`. Un cuadro modal del navegador en un teléfono, a pleno sol y con
+    // guantes, es la peor forma posible de confirmar que un parte se registró.
+    const guardando = ref(false);
+    const resultadoEnvio = ref(null);   // { tipo: 'ok'|'error'|'encolado', texto }
+
+    /* ─── Denunciante ────────────────────────────────────────────────────
+       Quien reporta NO es quien registra. El empleado queda siempre como
+       creador del caso —lo fija el servidor con `auth.uid()`, no se puede
+       falsear— y aquí se recogen, si la persona quiere darlos, los datos del
+       vecino que dio el aviso.
+
+       Anónimo por defecto, y a propósito: pedir el nombre a quien denuncia un
+       promontorio de basura frente a la casa de al lado tiene un coste que no
+       siempre compensa. Que dar los datos sea el paso extra, no lo contrario. */
+    const denunciante = ref({
+      anonimo: true,
+      nombre: '',
+      telefono: '',
+      ciudadanoId: null,
+      // Búsqueda en el padrón
+      identificador: '',      // DUI o teléfono tecleado
+      buscando: false,
+      resultadoBusqueda: null, // { encontrado, texto }
+    });
+
+    const ciudadanoVinculado = computed(() => Boolean(denunciante.value.ciudadanoId));
+
+    async function buscarEnPadron() {
+      const d = denunciante.value;
+      d.resultadoBusqueda = null;
+      d.buscando = true;
+      try {
+        const r = await buscarCiudadano(d.identificador);
+
+        if (r.ciudadano) {
+          // Coincidencia: se rellenan los campos y se vincula. El empleado
+          // sigue pudiendo editarlos si el vecino corrige algo.
+          d.ciudadanoId = r.ciudadano.ciudadano_id;
+          d.nombre = `${r.ciudadano.nombres} ${r.ciudadano.apellidos}`.trim();
+          // El teléfono solo se rellena si lo que se buscó ERA un teléfono; si
+          // se buscó por DUI, el número no viene en la respuesta.
+          const digitos = d.identificador.replace(/\D/g, '');
+          if (digitos.length === 8) d.telefono = digitos;
+          d.anonimo = false;
+          d.resultadoBusqueda = {
+            encontrado: true,
+            texto: `${d.nombre}${r.ciudadano.distrito ? ' · ' + r.ciudadano.distrito : ''}`,
+          };
+        } else {
+          // No estar registrado es lo habitual, no un fallo. Se desvincula por
+          // si venía de una búsqueda anterior con acierto.
+          d.ciudadanoId = null;
+          d.resultadoBusqueda = { encontrado: false, texto: r.mensaje };
+        }
+      } finally {
+        d.buscando = false;
+      }
+    }
+
+    // Marcar anónimo BORRA lo capturado, no solo lo oculta. Si se quedara en
+    // memoria, bastaría un descuido para acabar enviándolo — y la base lo
+    // descartaría igual, pero el empleado habría creído que lo mandaba.
+    function alternarAnonimo(valor) {
+      const d = denunciante.value;
+      d.anonimo = valor;
+      if (valor) {
+        d.nombre = '';
+        d.telefono = '';
+        d.ciudadanoId = null;
+        d.identificador = '';
+        d.resultadoBusqueda = null;
+      }
+    }
+
+    // Condición de envío en un solo sitio. Repetida en la plantilla —que ya la
+    // tenía tres veces solo para la descripción— cualquier regla nueva se
+    // olvida en alguna de las copias y el botón deja de coincidir con lo que
+    // de verdad valida `guardarDenuncia`.
+    const puedeEnviar = computed(() =>
+      !guardando.value &&
+      Boolean(formulario.value.categoriaId) &&
+      formulario.value.descripcion.trim().length >= 10 &&
+      formulario.value.direccionReferencia.trim().length >= 5 &&
+      Boolean(coordenadasSeleccionadas.value)
+    );
+
+    // Qué falta, en un solo mensaje. Se muestra en el propio botón para que el
+    // empleado no tenga que deducirlo pulsando.
+    const faltaParaEnviar = computed(() => {
+      if (!formulario.value.categoriaId) return 'Elige el tipo de incidente';
+      if (formulario.value.descripcion.trim().length < 10) return 'Escribe una descripción';
+      if (formulario.value.direccionReferencia.trim().length < 5) return 'Indica la referencia del lugar';
+      if (!coordenadasSeleccionadas.value) return 'Marca la ubicación';
+      return '';
+    });
+
     const guardarDenuncia = async () => {
-      if (!formulario.value.categoriaId || formulario.value.descripcion.length < 10) {
-        alert('Por favor completa todos los campos requeridos (descripción mínimo 10 caracteres).');
+      resultadoEnvio.value = null;
+
+      // ── Validación previa ──────────────────────────────────────────────
+      // La base vuelve a validar todo esto; aquí se comprueba para no gastar
+      // un viaje de red ni encolar algo que se sabe inválido.
+      const descripcion = formulario.value.descripcion.trim();
+      const referencia = formulario.value.direccionReferencia.trim();
+
+      if (!formulario.value.categoriaId) {
+        resultadoEnvio.value = { tipo: 'error', texto: 'Elige el tipo de incidente.' };
+        return;
+      }
+      if (descripcion.length < 10) {
+        resultadoEnvio.value = { tipo: 'error', texto: 'La descripción debe tener al menos 10 caracteres.' };
+        return;
+      }
+      if (referencia.length < 5) {
+        resultadoEnvio.value = {
+          tipo: 'error',
+          texto: 'Escribe una referencia del lugar (mínimo 5 caracteres). Es lo que usa la cuadrilla para encontrarlo.',
+        };
         return;
       }
       if (!coordenadasSeleccionadas.value) {
-        alert('Por favor selecciona la ubicación en el mapa.');
+        resultadoEnvio.value = { tipo: 'error', texto: 'Marca la ubicación en el mapa.' };
         return;
       }
 
-      const categoria = (tiposDenuncia.value || []).find(cat => cat.id == formulario.value.categoriaId);
-
-      const denuncia = {
-        titulo: categoria ? categoria.nombre : 'Denuncia',
-        categoria_id: formulario.value.categoriaId,
-        descripcion: formulario.value.descripcion,
-        coordenadas: coordenadasSeleccionadas.value,
-        es_anonima: formulario.value.anonima,
-        fotos: formulario.value.fotos,
-        origen: 'empleado',
-        estado_codigo: 'recibida',
-        fecha: new Date().toISOString()
-      };
-
-      // --- Offline-first ---
-      if (estaOnline.value && db) {
-        try {
-          const { error } = await db.from('casos').insert([{
-            titulo: denuncia.titulo,
-            descripcion: denuncia.descripcion,
-            categoria_id: denuncia.categoria_id,
-            coordenadas: denuncia.coordenadas,
-            es_anonima: denuncia.es_anonima,
-            origen: denuncia.origen,
-            estado_codigo: denuncia.estado_codigo
-          }]);
-          if (error) throw error;
-
-          localStorage.removeItem('tipo_denuncia_seleccionado');
-          alert('✅ Denuncia registrada exitosamente.');
-          irA('pwa-empleado');
-          return;
-        } catch(e) {
-          console.warn('[LevanterDenuncia] Falla al guardar en DB, encolando...', e.message);
-        }
+      const [lat, lng] = coordenadasSeleccionadas.value.split(',').map((c) => parseFloat(c.trim()));
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        resultadoEnvio.value = { tipo: 'error', texto: 'La ubicación no es válida. Vuelve a marcarla.' };
+        return;
       }
 
-      // Sin conexión o fallo DB → encolar para sincronizar después
-      agregarOperacion({
-        tipo: TIPOS_OPERACION.LEVANTAR_DENUNCIA,
-        datos: denuncia,
-        prioridad: 'alta'
-      });
+      const categoria = (tiposDenuncia.value || []).find(
+        (cat) => String(cat.id) === String(formulario.value.categoriaId)
+      );
 
-      localStorage.removeItem('tipo_denuncia_seleccionado');
-      alert('📥 Sin conexión. La denuncia fue guardada en el buzón offline y se enviará automáticamente al recuperar señal.');
-      irA('pwa-empleado');
+      // La referencia se genera UNA vez y se conserva aunque el envío acabe en
+      // el buzón. Es lo que permite que un reintento no duplique el caso si la
+      // red se cortó después de que la base ya lo hubiera insertado.
+      const referenciaCliente = nuevaReferenciaCliente();
+
+      const datosReporte = {
+        categoriaId: formulario.value.categoriaId,
+        descripcion,
+        direccionReferencia: referencia,
+        lat,
+        lng,
+        titulo: categoria ? categoria.nombre : null,
+        canal: 'pwa_empleado',
+        referenciaCliente,
+        // Las fotografías se suben a cPanel y viajan como URL. Mientras el
+        // endpoint de evidencias no esté conectado, se envía lista vacía: es
+        // preferible un caso sin fotos a un caso que no se registra.
+        adjuntos: [],
+        denunciante: {
+          anonimo: denunciante.value.anonimo,
+          nombre: denunciante.value.nombre.trim(),
+          telefono: denunciante.value.telefono.trim(),
+          ciudadanoId: denunciante.value.ciudadanoId,
+        },
+      };
+
+      guardando.value = true;
+
+      try {
+        if (estaOnline.value) {
+          const resultado = await registrarCasoEnCampo(datosReporte);
+
+          if (resultado.ok) {
+            almacen.borrar(CLAVE_CATEGORIA);
+            resultadoEnvio.value = { tipo: 'ok', texto: resultado.mensaje };
+            setTimeout(() => irA('pwa-empleado'), 1500);
+            return;
+          }
+
+          // El servidor lo RECHAZÓ: encolar solo repetiría el mismo error hasta
+          // agotar los reintentos, y el empleado se iría convencido de que su
+          // reporte está en camino. Se le dice ahora, que es cuando puede
+          // corregirlo y todavía está en el sitio.
+          if (!resultado.esDeRed) {
+            resultadoEnvio.value = { tipo: 'error', texto: resultado.mensaje };
+            return;
+          }
+        }
+
+        // Sin conexión, o el envío no llegó a salir del teléfono.
+        const encolado = agregarOperacion({
+          tipo: TIPOS_OPERACION.LEVANTAR_DENUNCIA,
+          datos: datosReporte,
+          prioridad: 'alta',
+        });
+
+        if (!encolado.ok) {
+          // No cabe en el dispositivo. Decirlo es obligatorio: lo contrario es
+          // responder "guardado" sobre algo que se acaba de perder.
+          resultadoEnvio.value = { tipo: 'error', texto: encolado.mensaje };
+          return;
+        }
+
+        almacen.borrar(CLAVE_CATEGORIA);
+        resultadoEnvio.value = {
+          tipo: 'encolado',
+          texto: 'Sin señal. El reporte quedó en el buzón y se enviará solo al recuperar cobertura.',
+        };
+        setTimeout(() => irA('pwa-empleado'), 2200);
+      } finally {
+        guardando.value = false;
+      }
     };
 
     const procesarFotografia = async (event) => {
@@ -582,7 +753,15 @@ export default {
       mostrarAdvertenciaJurisdiccion,
       estaOnline,
       procesarFotografia,
-      removerFotografia
+      removerFotografia,
+      guardando,
+      resultadoEnvio,
+      puedeEnviar,
+      faltaParaEnviar,
+      denunciante,
+      ciudadanoVinculado,
+      buscarEnPadron,
+      alternarAnonimo
     };
   }
 };

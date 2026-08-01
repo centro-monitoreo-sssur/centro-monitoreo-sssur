@@ -17,7 +17,7 @@ export default {
   setup() {
     const { vistaActual, sidebarAbierto, tituloVista, autenticado, perfilCargado, rolUsuario,
             setAutenticado, irA, cerrarSesion } = useNavegacion();
-    const { cargarTipos, cargarDepartamentos, cargarDistritos } = useCatalogos();
+    const { cargarTipos, cargarDepartamentos, cargarDistritos, cargarPrioridades } = useCatalogos();
     const { cargarDenuncias, suscribirRealtime } = useDenuncias();
     const { cargarPoblacion } = usePoblacion();
     const { config } = useConfiguracion();
@@ -151,6 +151,10 @@ export default {
         await cargarTipos();
         await cargarDepartamentos();
         await cargarDistritos();
+        // Las prioridades traen el SLA (`tiempo_objetivo_horas`) y son las que
+        // traducen `casos.prioridad_id` a algo legible. No se cargaban, así que
+        // cada vista lo traducía a mano — y ninguna acertaba.
+        await cargarPrioridades();
         // El alcance decide qué controles territoriales ofrece la consola.
         // Va antes de los casos para que la vista no arranque mostrando un
         // comparativo de 5 distritos a quien solo puede ver el suyo.

@@ -10,7 +10,7 @@ import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
 export default {
   setup() {
     const { setAutenticado, iniciarSesion: authIniciarSesion, errorAuth, cargandoAuth, irA } = useNavegacion();
-    const { cargarTipos, cargarDepartamentos, cargarDistritos } = useCatalogos();
+    const { cargarTipos, cargarDepartamentos, cargarDistritos, cargarPrioridades } = useCatalogos();
     const { cargarDenuncias, suscribirRealtime } = useDenuncias();
     const { cargarAlcance } = usePermisos();
 
@@ -155,16 +155,27 @@ export default {
           return;
         }
 
-        // Cargar catálogos y casos al ingresar (admin).
-        // El orden importa: `cargarDenuncias()` resuelve el nombre del distrito
-        // de cada caso contra `catalogos.distritos`. Si los catálogos no están
-        // cargados, los casos quedan sin distrito y el filtro territorial del
-        // Mapa en Vivo no encuentra nada hasta recargar la página.
+        // ── Catálogos: para TODOS los contextos ────────────────────────
+        //
+        // Antes esto estaba dentro del `if` de monitoreo, así que un empleado
+        // recién autenticado se quedaba sin categorías, prioridades ni
+        // distritos: el formulario de levantar denuncia salía sin opciones y
+        // sus casos aparecían sin categoría ni prioridad. Solo se arreglaba
+        // recargando la página, porque entonces sí los cargaba `app-root`.
+        //
+        // El orden importa: los casos resuelven el nombre de su distrito contra
+        // `catalogos.distritos`; si el catálogo llega después, quedan sin
+        // distrito y el filtro territorial no encuentra nada.
+        await cargarTipos();
+        await cargarPrioridades();
+        await cargarDistritos();
+        await cargarDepartamentos();
+        await cargarAlcance();
+
+        // Los casos del municipio y el tiempo real son solo del Centro de
+        // Monitoreo. La PWA de campo usa `stores/mis-casos.js`, que pide
+        // únicamente lo del propio empleado en vez de 200 filas del municipio.
         if (contexto === CONTEXTOS.MONITOREO) {
-          await cargarTipos();
-          await cargarDepartamentos();
-          await cargarDistritos();
-          await cargarAlcance();
           await cargarDenuncias();
           suscribirRealtime();
         }

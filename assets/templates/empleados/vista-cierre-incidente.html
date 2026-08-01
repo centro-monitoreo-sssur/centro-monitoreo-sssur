@@ -80,7 +80,27 @@
   
   <!-- Footer de Acciones -->
   <div v-if="incidenteSeleccionado" class="bg-white border-t border-gray-100 p-4 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-    <button @click="guardarCierre" :disabled="!resolucion.trim() || guardando" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
+    <!-- ── Resultado del cierre ────────────────────────────────────────
+         Sustituye a los `alert()` que había: bloquean el hilo y son
+         inmanejables en un teléfono a pleno sol. En ámbar se muestra el caso
+         "ya estaba cerrado", que no es un error sino un reintento del buzón o
+         un cierre hecho entretanto desde el Centro de Monitoreo. -->
+    <div v-if="resultado" class="mb-3 rounded-2xl px-4 py-3 flex items-start gap-3 text-sm font-medium" :class="{
+        'bg-emerald-600 text-white': resultado.tipo === 'ok',
+        'bg-amber-500 text-white':   resultado.tipo === 'encolado',
+        'bg-red-600 text-white':     resultado.tipo === 'error'
+      }">
+      <i class="mt-0.5 fa-solid" :class="{
+          'fa-circle-check':         resultado.tipo === 'ok',
+          'fa-cloud-arrow-up':       resultado.tipo === 'encolado',
+          'fa-triangle-exclamation': resultado.tipo === 'error'
+        }"></i>
+      <span class="flex-1">{{ resultado.texto }}</span>
+    </div>
+
+    <!-- `puedeGuardar` exige los 10 caracteres que también exige el RPC. Antes
+         bastaba con un carácter y el rechazo llegaba del servidor. -->
+    <button @click="guardarCierre" :disabled="!puedeGuardar" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
       <i v-if="guardando" class="fa-solid fa-circle-notch fa-spin text-lg"></i>
       <i v-else class="fa-solid fa-check-double text-lg"></i>
       {{ guardando ? 'Registrando...' : (estaOnline ? 'Confirmar Cierre de Incidente' : 'Guardar en Buzón Offline') }}

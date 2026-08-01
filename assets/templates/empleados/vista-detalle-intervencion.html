@@ -79,7 +79,11 @@
 
       <!-- Acciones de cierre -->
       <div class="pt-4 pb-safe">
-        <button v-if="intervencion.estado !== 'completada'" @click="irACierre" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
+        <!-- `puedeCerrarse` y no una comparación contra 'completada': ese valor
+             no existe entre los códigos reales del flujo, así que el botón se
+             pintaba también en casos ya resueltos. Ahora sale del `es_final`
+             que declara la categoría. -->
+        <button v-if="puedeCerrarse" @click="irACierre" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
           <i class="fa-solid fa-clipboard-check text-lg"></i> Iniciar Cierre de Incidente
         </button>
         

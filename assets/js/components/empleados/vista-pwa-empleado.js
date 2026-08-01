@@ -1,32 +1,41 @@
-﻿// Vista PWA Empleado: App principal para empleados de campo
-// DEMO: Funcionalidad simulada - reemplazar con API real
-import { ref, computed } from '../../core/vue.js';
+// ============================================================================
+// VISTA: pantalla de inicio de la PWA de empleado
+//
+// Es lo primero que ve alguien en territorio, y hasta ahora casi todo lo que
+// mostraba era falso:
+//   · `tareasPendientes = ref(3)` — un tres fijo. Decía "3 tareas pendientes"
+//     tuviera cero o cuarenta.
+//   · El área y la zona salían de `localStorage.empleado_datos`, una clave que
+//     NO escribe nadie en todo el proyecto, así que siempre caían al valor por
+//     defecto: "Municipalidad" y "No asignada".
+//   · Cuatro funciones de navegación que solo hacían `console.log`. Ni siquiera
+//     estaban enlazadas en la plantilla: eran código muerto.
+//
+// Ahora el contador sale de los casos reales del empleado y la adscripción del
+// perfil de `public.usuarios`.
+// ============================================================================
+import { computed, onMounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { useMisCasos } from '../../stores/mis-casos.js';
+import { useCatalogos } from '../../stores/catalogos.js';
 
 export default {
   setup() {
-    const { usuarioActual, nombreUsuario, rolUsuario, cerrarSesion, irA } = useNavegacion();
+    const {
+      usuarioActual, nombreUsuario, rolUsuario, cerrarSesion, irA,
+      departamentoUsuario, distritoUsuario,
+    } = useNavegacion();
+    const { estadisticas, cargarMisCasos } = useMisCasos();
+    const { nombreDepartamento, nombreDistrito } = useCatalogos();
 
-    // Obtener datos del empleado del localStorage
-    const empleadoDatos = computed(() => {
-      const datos = localStorage.getItem('empleado_datos');
-      return datos ? JSON.parse(datos) : null;
-    });
-
-    // Nombre del usuario (primer nombre y primer apellido).
-    // Orden de preferencia: perfil de public.usuarios → datos locales del
-    // empleado → parte local del correo. NUNCA el correo completo: no tiene
-    // espacios, así que como token indivisible en un titular grande desborda
-    // el ancho de la pantalla y arrastra a toda la página al scroll horizontal.
+    // Dos primeras palabras del nombre. NUNCA el correo completo: no tiene
+    // espacios, así que como palabra indivisible en un titular grande desborda
+    // la pantalla y arrastra la página al scroll horizontal.
     const usuarioNombre = computed(() => {
-      const dosPrimeras = (texto) => {
-        if (!texto) return '';
-        const partes = texto.trim().split(/\s+/).filter(Boolean);
-        return partes.slice(0, 2).join(' ');
-      };
+      const dosPrimeras = (texto) =>
+        (texto || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
 
       if (nombreUsuario.value) return dosPrimeras(nombreUsuario.value);
-      if (empleadoDatos.value?.nombre) return dosPrimeras(empleadoDatos.value.nombre) || 'Empleado';
 
       // Último recurso: "soporte.ti@dominio" → "Soporte Ti"
       const local = (usuarioActual.value || '').split('@')[0];
@@ -35,57 +44,37 @@ export default {
         .replace(/\b\p{L}/gu, (c) => c.toUpperCase()) || 'Empleado';
     });
 
-    // Display del rol
-    const rolDisplay = computed(() => {
-      switch (rolUsuario.value) {
-        case 'empleado_campo':
-          return 'Empleado de Campo';
-        case 'jefe_area':
-          return 'Jefe de Área';
-        default:
-          return 'Empleado Municipal';
-      }
-    });
+    const ROLES = {
+      empleado:     'Empleado de Campo',
+      jefe_area:    'Jefe de Área',
+      jefe_distrito:'Jefatura de Distrito',
+      directivo:    'Directivo',
+      alcalde:      'Alcalde',
+      admin:        'Administrador',
+      superadmin:   'Superadministrador',
+    };
+    const rolDisplay = computed(() => ROLES[rolUsuario.value] || 'Empleado Municipal');
 
-    // Display del área
+    // Departamento real del organigrama. Si el perfil no lo tiene asignado se
+    // dice así, en vez de inventar una adscripción genérica.
     const areaDisplay = computed(() => {
-      if (empleadoDatos.value?.area) {
-        return empleadoDatos.value.area;
-      }
-      if (empleadoDatos.value?.distrito) {
-        return `Distrito ${empleadoDatos.value.distrito}`;
-      }
-      return 'Municipalidad';
+      const nombre = departamentoUsuario.value ? nombreDepartamento(departamentoUsuario.value) : '';
+      return nombre || 'Sin departamento asignado';
     });
 
-    // Zona asignada
     const zonaAsignada = computed(() => {
-      return empleadoDatos.value?.distrito || empleadoDatos.value?.area || 'No asignada';
+      const nombre = distritoUsuario.value ? nombreDistrito(distritoUsuario.value) : '';
+      return nombre || 'Sin distrito asignado';
     });
 
-    // Tareas pendientes (demo)
-    const tareasPendientes = ref(3);
+    // Trabajo vivo: lo que está por atender más lo que ya está en curso. Es la
+    // cifra que responde a "¿qué me queda hoy?", que es lo que mira alguien al
+    // abrir la aplicación.
+    const tareasPendientes = computed(
+      () => estadisticas.value.pendientes + estadisticas.value.enProceso
+    );
 
-    // Navegación a vistas específicas (placeholder)
-    const irAMisIntervenciones = () => {
-      // DEMO: Implementar vista de intervenciones
-      console.log('Navegar a mis intervenciones');
-    };
-
-    const irALevantarDenuncia = () => {
-      // DEMO: Implementar vista de levantar denuncia
-      console.log('Navegar a levantar denuncia');
-    };
-
-    const irACierreIncidente = () => {
-      // DEMO: Implementar vista de cierre de incidente
-      console.log('Navegar a cierre de incidente');
-    };
-
-    const irABuzonOffline = () => {
-      // DEMO: Implementar vista de buzón offline
-      console.log('Navegar a buzón offline');
-    };
+    onMounted(cargarMisCasos);
 
     return {
       usuarioNombre,
@@ -97,10 +86,6 @@ export default {
       tareasPendientes,
       cerrarSesion,
       irA,
-      irAMisIntervenciones,
-      irALevantarDenuncia,
-      irACierreIncidente,
-      irABuzonOffline
     };
-  }
+  },
 };

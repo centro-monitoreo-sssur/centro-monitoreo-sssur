@@ -253,4 +253,8 @@ if (typeof window !== 'undefined') {
 }
 
 // Exportar para uso modular (ES6)
-export { logger, errorHandler, AppError, CODIGOS_ERROR, TIPOS_ERROR, SEVERIDAD };
+// `CODIGOS_ERROR`, `TIPOS_ERROR` y `SEVERIDAD` ya se exportan en su declaración
+// (líneas 6, 47 y 55). Repetirlos aquí es "Duplicate export", un error de
+// SINTAXIS: el módulo no llega a evaluarse. Hoy no se nota porque nadie lo
+// importa todavía, pero el primero que lo hiciera se llevaría la app entera.
+export { logger, errorHandler, AppError };

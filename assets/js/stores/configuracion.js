@@ -149,8 +149,20 @@ async function cargarDesdeDB() {
       const { data: sesionData } = await db.auth.getSession();
       if (!sesionData?.session) throw new Error('sin-sesion');
 
-      const { data, error } = await db.from('configuracion').select('valor').eq('clave', KEY).single();
-      if (!error && data) {
+      // `maybeSingle()` y no `single()`.
+      //
+      // `single()` exige EXACTAMENTE una fila y convierte "ninguna" en un error
+      // HTTP 406. Y "ninguna" es un resultado perfectamente normal aquí: hasta
+      // la v21, la policy `config_admin_select` solo dejaba leer esta tabla a
+      // admin y superadmin, así que cualquier empleado que abriera la PWA se
+      // encontraba un 406 en rojo en la consola en cada arranque —sin que nada
+      // estuviera roto, porque los valores por defecto ya cubren el caso—.
+      //
+      // Se conserva `maybeSingle()` aunque la v21 abra la lectura: una
+      // instalación nueva tampoco tiene todavía la fila 'global'.
+      const { data, error } = await db.from('configuracion').select('valor').eq('clave', KEY).maybeSingle();
+      if (error) throw error;
+      if (data?.valor) {
         return {
           mapa: { ...DEFAULTS.mapa, ...data.valor.mapa },
           notificaciones: {
