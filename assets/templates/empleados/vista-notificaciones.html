@@ -7,8 +7,8 @@
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
     <div class="px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <button @click="irA('pwa-empleado')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        <button @click="irA('pwa-empleado')" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Volver">
+          <i aria-hidden="true" class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
         </button>
         <div>
           <h1 class="text-lg font-semibold text-gray-900">Notificaciones</h1>
@@ -19,8 +19,8 @@
         <button @click="handleMarcarTodas" v-if="contadorNoLeidas > 0" class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
           <i class="fa-solid fa-check-double text-white text-sm"></i>
         </button>
-        <button @click="mostrarFiltros = !mostrarFiltros" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-          <i class="fa-solid fa-filter text-gray-600 text-sm"></i>
+        <button @click="mostrarFiltros = !mostrarFiltros" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Filtrar">
+          <i aria-hidden="true" class="fa-solid fa-filter text-gray-600 text-sm"></i>
         </button>
       </div>
     </div>
@@ -106,8 +106,8 @@
                   </div>
                   <div class="flex items-center space-x-1 ml-2">
                     <span v-if="!notif.leida" class="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    <button @click.stop="handleEliminar(notif.id)" class="text-gray-400 hover:text-red-500 transition-colors">
-                      <i class="fa-solid fa-trash text-xs"></i>
+                    <button @click.stop="handleEliminar(notif.id)" class="toque-comodo text-gray-400 hover:text-red-500 transition-colors" aria-label="Eliminar">
+                      <i aria-hidden="true" class="fa-solid fa-trash text-xs"></i>
                     </button>
                   </div>
                 </div>

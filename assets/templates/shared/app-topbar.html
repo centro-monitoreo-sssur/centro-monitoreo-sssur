@@ -1,30 +1,158 @@
 <header class="sticky top-0 z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
   <div class="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
+
+    <!-- IZQUIERDA: menú móvil + migas + título -->
     <div class="flex items-center gap-3 min-w-0">
-      <button @click="toggleSidebar" class="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xl transition-colors" :title="sidebarColapsado ? 'Mostrar menú' : 'Ocultar menú'">
-        <i class="fas fa-bars"></i>
+      <button @click="toggleSidebar" type="button"
+              :aria-label="sidebarColapsado ? 'Mostrar menú' : 'Ocultar menú'"
+              class="toque-comodo lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xl transition-colors">
+        <i class="fas fa-bars" aria-hidden="true"></i>
       </button>
+
       <div class="min-w-0">
+        <!-- Migas: con 31 vistas, el título solo no dice en qué sección estás. -->
+        <nav aria-label="Ubicación" class="hidden sm:flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">
+          <span>Centro de Monitoreo</span>
+          <template v-for="(m, i) in migas" :key="'miga-' + i">
+            <i class="fa-solid fa-chevron-right text-[8px] opacity-60" aria-hidden="true"></i>
+            <span :class="i === migas.length - 1 ? 'text-gray-600 dark:text-gray-300 font-medium' : ''">{{ m.texto }}</span>
+          </template>
+        </nav>
         <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ tituloVista }}</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ fechaHoraActual }}</p>
       </div>
     </div>
-    <div class="flex items-center gap-3 shrink-0">
-      <button @click="toggleDarkMode" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
-        <i class="fa-solid fa-sun text-lg" v-if="isDarkMode"></i>
-        <i class="fa-solid fa-moon text-lg" v-else></i>
+
+    <!-- DERECHA -->
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+
+      <!-- Buscador global -->
+      <button @click="abrirBuscador" type="button" aria-label="Buscar (Ctrl+K)"
+              class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-400 hover:border-brand-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+        <i class="fa-solid fa-search text-xs" aria-hidden="true"></i>
+        <span class="text-xs">Buscar…</span>
+        <kbd class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">Ctrl K</kbd>
       </button>
-      <span class="hidden sm:inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700">
+      <button @click="abrirBuscador" type="button" aria-label="Buscar"
+              class="toque-comodo md:hidden text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors">
+        <i class="fa-solid fa-search text-lg" aria-hidden="true"></i>
+      </button>
+
+      <button @click="toggleDarkMode" type="button"
+              :aria-label="isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+              class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
+        <i class="fa-solid fa-sun text-lg" v-if="isDarkMode" aria-hidden="true"></i>
+        <i class="fa-solid fa-moon text-lg" v-else aria-hidden="true"></i>
+      </button>
+
+      <!-- El reloj institucional estaba bajo el título; ahí van ahora las migas.
+           Se conserva aquí: en una consola de monitoreo la hora en pantalla es
+           la referencia para anotar la hora de un aviso. -->
+      <span class="hidden xl:block text-xs text-gray-500 dark:text-gray-400 font-mono">{{ fechaHoraActual }}</span>
+
+      <span class="hidden xl:inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700">
         {{ versionApp }}
       </span>
-      <span class="hidden sm:inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> En línea
+      <span class="hidden lg:inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span> En línea
       </span>
-      <button @click="irA('notificaciones')" type="button" class="relative text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
-        <i class="fa-solid fa-bell text-lg"></i>
-        <div class="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+
+      <button @click="irA('vista-notificaciones')" type="button" aria-label="Notificaciones"
+              class="relative text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
+        <i class="fa-solid fa-bell text-lg" aria-hidden="true"></i>
+        <div class="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-gray-800" aria-hidden="true"></div>
       </button>
-      <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background:var(--brand)">SA</div>
+
+      <!-- Perfil: hace visible el ámbito bajo el que la RLS está filtrando -->
+      <div class="relative" data-menu-perfil>
+        <button @click="menuPerfilAbierto = !menuPerfilAbierto" type="button"
+                :aria-expanded="menuPerfilAbierto ? 'true' : 'false'"
+                aria-haspopup="true"
+                :aria-label="'Perfil de ' + nombreMostrado"
+                class="flex items-center gap-2 rounded-full pr-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
+                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+          <span class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                style="background:var(--brand)">{{ iniciales }}</span>
+          <i class="fa-solid fa-chevron-down text-[10px] text-gray-400 hidden sm:block" aria-hidden="true"></i>
+        </button>
+
+        <transition
+          enter-active-class="transition duration-100" enter-from-class="opacity-0 scale-95"
+          leave-active-class="transition duration-75" leave-to-class="opacity-0 scale-95">
+          <div v-if="menuPerfilAbierto"
+               class="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-popover overflow-hidden z-30">
+            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ nombreMostrado }}</p>
+              <p v-if="rolUsuario" class="text-xs text-brand-600 dark:text-brand-300 font-medium mt-0.5 capitalize">{{ rolUsuario }}</p>
+            </div>
+
+            <div v-if="ambito.length" class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Ámbito de tus datos</p>
+              <p v-for="(a, i) in ambito" :key="'amb-' + i"
+                 class="text-xs text-gray-600 dark:text-gray-300 flex items-start gap-1.5">
+                <i class="fa-solid fa-filter text-[9px] mt-1 text-gray-400 shrink-0" aria-hidden="true"></i>
+                <span class="min-w-0 break-words">{{ a }}</span>
+              </p>
+            </div>
+
+            <button @click="salir" type="button"
+                    class="w-full text-left px-4 py-3 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-2">
+              <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Cerrar sesión
+            </button>
+          </div>
+        </transition>
+      </div>
     </div>
   </div>
+
+  <!-- ================== BUSCADOR GLOBAL (Ctrl+K) ================== -->
+  <ui-modal :mostrar="buscadorAbierto" tamano="md" @cerrar="cerrarBuscador">
+    <template #cabecera>
+      <div class="flex items-center gap-3 w-full">
+        <i class="fa-solid fa-search text-gray-400" aria-hidden="true"></i>
+        <input ref="campoBusqueda" v-model="consulta" type="text"
+               placeholder="Buscar vistas, número de caso, dirección…"
+               aria-label="Buscar en el sistema"
+               class="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400"
+               @keydown.down.prevent="moverSeleccion(1)"
+               @keydown.up.prevent="moverSeleccion(-1)"
+               @keydown.enter.prevent="elegir(resultados[indiceActivo])">
+      </div>
+    </template>
+
+    <ul v-if="resultados.length" class="-m-2 max-h-80 overflow-y-auto">
+      <li v-for="(r, i) in resultados" :key="r.id">
+        <button type="button" @click="elegir(r)" @mouseenter="indiceActivo = i"
+                class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 transition-colors"
+                :class="i === indiceActivo ? 'bg-brand-50 dark:bg-brand-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-750'">
+          <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                :class="r.tipo === 'caso'
+                  ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300'
+                  : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300'">
+            <i :class="r.icono" class="text-xs" aria-hidden="true"></i>
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-medium text-gray-900 dark:text-white truncate">{{ r.titulo }}</span>
+            <span v-if="r.detalle" class="block text-xs text-gray-400 truncate">{{ r.detalle }}</span>
+          </span>
+          <i v-if="i === indiceActivo" class="fa-solid fa-arrow-turn-down fa-rotate-90 text-[10px] text-gray-400 shrink-0" aria-hidden="true"></i>
+        </button>
+      </li>
+    </ul>
+
+    <div v-else class="py-10 text-center text-gray-400">
+      <i class="fa-solid fa-magnifying-glass text-3xl mb-3 opacity-40" aria-hidden="true"></i>
+      <p class="text-sm">Sin resultados para «{{ consulta }}»</p>
+    </div>
+
+    <template #pie>
+      <p class="text-[11px] text-gray-400 mr-auto">
+        <kbd class="font-mono">↑</kbd> <kbd class="font-mono">↓</kbd> para navegar ·
+        <kbd class="font-mono">Enter</kbd> para abrir ·
+        <kbd class="font-mono">Esc</kbd> para cerrar
+      </p>
+      <!-- Los casos se buscan sobre lo ya cargado, no contra la base: decirlo
+           evita que alguien concluya que un caso no existe. -->
+      <p class="text-[11px] text-gray-400">Casos: sobre los ya cargados</p>
+    </template>
+  </ui-modal>
 </header>

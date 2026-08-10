@@ -1,0 +1,5 @@
+<span :class="clases" :style="estilo">
+  <span v-if="punto" class="w-1.5 h-1.5 rounded-full bg-current shrink-0" aria-hidden="true"></span>
+  <i v-if="icono" :class="icono" aria-hidden="true"></i>
+  <slot></slot>
+</span>

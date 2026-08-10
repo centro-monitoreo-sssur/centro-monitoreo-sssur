@@ -942,8 +942,8 @@
           <p class="text-[11px] text-gray-500 dark:text-gray-400">Últimos 25 eventos de sesión en la bitácora</p>
         </div>
         <button @click="cargarSesiones" :disabled="cargandoSesiones"
-          class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
-          <i :class="cargandoSesiones ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate'"></i>
+          class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50" aria-label="Actualizar">
+          <i aria-hidden="true" :class="cargandoSesiones ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-rotate'"></i>
         </button>
       </div>
 

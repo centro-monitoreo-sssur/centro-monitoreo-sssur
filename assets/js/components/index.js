@@ -13,6 +13,17 @@ import modalConfirmacion from './shared/modal-confirmacion.js';
 import vistaLogin        from './shared/vista-login.js';
 import vistaPlaceholder  from './shared/vista-placeholder.js';
 
+// ── SHARED · primitivas de UI ────────────────────────────────
+// Se registran globalmente: las usan vistas de los tres portales y pasarlas
+// como dependencia local en cada componente sería ruido sin ganancia.
+import uiBoton  from './shared/ui/ui-boton.js';
+import uiBadge  from './shared/ui/ui-badge.js';
+import uiCard   from './shared/ui/ui-card.js';
+import uiInput  from './shared/ui/ui-input.js';
+import uiSelect from './shared/ui/ui-select.js';
+import uiModal  from './shared/ui/ui-modal.js';
+import uiTabla  from './shared/ui/ui-tabla.js';
+
 // ── ADMIN ────────────────────────────────────────────────────
 import vistaDashboard     from './admin/vista-dashboard.js';
 import vistaMapa          from './admin/vista-mapa.js';
@@ -62,6 +73,15 @@ export const componentes = {
   'modal-confirmacion':     { comp: modalConfirmacion,     tpl: 'shared/modal-confirmacion' },
   'vista-login':            { comp: vistaLogin,            tpl: 'shared/vista-login' },
   'vista-placeholder':      { comp: vistaPlaceholder,      tpl: 'shared/vista-placeholder' },
+
+  // ── SHARED · primitivas de UI ──────────────────────────────
+  'ui-boton':               { comp: uiBoton,               tpl: 'shared/ui/ui-boton' },
+  'ui-badge':               { comp: uiBadge,               tpl: 'shared/ui/ui-badge' },
+  'ui-card':                { comp: uiCard,                tpl: 'shared/ui/ui-card' },
+  'ui-input':               { comp: uiInput,               tpl: 'shared/ui/ui-input' },
+  'ui-select':              { comp: uiSelect,              tpl: 'shared/ui/ui-select' },
+  'ui-modal':               { comp: uiModal,               tpl: 'shared/ui/ui-modal' },
+  'ui-tabla':               { comp: uiTabla,               tpl: 'shared/ui/ui-tabla' },
 
   // ── ADMIN ──────────────────────────────────────────────────
   'vista-dashboard':        { comp: vistaDashboard,        tpl: 'admin/vista-dashboard' },

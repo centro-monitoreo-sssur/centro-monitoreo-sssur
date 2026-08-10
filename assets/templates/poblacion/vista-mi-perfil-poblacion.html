@@ -7,8 +7,8 @@
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
     <div class="px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <button @click="irA('pwa-poblacion')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        <button @click="irA('pwa-poblacion')" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Volver">
+          <i aria-hidden="true" class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
         </button>
         <div>
           <h1 class="text-lg font-semibold text-gray-900">Mi Perfil</h1>
@@ -88,8 +88,8 @@
     <div class="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-xl font-bold text-gray-900">Editar Perfil</h3>
-        <button @click="cancelarEdicion" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-          <i class="fa-solid fa-xmark text-gray-600 text-sm"></i>
+        <button @click="cancelarEdicion" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Cerrar">
+          <i aria-hidden="true" class="fa-solid fa-xmark text-gray-600 text-sm"></i>
         </button>
       </div>
       
@@ -159,8 +159,8 @@
     <div class="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm animate-slide-up">
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-xl font-bold text-gray-900">Cambiar Correo</h3>
-        <button @click="cancelarCambioCorreo" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-          <i class="fa-solid fa-xmark text-gray-600 text-sm"></i>
+        <button @click="cancelarCambioCorreo" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Cerrar">
+          <i aria-hidden="true" class="fa-solid fa-xmark text-gray-600 text-sm"></i>
         </button>
       </div>
       

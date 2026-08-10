@@ -18,6 +18,9 @@ import { formatoFecha } from '../../utils/formato.js';
 import { badgeEstado, etiquetaEstado } from '../../utils/badge.js';
 import { marcadorDenuncia, marcadorIntervencion } from '../../services/marcadores.js';
 import { popupDenuncia, popupIntervencion } from '../../services/mapa-monitoreo.js';
+import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
+import { crearGestorDeCapas } from '../../services/mapa/capas-territoriales.js';
+import { leerVistaMapa, restaurarVistaMapa, vigilarVistaMapa } from '../../utils/vista-mapa-persistida.js';
 import { useConfiguracion } from '../../stores/configuracion.js';
 // Estructura de la consola, extraída a tres módulos declarativos. La vista
 // ejecuta los efectos; el catálogo de paneles, herramientas y filtros vive
@@ -26,7 +29,8 @@ import { PANELES, SECCIONES_CAPAS, SECCIONES_MENU_CAPAS, TABS_MOVIL, estadoInici
   from '../../config/mapa/paneles-mapa.js';
 import {
   TILES, TILE_POR_DEFECTO, HERRAMIENTAS, GRUPOS_HERRAMIENTAS, BOTONES_FLOTANTES,
-  CONTROLES_NAVEGACION, MODOS_MEDICION, estadoInicialHerramientas, exclusionesDe,
+  CONTROLES_NAVEGACION, MODOS_MEDICION, CAPAS_TERRITORIALES,
+  estadoInicialHerramientas, exclusionesDe, herramientasDelGrupo,
 } from '../../config/mapa/herramientas-mapa.js';
 import {
   ESTADOS_FILTRO, VENTANAS_TIEMPO, COLUMNAS_COMPARATIVO,
@@ -69,7 +73,12 @@ export default {
       return altMeters + ' m';
     });
     // Capa base inicial. El catálogo de tiles vive en config/mapa/herramientas-mapa.js
-    const estiloTile = ref(cfgMapa.estilo || TILE_POR_DEFECTO);
+    const CLAVE_VISTA_MAPA = 'admin-mapa';
+    let _dejarDeVigilarVista = null;
+    // La capa base recordada gana a la de configuración: si el operador eligió
+    // satélite para revisar una zona rural, volver al callejero en cada entrada
+    // le obliga a repetir el gesto.
+    const estiloTile = ref(leerVistaMapa(CLAVE_VISTA_MAPA)?.estilo || cfgMapa.estilo || TILE_POR_DEFECTO);
     const ubicacionActiva = ref(false);
     const ubicacionCargando = ref(false);
     // ⚠ Los objetos de Leaflet NUNCA deben vivir dentro de un ref/reactive.
@@ -113,9 +122,11 @@ export default {
 
     // Catálogo y estado inicial: config/mapa/herramientas-mapa.js
     const herramientasActivas = reactive(estadoInicialHerramientas(cfgMapa));
-    const medicionModo = ref('linea'); // 'linea' | 'ruta'
+    const medicionModo = ref('linea'); // 'linea' | 'ruta' | 'manual'
     const medicionTerminada = ref(false); // true cuando ya se calculó resultado
-    const medicionPuntosCount = ref(0);  // num de puntos trazados (0 ó 1)
+    const medicionPuntosCount = ref(0);  // vértices marcados en la medición viva
+    const medicionResultado = ref('');   // etiqueta del resultado (distancia, o distancia · tiempo)
+    const medicionCalculando = ref(false);
 
     // Estado de polígonos
     const poligonosGuardados = ref([]);
@@ -145,7 +156,6 @@ export default {
     let layerGroups = {};
     let heatmapLayer = null;
     let measureControl = null;
-    let distritosLayer = null;
     let routesLayer = null;
     let intervLayer = null;
     let clockInt = null;
@@ -405,12 +415,16 @@ export default {
     // Extrae el bounding box del polígono de un distrito desde el GeoJSON
     // municipal. El GeoJSON identifica los distritos por NOMBRE
     // (`properties.nombre`), así que hay que traducir el id del catálogo.
+    // Usa la cartografía oficial ya descargada (`cartografiaCache`), la misma
+    // que dibuja la capa de distritos. Con el global antiguo, encuadrar un
+    // distrito llevaba el mapa a una frontera distinta de la que se veía
+    // pintada encima.
     function limitesDeDistrito(idDistrito) {
-      if (typeof window.getDistritosGeoJSON !== 'function') return null;
       const dist = (distritos.value || []).find((d) => String(d.id) === String(idDistrito));
       if (!dist) return null;
 
-      const geojson = window.getDistritosGeoJSON();
+      const geojson = cartografiaCache
+        || (typeof window.getDistritosGeoJSON === 'function' ? window.getDistritosGeoJSON() : null);
       const feat = (geojson?.features || []).find((f) => {
         const p = f.properties || {};
         const nombre = p.nombre || p.NOMBRE || p.name || '';
@@ -499,54 +513,32 @@ export default {
 
 
 
-    /* ─── Límites del Municipio (GeoJSON) ─── */
-    function toggleCapaDistrítos(activa) {
-      if (activa) {
-        // Intentar usar la función global del archivo limites-municipio.js
-        let geoData = null;
-        if (typeof window.getMunicipalityGeoJSON === 'function') {
-          geoData = window.getMunicipalityGeoJSON();
-        }
-        if (!geoData) {
-          console.warn('[Distritos] getMunicipalityGeoJSON() no está disponible.');
-          return;
-        }
+    // Cartografía oficial ya resuelta. `limitesDeDistrito()` la necesita de
+    // forma síncrona para encuadrar el mapa al cambiar de distrito, así que se
+    // ceba al montar; `cargarLimitesSSSur()` memoriza la descarga y no repite
+    // la petición aunque la pidan varias vistas.
+    let cartografiaCache = null;
 
-        // Procesar el GeoJSON que puede tener FeatureCollections anidadas
-        // El archivo tiene LineStrings → dibujamos como polilíneas institucionales
-        const colorLimites = estiloTile.value === 'satellite' ? '#ffffff' : '#1d4ed8';
-        const style = {
-          color: colorLimites,
-          weight: 2.5,
-          opacity: 0.9,
-          dashArray: null,
-          fillOpacity: 0,
-        };
+    /* ─── Capas territoriales ─────────────────────────────────────────────
+       El dibujo vive en `services/mapa/capas-territoriales.js`, compartido con
+       el Cartograma. Aquí había ~70 líneas de `L.geoJSON` con su estilo, su
+       tooltip y su limpieza, copiadas —y ya divergidas— en otros cinco
+       archivos.
 
-        distritosLayer = L.geoJSON(geoData, {
-          style,
-          // Para cada feature añadimos un tooltip con el nombre si existe
-          onEachFeature(feature, layer) {
-            const nombre = feature.properties?.name || feature.properties?.NOMBRE || feature.properties?.nombre;
-            if (nombre) {
-              layer.bindTooltip(`<div style="font-family:'Inter',sans-serif;font-size:12px;font-weight:600;">${nombre}</div>`, {
-                sticky: true, className: 'dp',
-              });
-            }
-          },
-        }).addTo(lmap);
+       Además solo existía UNA capa, `distritos`, cuya etiqueta en la plantilla
+       decía "Límites Municipio": no se podía ver el contorno del municipio sin
+       las divisiones internas. Ahora son tres capas independientes. */
+    let gestorCapas = null;
 
-        // Hacer zoom para mostrar el polígono completo
-        try {
-          const bounds = distritosLayer.getBounds();
-          if (bounds.isValid()) lmap.fitBounds(bounds, { padding: [40, 40] });
-        } catch (e) { /* getBounds puede fallar si la capa es vacía */ }
+    function alternarCapaTerritorial(id) {
+      if (!gestorCapas) return;
+      gestorCapas.alternar(id, herramientasActivas[id]);
 
-      } else {
-        if (distritosLayer) {
-          lmap.removeLayer(distritosLayer);
-          distritosLayer = null;
-        }
+      // Las colonias solo se distinguen de cerca. Encenderlas con el municipio
+      // entero en pantalla pinta 153 polígonos ilegibles, así que se avisa en
+      // vez de dejar al operador pensando que la capa no funciona.
+      if (id === "colonias" && herramientasActivas.colonias && !gestorCapas.tieneSentidoAlZoom("colonias")) {
+        console.info("[capas] Acércate para distinguir las colonias.");
       }
     }
 
@@ -600,17 +592,50 @@ export default {
         }
       }
 
-      if (herramienta === 'distritos') {
-        toggleCapaDistrítos(herramientasActivas.distritos);
+      // Cualquiera de las capas territoriales: municipio, distritos o colonias.
+      // Se pregunta al catálogo en vez de enumerarlas aquí, para que añadir una
+      // capa nueva no obligue a acordarse de este `if`.
+      if (CAPAS_TERRITORIALES.includes(herramienta)) {
+        alternarCapaTerritorial(herramienta);
       }
     }
 
-    /* ─── Medición de distancias (implementación propia sin plugins) ─── */
+    /* ─── Medición de distancias (implementación propia sin plugins) ───
+     *
+     * Tres modos, para que cualquier persona del equipo pueda medir sobre el
+     * mapa sin escribir nada en el sistema:
+     *
+     *   · linea  → distancia en línea recta entre dos puntos. Exactamente dos:
+     *              el tercer clic descarta la medición anterior y empieza otra.
+     *   · ruta   → distancia por calle. Admite waypoints: A→B→C…, y OSRM
+     *              encadena el recorrido completo.
+     *   · manual → polilínea trazada a mano, vértice a vértice. Necesaria en
+     *              zona rural, donde hay caminos visibles en la vista satélite
+     *              que no existen en la base de OpenStreetMap y que por tanto
+     *              el ruteo automático no puede seguir.
+     *
+     * Regla común: UNA medición viva a la vez. Antes, `_terminarCapturaPuntos()`
+     * vaciaba el array de puntos pero NO la capa, así que la medición anterior
+     * seguía dibujada y el siguiente clic iniciaba una segunda encima. Todo el
+     * dibujo pasa ahora por `_redibujarMedicion()`, que parte siempre de la capa
+     * limpia: con una sola función de pintado, el estado no puede
+     * desincronizarse de lo que se ve.
+     *
+     * Nada de esto persiste: no toca `casos`, ni `recorrido`, ni la cola
+     * offline. Es una herramienta de consulta.
+     */
     let _medicionLayer = null;
-    let _medicionPuntos = [];
-    let _medicionLinea = null;
-    let _medicionLineaTemp = null;
-    let _medicionTooltip = null;
+    let _medicionPuntos = [];          // vértices confirmados por el usuario
+    let _medicionLineaTemp = null;     // segmento elástico hasta el cursor
+    let _medicionGeometriaRuta = null; // geometría devuelta por OSRM
+
+    // Tope de waypoints. El servidor público de OSRM degrada y acaba rechazando
+    // peticiones con muchas coordenadas; y un trayecto de 25 tramos ya no es una
+    // medición, es una ruta operativa.
+    const MAX_WAYPOINTS = 25;
+
+    const MODOS_MULTIPUNTO = ['ruta', 'manual'];
+    const esMultipunto = () => MODOS_MULTIPUNTO.includes(medicionModo.value);
 
     function _distanciaM(a, b) {
       return lmap.distance(a, b);
@@ -626,170 +651,272 @@ export default {
       return m >= 1000 ? (m / 1000).toFixed(2) + ' km' : Math.round(m) + ' m';
     }
 
+    const _opcionesTooltip = {
+      permanent: true, direction: 'top', offset: [0, -8], className: 'mv-medicion-tt',
+    };
+
+    /**
+     * Única función que dibuja. Limpia la capa y repinta desde el estado, de
+     * modo que deshacer, reiniciar y finalizar comparten un solo camino.
+     */
+    function _redibujarMedicion() {
+      if (!_medicionLayer) return;
+      _medicionLayer.clearLayers();
+      _medicionLineaTemp = null;
+
+      const puntos = _medicionPuntos;
+      if (!puntos.length) return;
+
+      // Traza: la geometría de OSRM si la hay; si no, los vértices rectos.
+      if (medicionModo.value === 'ruta' && _medicionGeometriaRuta) {
+        L.geoJSON(_medicionGeometriaRuta, {
+          style: { color: '#001ba0', weight: 4, opacity: 0.85 },
+        }).addTo(_medicionLayer);
+      } else if (puntos.length > 1) {
+        L.polyline(puntos, {
+          color: '#001ba0', weight: 2.5,
+          // Punteado fino en el trazado manual: recuerda que ese camino lo
+          // dibujó una persona y no sale de la cartografía base.
+          dashArray: medicionModo.value === 'manual' ? '2,6' : '6,4',
+          opacity: 0.9,
+        }).addTo(_medicionLayer);
+      }
+
+      // Vértices. El último lleva la etiqueta con el acumulado.
+      puntos.forEach((pt, i) => {
+        const esUltimo = i === puntos.length - 1;
+        const mk = L.circleMarker(pt, {
+          radius: esUltimo ? 6 : 4,
+          color: '#001ba0', weight: 2, fillColor: '#fff', fillOpacity: 1,
+        });
+        let etiqueta = '';
+        if (i === 0 && puntos.length === 1) etiqueta = 'Inicio';
+        else if (esUltimo) etiqueta = medicionResultado.value || _formatDistancia(_distanciaTotal(puntos));
+        if (etiqueta) mk.bindTooltip(etiqueta, _opcionesTooltip).openTooltip();
+        mk.addTo(_medicionLayer);
+      });
+    }
+
+    function _reiniciarMedicion(primerPunto) {
+      _medicionPuntos = primerPunto ? [primerPunto] : [];
+      _medicionGeometriaRuta = null;
+      medicionResultado.value = '';
+      medicionTerminada.value = false;
+      medicionPuntosCount.value = _medicionPuntos.length;
+      _redibujarMedicion();
+    }
+
     function _onMedicionClick(e) {
       if (!herramientasActivas.medicion) return;
+
+      // Una medición terminada no se acumula con la siguiente: el clic que
+      // sigue a un resultado descarta el trazo anterior y empieza de cero.
+      if (medicionTerminada.value) {
+        _reiniciarMedicion(e.latlng);
+        return;
+      }
+
+      if (_medicionPuntos.length >= MAX_WAYPOINTS) {
+        addToast('Máximo ' + MAX_WAYPOINTS + ' puntos por medición. Finaliza o elimina el trazo.',
+                 '#f59e0b', 'LÍMITE DE PUNTOS');
+        return;
+      }
+
       _medicionPuntos.push(e.latlng);
       medicionPuntosCount.value = _medicionPuntos.length;
 
-      // Marcador de punto
-      const mk = L.circleMarker(e.latlng, {
-        radius: 5, color: '#001ba0', weight: 2,
-        fillColor: '#fff', fillOpacity: 1
-      });
-
-      if (_medicionPuntos.length === 2) {
-        if (medicionModo.value === 'linea') {
-          const dist = _distanciaTotal(_medicionPuntos);
-          mk.bindTooltip(_formatDistancia(dist), {
-            permanent: true, direction: 'top', offset: [0, -8],
-            className: 'mv-medicion-tt'
-          }).openTooltip();
-          mk.addTo(_medicionLayer);
-          if (_medicionLinea) _medicionLayer.removeLayer(_medicionLinea);
-          _medicionLinea = L.polyline(_medicionPuntos, {
-            color: '#001ba0', weight: 2.5, dashArray: '6,4', opacity: 0.9
-          }).addTo(_medicionLayer);
-
-          addToast(`📏 Distancia en línea recta: ${_formatDistancia(dist)}`, '#001ba0', 'MEDICIÓN COMPLETADA');
-          _terminarCapturaPuntos();
-        } else {
-          // Modo ruta: calculamos ruta OSRM
-          mk.bindTooltip('Calculando ruta...', {
-            permanent: true, direction: 'top', offset: [0, -8],
-            className: 'mv-medicion-tt'
-          }).openTooltip();
-          mk.addTo(_medicionLayer);
-          const origen = _medicionPuntos[0];
-          const destino = e.latlng;
-          _calcularRutaOSRM(origen, destino, mk);
+      // Línea recta: exactamente dos puntos, y se cierra sola.
+      if (medicionModo.value === 'linea') {
+        if (_medicionPuntos.length === 2) {
+          medicionResultado.value = _formatDistancia(_distanciaTotal(_medicionPuntos));
+          medicionTerminada.value = true;
+          _redibujarMedicion();
+          addToast('📏 Distancia en línea recta: ' + medicionResultado.value,
+                   '#001ba0', 'MEDICIÓN COMPLETADA');
+          return;
         }
-      } else {
-        mk.bindTooltip('Inicio', {
-          permanent: true, direction: 'top', offset: [0, -8],
-          className: 'mv-medicion-tt'
-        }).openTooltip();
-        mk.addTo(_medicionLayer);
+        _redibujarMedicion();
+        return;
       }
-    }
 
-    function _terminarCapturaPuntos() {
-      if (_medicionLineaTemp) {
-        _medicionLayer.removeLayer(_medicionLineaTemp);
-        _medicionLineaTemp = null;
+      // Manual: acumula y va mostrando el total sobre la marcha.
+      if (medicionModo.value === 'manual') {
+        if (_medicionPuntos.length > 1) {
+          medicionResultado.value = _formatDistancia(_distanciaTotal(_medicionPuntos));
+        }
+        _redibujarMedicion();
+        return;
       }
-      _medicionPuntos = []; // Resetea para permitir un nuevo click de inicio
-      medicionPuntosCount.value = 0;
-      medicionTerminada.value = true; // <-- activa el flotante de herramientas
+
+      // Ruta: cada punto nuevo recalcula el recorrido completo por calle.
+      _redibujarMedicion();
+      if (_medicionPuntos.length > 1) _calcularRutaOSRM();
     }
 
     function _onMedicionMove(e) {
-      if (!herramientasActivas.medicion || _medicionPuntos.length !== 1) return;
+      if (!herramientasActivas.medicion) return;
+      if (medicionTerminada.value || !_medicionPuntos.length) return;
+      // En modo ruta el elástico recto engañaría: la distancia real la marca la
+      // calle, no la línea entre el último vértice y el cursor.
+      if (medicionModo.value === 'ruta') return;
+
       if (_medicionLineaTemp) _medicionLayer.removeLayer(_medicionLineaTemp);
-      _medicionLineaTemp = L.polyline([_medicionPuntos[0], e.latlng], {
-        color: '#001ba0', weight: 2, dashArray: '4,4', opacity: 0.55
+      const ultimo = _medicionPuntos[_medicionPuntos.length - 1];
+      _medicionLineaTemp = L.polyline([ultimo, e.latlng], {
+        color: '#001ba0', weight: 2, dashArray: '4,4', opacity: 0.55,
       }).addTo(_medicionLayer);
     }
 
+    // Doble clic cierra el trazo en los modos de varios puntos: es el gesto que
+    // espera cualquiera que haya dibujado en un SIG.
+    function _onMedicionDblClick(e) {
+      if (!herramientasActivas.medicion || !esMultipunto()) return;
+      if (L.DomEvent && e.originalEvent) L.DomEvent.stop(e.originalEvent);
+      finalizarMedicion();
+    }
+
+    function _onMedicionTecla(evento) {
+      if (!herramientasActivas.medicion) return;
+      if (evento.key === 'Enter') { evento.preventDefault(); finalizarMedicion(); }
+      else if (evento.key === 'Escape') { evento.preventDefault(); limpiarMedicion(); }
+    }
+
+    /** Cierra la medición en curso. El trazo se queda visible. */
+    function finalizarMedicion() {
+      if (medicionTerminada.value) return;
+      if (_medicionPuntos.length < 2) {
+        addToast('Marca al menos dos puntos antes de finalizar.', '#f59e0b', 'MEDICIÓN INCOMPLETA');
+        return;
+      }
+      medicionTerminada.value = true;
+      if (_medicionLineaTemp) { _medicionLayer.removeLayer(_medicionLineaTemp); _medicionLineaTemp = null; }
+
+      if (medicionModo.value === 'manual') {
+        medicionResultado.value = _formatDistancia(_distanciaTotal(_medicionPuntos));
+        addToast('✏️ Trayecto manual: ' + medicionResultado.value + ' · ' + _medicionPuntos.length + ' puntos',
+                 '#001ba0', 'TRAYECTO COMPLETADO');
+      } else if (medicionModo.value === 'ruta' && medicionResultado.value) {
+        addToast('🗺️ Ruta: ' + medicionResultado.value, '#001ba0', 'RUTA COMPLETADA');
+      }
+      _redibujarMedicion();
+    }
+
     function deshacerPuntoMedicion() {
-      if (_medicionPuntos.length === 0) return;
+      if (!_medicionPuntos.length) return;
       _medicionPuntos.pop();
       medicionPuntosCount.value = _medicionPuntos.length;
-      // Limpiar y redibujar
-      if (_medicionLayer) _medicionLayer.clearLayers();
-      _medicionLinea = null;
-      _medicionLineaTemp = null;
-      // Si quedaron puntos, redibujar el marcador de inicio
-      if (_medicionPuntos.length > 0) {
-        L.circleMarker(_medicionPuntos[0], {
-          radius: 6, color: '#001ba0', weight: 2, fillColor: '#fff', fillOpacity: 1
-        }).bindTooltip('Inicio', {
-          permanent: true, direction: 'top', offset: [0, -8], className: 'mv-medicion-tt'
-        }).openTooltip().addTo(_medicionLayer);
-      }
-      // Asegurarse de estar escuchando de nuevo
-      lmap.on('click', _onMedicionClick);
-      lmap.on('mousemove', _onMedicionMove);
+      medicionTerminada.value = false;
+      _medicionGeometriaRuta = null;
+      medicionResultado.value = _medicionPuntos.length > 1
+        ? _formatDistancia(_distanciaTotal(_medicionPuntos))
+        : '';
+      _redibujarMedicion();
+      if (medicionModo.value === 'ruta' && _medicionPuntos.length > 1) _calcularRutaOSRM();
     }
 
     function limpiarMedicion() {
-      if (_medicionLayer) _medicionLayer.clearLayers();
-      _medicionPuntos = [];
-      _medicionLinea = null;
-      _medicionLineaTemp = null;
-      medicionPuntosCount.value = 0;
-      medicionTerminada.value = false;
-      // Reactivar captura si la herramienta sigue activa
-      if (herramientasActivas.medicion) {
-        lmap.on('click', _onMedicionClick);
-        lmap.on('mousemove', _onMedicionMove);
+      _reiniciarMedicion(null);
+      if (herramientasActivas.medicion && lmap) {
         lmap.getContainer().style.cursor = 'crosshair';
       }
     }
 
-    async function _calcularRutaOSRM(origen, destino, markerDestino) {
+    /**
+     * Ruta por calle a través de TODOS los vértices marcados. OSRM acepta las
+     * coordenadas separadas por `;`, así que un solo viaje resuelve el trayecto
+     * completo en lugar de encadenar tramos A→B sueltos.
+     */
+    async function _calcularRutaOSRM() {
+      const puntos = _medicionPuntos.slice();
+      if (puntos.length < 2) return;
+
+      medicionCalculando.value = true;
+      medicionResultado.value = 'Calculando ruta…';
+      _redibujarMedicion();
+
       try {
-        const url = `https://router.project-osrm.org/route/v1/driving/${origen.lng},${origen.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson`;
+        const coords = puntos.map((p) => p.lng + ',' + p.lat).join(';');
+        const url = 'https://router.project-osrm.org/route/v1/driving/' + coords +
+                    '?overview=full&geometries=geojson';
         const resp = await fetch(url);
         const data = await resp.json();
-        if (data.code !== 'Ok' || !data.routes.length) {
-          markerDestino.setTooltipContent('Sin ruta disponible');
+
+        // Mientras respondía, el usuario pudo deshacer o reiniciar: si los
+        // puntos ya no son los mismos, este resultado es de otra medición.
+        if (puntos.length !== _medicionPuntos.length) return;
+
+        if (data.code !== 'Ok' || !data.routes || !data.routes.length) {
+          medicionResultado.value = 'Sin ruta por calle';
+          _medicionGeometriaRuta = null;
+          addToast('OSRM no encontró calle entre esos puntos. En zona rural usa el trazado manual.',
+                   '#f59e0b', 'SIN RUTA');
+          _redibujarMedicion();
           return;
         }
+
         const route = data.routes[0];
-        const distM = route.distance; // metros
         const durMin = Math.round(route.duration / 60);
-        const label = `${_formatDistancia(distM)} · ~${durMin} min`;
-        markerDestino.setTooltipContent(label);
-        // Dibujar la ruta en el mapa
-        if (_medicionLinea) _medicionLayer.removeLayer(_medicionLinea);
-        _medicionLinea = L.geoJSON(route.geometry, {
-          style: { color: '#001ba0', weight: 4, opacity: 0.85 }
-        }).addTo(_medicionLayer);
-        addToast(`🗺️ Ruta calculada: ${label}`, '#001ba0', 'RUTA DE MAPA');
-        _terminarCapturaPuntos();
+        medicionResultado.value = _formatDistancia(route.distance) + ' · ~' + durMin + ' min';
+        _medicionGeometriaRuta = route.geometry;
+        _redibujarMedicion();
       } catch (err) {
-        markerDestino.setTooltipContent('Error calculando ruta');
+        medicionResultado.value = 'Error de conexión';
+        _medicionGeometriaRuta = null;
         addToast('No se pudo calcular la ruta. Verifica tu conexión.', '#dc2626', 'ERROR DE RUTA');
-        _terminarCapturaPuntos();
+        _redibujarMedicion();
+      } finally {
+        medicionCalculando.value = false;
       }
     }
+
+    const MENSAJE_MODO = {
+      linea:  '📏 Línea recta: marca el punto A y el punto B. Un tercer clic empieza una medición nueva.',
+      ruta:   '🗺️ Ruta vial: marca los puntos del recorrido. Doble clic o «Finalizar» para cerrarlo.',
+      manual: '✏️ Trazado manual: marca cada vértice del camino. Doble clic o «Finalizar» para cerrarlo.',
+    };
 
     function iniciarMedicion() {
       if (!lmap) return;
       if (!_medicionLayer) _medicionLayer = L.layerGroup().addTo(lmap);
-      else _medicionLayer.clearLayers();
-      _medicionPuntos = [];
-      medicionPuntosCount.value = 0;
-      medicionTerminada.value = false;
+      _reiniciarMedicion(null);
+
       lmap.getContainer().style.cursor = 'crosshair';
       lmap.on('click', _onMedicionClick);
       lmap.on('mousemove', _onMedicionMove);
-      if (medicionModo.value === 'linea') {
-        addToast('📏 Modo línea recta activo. Haz click en el punto A y luego en el B.', '#001ba0', 'MEDICIÓN ACTIVA');
-      } else {
-        addToast('🗺️ Modo ruta activo. Haz click en el punto A y luego en el B.', '#001ba0', 'MEDICIÓN ACTIVA');
-      }
+      lmap.on('dblclick', _onMedicionDblClick);
+      document.addEventListener('keydown', _onMedicionTecla);
+      // Sin esto, el doble clic con el que se cierra un trazo también hace zoom.
+      if (lmap.doubleClickZoom) lmap.doubleClickZoom.disable();
+
+      addToast(MENSAJE_MODO[medicionModo.value], '#001ba0', 'MEDICIÓN ACTIVA');
     }
 
     function detenerMedicion() {
       if (!lmap) return;
       lmap.off('click', _onMedicionClick);
       lmap.off('mousemove', _onMedicionMove);
+      lmap.off('dblclick', _onMedicionDblClick);
+      document.removeEventListener('keydown', _onMedicionTecla);
+      if (lmap.doubleClickZoom) lmap.doubleClickZoom.enable();
       lmap.getContainer().style.cursor = '';
       if (_medicionLayer) { lmap.removeLayer(_medicionLayer); _medicionLayer = null; }
       _medicionPuntos = [];
-      _medicionLinea = null;
       _medicionLineaTemp = null;
+      _medicionGeometriaRuta = null;
       medicionPuntosCount.value = 0;
       medicionTerminada.value = false;
+      medicionResultado.value = '';
+      medicionCalculando.value = false;
     }
 
-    // Cambia entre medición en línea recta y ruta vial reiniciando la captura.
+    // Cambiar de modo descarta la medición en curso: mezclar una recta con un
+    // trayecto por calle daría un total que no significa nada.
     function cambiarModoMedicion(modo) {
       if (medicionModo.value === modo) return;
       medicionModo.value = modo;
       if (herramientasActivas.medicion) {
         detenerMedicion();
+        herramientasActivas.medicion = true;
         iniciarMedicion();
       }
     }
@@ -950,12 +1077,14 @@ export default {
       estiloTile.value = estilo;
       if (capaBase) lmap.removeLayer(capaBase);
       capaBase = construirTile(estilo).addTo(lmap);
-      
-      // Si la capa de distritos (límites) está activa, forzar re-dibujado para aplicar color dinámico
-      if (herramientasActivas.distritos) {
-        toggleCapaDistrítos(false);
-        toggleCapaDistrítos(true);
-      }
+
+      // El color de los límites depende de la capa base (blanco sobre satélite
+      // u oscuro, azul sobre callejero), así que hay que refrescarlo.
+      //
+      // Se reaplica el estilo y NO se apaga y reenciende la capa: reencenderla
+      // relanzaría la fusión del municipio y el redibujado de 153 polígonos de
+      // colonias por un simple cambio de fondo.
+      if (gestorCapas) gestorCapas.actualizarTile(estilo);
     }
 
     // Retira el marcador de ubicación siempre por la misma referencia cruda con
@@ -1022,7 +1151,11 @@ export default {
         center: [13.61229, -89.17036], zoom: 13, zoomControl: false,
         attributionControl: true, minZoom: 11, maxZoom: 20,
       });
+      // Devuelve al operador donde lo dejó. Entrar al detalle de un caso y
+      // volver al mapa reencuadraba el municipio entero cada vez.
+      restaurarVistaMapa(CLAVE_VISTA_MAPA, lmap);
       capaBase = construirTile(estiloTile.value).addTo(lmap);
+      _dejarDeVigilarVista = vigilarVistaMapa(CLAVE_VISTA_MAPA, lmap, () => estiloTile.value);
 
       // Rastrear el centro del mapa en lugar del cursor
       lmap.on('move', () => {
@@ -1040,9 +1173,23 @@ export default {
       pintarRutas();
       pintarIntervenciones();
 
-      if (herramientasActivas.distritos) {
-        toggleCapaDistrítos(true);
+      // Gestor de capas territoriales de ESTE mapa. Se crea aquí, cuando `lmap`
+      // ya existe, y se enciende lo que diga la configuración.
+      gestorCapas = crearGestorDeCapas(lmap, { tile: estiloTile.value });
+      for (const id of CAPAS_TERRITORIALES) {
+        if (herramientasActivas[id]) gestorCapas.mostrar(id);
       }
+
+      // `limitesDeDistrito()` necesita la cartografía de forma síncrona para
+      // encuadrar al cambiar de distrito, y puede pedirse antes de que ninguna
+      // capa esté encendida. La descarga está memorizada, así que esto no añade
+      // una petición: reutiliza la que ya hicieron las capas, o la adelanta.
+      cargarLimitesSSSur().then((geo) => { cartografiaCache = geo; });
+
+      // Vigilar la caja del mapa. Va al final de `initMap`, cuando el
+      // contenedor ya tiene medidas: la primera medición solo siembra la
+      // referencia y no aplica corrección.
+      vigilarCajaDelMapa();
     }
 
     function pintarRutas() {
@@ -1106,9 +1253,39 @@ export default {
     }
 
     /* ─── Detección de nuevas denuncias (realtime / simulación) ─── */
+    //
+    // Una denuncia que entra y NO pasa los filtros activos no puede
+    // desaparecer en silencio. Con el filtro de estado en "En curso" —que es
+    // configurable y mucha gente deja puesto— un caso nuevo nace en
+    // `pendiente`, queda fuera del filtro y el mapa no muestra absolutamente
+    // nada: ni pin, ni feed, ni aviso. En una consola de monitoreo eso es el
+    // peor fallo posible, porque el operador concluye que no ha entrado nada.
+    //
+    // Se avisa aparte y se ofrece quitar el filtro de un clic.
+    const nuevasFueraDeFiltro = ref(0);
+
+    function limpiarFiltroEstado() {
+      filtros.estadoIncidencia = '';
+      nuevasFueraDeFiltro.value = 0;
+      aplicarFiltros();
+    }
+
     function manejarNueva(id) {
       const d = (denuncias.value || []).find((x) => x.id === id);
       if (!d) return;
+
+      // ¿La vería el operador con los filtros que tiene puestos?
+      const visible = pasaFiltrosBase(d) && pasaFiltroEstado(d);
+      if (!visible) {
+        nuevasFueraDeFiltro.value++;
+        reproducirSonidoAlerta();
+        addToast(
+          `Entró una denuncia que tus filtros ocultan (${etiquetaEstado(d.estado)}). Pulsa "Ver todas" para mostrarla.`,
+          '#f59e0b', 'DENUNCIA FUERA DE FILTRO'
+        );
+        return;
+      }
+
       const cat = (tiposDenuncia.value || []).find((t) => t.id === d.tipo_id);
       const color = cat ? cat.color_hex : '#ffcc00';
       const short = cat ? (cat.area || cat.nombre) : 'Denuncia';
@@ -1191,7 +1368,10 @@ export default {
     }
 
     /* ─── Pantalla completa: al entrar el mapa ocupa todo el viewport ─── */
-    watch(mapaFullscreen, () => nextTick(() => lmap && lmap.invalidateSize()));
+    // Pasa por el mismo anclaje que los paneles. Al entrar en pantalla completa
+    // desaparecen el sidebar de la aplicación y la topbar, así que la esquina
+    // del mapa se mueve en las dos direcciones y hay que compensar ambas.
+    watch(mapaFullscreen, () => nextTick(anclarTrasCambioDeCaja));
 
     /* ─── Toggle conjunto de barras laterales (Feed + Capas) ─── */
     // true = ambas visibles; false = ambas ocultas. Refleja el estado para el ícono.
@@ -1205,18 +1385,82 @@ export default {
       mostrarPanelFiltros.value = false;
     };
 
-    /* ─── Reflow de Leaflet al plegar/desplegar paneles ───────────────────
-       Con el layout en grid los paneles son columnas reales: al abrirlos o
-       cerrarlos cambia el ancho del escenario y Leaflet debe recalcular su
-       viewport, o el mapa queda con tiles en gris. La transición de ancho
-       dura 300ms (ver .mv-panel en mapa.css), así que revalidamos al final. */
+    /* ─── Anclaje del mapa cuando cambia su caja ──────────────────────────
+
+       Con el layout en grid los paneles son COLUMNAS REALES: al plegarlos
+       cambia el ancho del escenario y Leaflet tiene que recalcular su viewport
+       o las teselas quedan en gris. Eso lo resuelve `invalidateSize()`. Lo que
+       NO resuelve —y era el fallo visible— es que el mapa se quedara quieto.
+
+       Ninguna de las dos opciones de Leaflet sirve por sí sola:
+
+         · `pan: true` (por defecto) conserva el CENTRO del contenedor. Al
+           ensancharse el escenario hace un `panBy` de medio ancho ganado, así
+           que el mapa "se va" solo cuando los paneles se repliegan.
+         · `pan: false` ancla el contenido a la ESQUINA SUPERIOR IZQUIERDA. Con
+           el panel derecho va bien —esa esquina no se mueve—, pero al plegar el
+           IZQUIERDO el borde izquierdo del escenario se desplaza, la esquina se
+           va con él y el contenido viaja pegado al panel.
+
+       La única forma de que el mapa no se mueva es compensar explícitamente
+       cuánto se ha desplazado esa esquina en pantalla. Se mide con
+       `getBoundingClientRect()` antes y después, y se corrige con un `panBy`
+       del mismo delta.
+
+       Se usa un `ResizeObserver` en lugar de un temporizador tras el cambio de
+       panel por tres razones: dispara en CADA fotograma de la transición de
+       300 ms —así el mapa queda inmóvil durante toda la animación, no solo al
+       final—, no depende de acertar la duración, y cubre también los cambios
+       de caja que no vienen de estos paneles: plegar el sidebar de la
+       aplicación, entrar en pantalla completa o redimensionar la ventana. */
+    let _rectPrevio = null;
+    let _observadorCaja = null;
     let _reflowTimeout = null;
-    watch([feedOpen, rpanelOpen], () => {
-      clearTimeout(_reflowTimeout);
-      _reflowTimeout = setTimeout(() => {
-        if (lmap) lmap.invalidateSize({ animate: false });
-      }, 320);
-    });
+
+    function anclarTrasCambioDeCaja() {
+      if (!lmap) return;
+      const rect = lmap.getContainer().getBoundingClientRect();
+
+      // Contenedor oculto (otra vista activa) o aún sin medidas. Se olvida la
+      // referencia: al volver, el primer rect válido solo sirve para sembrar,
+      // porque comparar contra el de antes de ocultarse daría un delta enorme.
+      if (!rect.width || !rect.height) { _rectPrevio = null; return; }
+
+      lmap.invalidateSize({ animate: false, pan: false });
+
+      if (_rectPrevio) {
+        const dx = rect.left - _rectPrevio.left;
+        const dy = rect.top - _rectPrevio.top;
+        // `panBy` mueve el contenido en sentido contrario al offset, así que
+        // pasar el propio desplazamiento de la esquina lo devuelve a su sitio.
+        if (dx || dy) lmap.panBy([dx, dy], { animate: false });
+      }
+      _rectPrevio = rect;
+    }
+
+    function vigilarCajaDelMapa() {
+      if (!lmap || _observadorCaja) return;
+
+      if (typeof ResizeObserver !== 'function') {
+        // Sin ResizeObserver no hay corrección continua; queda el reflujo tras
+        // la transición, que al menos evita las teselas en gris.
+        watch([feedOpen, rpanelOpen], () => {
+          clearTimeout(_reflowTimeout);
+          _reflowTimeout = setTimeout(anclarTrasCambioDeCaja, 340);
+        });
+        return;
+      }
+
+      // Un solo trabajo por fotograma: el observador puede disparar varias
+      // veces seguidas y `invalidateSize` recoloca todas las teselas.
+      let pendiente = false;
+      _observadorCaja = new ResizeObserver(() => {
+        if (pendiente) return;
+        pendiente = true;
+        requestAnimationFrame(() => { pendiente = false; anclarTrasCambioDeCaja(); });
+      });
+      _observadorCaja.observe(lmap.getContainer());
+    }
 
     /* ─── Sincronizar estilo de mapa con Dark Mode ─── */
     watch(isDarkMode, (isDark) => {
@@ -1307,11 +1551,20 @@ export default {
       programarAutoOcultar();
       tick();
       clockInt = setInterval(tick, 1000);
-      nextTick(() => { initMap(); if (lmap) lmap.invalidateSize(); });
+      // `initMap` deja ya el observador de caja en marcha, así que no hace
+      // falta un `invalidateSize` suelto aquí: la primera medición la hace él.
+      nextTick(initMap);
       window.addEventListener('resize', _kpiResizeHandler, { passive: true });
     });
 
     onUnmounted(() => {
+      // Sin esto, el vigilante sigue escuchando `moveend` sobre un mapa ya
+      // destruido y escribiendo en localStorage desde una vista que no existe.
+      if (_dejarDeVigilarVista) { _dejarDeVigilarVista(); _dejarDeVigilarVista = null; }
+      // Sin desconectarlo, el observador sigue midiendo un contenedor que se
+      // va a destruir y llamaría a `invalidateSize` sobre un mapa ya muerto.
+      if (_observadorCaja) { _observadorCaja.disconnect(); _observadorCaja = null; }
+      _rectPrevio = null;
       clearInterval(clockInt);
       if (initTimeoutId) clearTimeout(initTimeoutId);
       clearTimeout(_reflowTimeout);
@@ -1320,6 +1573,9 @@ export default {
       cancelarAutoOcultar(true);
       mapaFullscreen.value = false;
       marcadorUbicacion = null;
+      // Antes de destruir el mapa: el gestor tiene que soltar sus capas
+      // mientras el contenedor sigue vivo.
+      if (gestorCapas) { gestorCapas.destruir(); gestorCapas = null; }
       if (lmap) { lmap.remove(); lmap = null; }
       window.removeEventListener('resize', _kpiResizeHandler);
     });
@@ -1333,6 +1589,8 @@ export default {
       mapaFullscreen, toggleMapaFullscreen,
       mostrarMenuCapas, seccionesCapas, herramientasActivas, toggleHerramienta, medicionModo,
       medicionTerminada, medicionPuntosCount, deshacerPuntoMedicion, limpiarMedicion, cambiarModoMedicion,
+      medicionResultado, medicionCalculando, finalizarMedicion, esMultipunto,
+      nuevasFueraDeFiltro, limpiarFiltroEstado,
       mostrarModalPoligono, formPoligono, guardarPoligono, cerrarModalPoligono,
       hasNewFeed, pillFlash, toasts, feedItems, categories, visibilidad,
       routes, interventions, routesVis, intervVis,
@@ -1350,7 +1608,7 @@ export default {
       // tile, herramienta o botón: añadir uno nuevo pasa a ser una línea de
       // datos y no un bloque de HTML copiado.
       PANELES, SECCIONES_CAPAS, SECCIONES_MENU_CAPAS, TABS_MOVIL,
-      TILES, HERRAMIENTAS, GRUPOS_HERRAMIENTAS, BOTONES_FLOTANTES,
+      TILES, HERRAMIENTAS, GRUPOS_HERRAMIENTAS, BOTONES_FLOTANTES, herramientasDelGrupo,
       CONTROLES_NAVEGACION, MODOS_MEDICION,
       VENTANAS_TIEMPO, COLUMNAS_COMPARATIVO,
       // Consola territorial

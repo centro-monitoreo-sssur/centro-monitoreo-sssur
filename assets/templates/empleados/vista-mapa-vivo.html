@@ -20,11 +20,34 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
-        <button @click="obtenerUbicacion" class="relative w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95">
-          <i class="fa-solid fa-location-crosshairs"></i>
+        <!-- La ubicación se pide SOLO al pulsar. El botón cambia de estado para
+             que se note que el GPS está trabajando: en campo puede tardar
+             varios segundos y sin señal visible parece que no responde. -->
+        <!-- Tres estados con un solo botón: sin ubicación → puntual → seguir.
+             Se pide el GPS solo al pulsar, nunca al abrir la vista. -->
+        <button @click="ubicacionActiva ? alternarSeguimiento() : obtenerUbicacion()"
+                :disabled="cargandoUbicacion"
+                :aria-label="cargandoUbicacion ? 'Obteniendo tu ubicación'
+                  : siguiendo ? 'Dejar de seguir mi ubicación'
+                  : ubicacionActiva ? 'Seguir mi ubicación mientras me muevo' : 'Ir a mi ubicación'"
+                :aria-pressed="siguiendo ? 'true' : 'false'"
+                :aria-busy="cargandoUbicacion ? 'true' : 'false'"
+                class="relative w-11 h-11 rounded-full flex items-center justify-center transition-colors active:scale-95 disabled:opacity-70"
+                :class="siguiendo ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                  : ubicacionActiva ? 'bg-emerald-100 text-emerald-600'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'">
+          <i class="fa-solid"
+             :class="cargandoUbicacion ? 'fa-circle-notch fa-spin'
+               : siguiendo ? 'fa-location-arrow' : 'fa-location-crosshairs'" aria-hidden="true"></i>
+          <span v-if="siguiendo" class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-white flex items-center justify-center">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          </span>
         </button>
-        <button @click="mostrarMenuCapas = !mostrarMenuCapas" class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95">
-          <i class="fa-solid fa-layer-group"></i>
+        <button @click="mostrarMenuCapas = !mostrarMenuCapas"
+                aria-label="Capas del mapa"
+                :aria-expanded="mostrarMenuCapas ? 'true' : 'false'"
+                class="toque-comodo w-11 h-11 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95">
+          <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
         </button>
       </div>
     </div>
@@ -32,6 +55,26 @@
 
   <!-- Contenedor del Mapa -->
   <div id="map-vivo-mobile" class="absolute inset-0 z-0 w-full h-full"></div>
+
+  <!-- Aviso de GPS. Un fallo de ubicación tiene que decirse: antes el mapa
+       simplemente saltaba a las coordenadas por defecto y no había forma de
+       saber si el GPS había fallado o si esa era tu posición. -->
+  <div v-if="errorUbicacion" role="alert"
+       class="absolute top-20 left-4 right-4 z-30 flex items-start gap-3 rounded-2xl bg-white/95 backdrop-blur-xl border border-amber-200 shadow-lg px-4 py-3">
+    <i class="fa-solid fa-location-dot text-amber-500 mt-0.5 shrink-0" aria-hidden="true"></i>
+    <p class="flex-1 min-w-0 text-xs text-gray-700 break-words">{{ errorUbicacion }}</p>
+    <button @click="limpiarErrorUbicacion" aria-label="Descartar aviso"
+            class="toque-comodo shrink-0 w-6 h-6 rounded-full text-gray-400 hover:bg-gray-100 flex items-center justify-center">
+      <i class="fa-solid fa-xmark text-xs" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <!-- Precisión: una posición con ±200 m no sirve para ubicar un bache, y sin
+       este dato el empleado no puede saberlo. -->
+  <div v-else-if="ubicacionActiva && precisionUbicacion"
+       class="absolute bottom-32 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-gray-200 shadow text-[11px] text-gray-600 font-mono whitespace-nowrap">
+    Precisión ±{{ precisionUbicacion }} m
+  </div>
 
   <!-- Menu de Capas -->
   <div v-if="mostrarMenuCapas" class="absolute top-20 left-4 right-4 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-gray-900/20 p-5 z-30 border border-gray-100/50">

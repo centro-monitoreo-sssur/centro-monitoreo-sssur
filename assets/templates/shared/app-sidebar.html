@@ -17,9 +17,11 @@
         <span class="font-extrabold tracking-tight leading-tight text-xs">San Salvador<br>Sur</span>
       </div>
     </div>
-    <button @click="toggleSidebar"
-      class="hidden lg:flex w-8 h-8 shrink-0 items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white">
-      <i class="fas fa-bars text-lg"></i>
+    <button @click="toggleSidebar" type="button"
+      :aria-label="sidebarColapsado ? 'Expandir menú lateral' : 'Colapsar menú lateral'"
+      :aria-expanded="sidebarColapsado ? 'false' : 'true'"
+      class="toque-comodo hidden lg:flex w-8 h-8 shrink-0 items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white">
+      <i class="fas fa-bars text-lg" aria-hidden="true"></i>
     </button>
   </div>
 
@@ -123,7 +125,7 @@
 
       <button v-show="!sidebarColapsado"
         @click="abrirModalLogout"
-        class="shrink-0 text-white/40 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
+        class="toque-comodo shrink-0 text-white/40 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
         title="Cerrar sesión">
         <i class="fas fa-sign-out-alt text-sm"></i>
       </button>

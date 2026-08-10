@@ -26,15 +26,26 @@
         <i class="fa-solid fa-users text-blue-500 text-xs"></i>
         <div>
           <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{
-            kpisGlobales.poblacion.toLocaleString() }}</div>
-          <div class="text-[9px] text-gray-400 leading-none">Habitantes</div>
+            kpisGlobales.poblacion.toLocaleString('es-SV') }}</div>
+          <!-- La procedencia del dato censal, a la vista. Los indicadores "por
+               habitante" solo valen lo que valga esta cifra, y si es de hace
+               ocho años quien decide tiene que saberlo. -->
+          <div class="text-[9px] text-gray-400 leading-none"
+            :title="fuentePoblacion ? fuentePoblacion.texto : 'Sin fuente declarada'">
+            Habitantes
+            <i v-if="fuentePoblacion" class="fa-solid fa-circle-info text-[7px] ml-0.5 opacity-60"></i>
+          </div>
         </div>
       </div>
       <div
         class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
         <i class="fa-solid fa-ruler-combined text-emerald-500 text-xs"></i>
         <div>
-          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">198.75 km²</div>
+          <!-- Se suma de los datos por distrito en vez de estar escrito a mano:
+               el literal "198.75" no cuadraba con la suma real (198,67) y
+               cualquier corrección de un distrito lo dejaba desfasado. -->
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">
+            {{ kpisGlobales.extensionKm2.toFixed(2) }} km²</div>
           <div class="text-[9px] text-gray-400 leading-none">Extensión</div>
         </div>
       </div>
@@ -42,17 +53,43 @@
         class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
         <i class="fa-solid fa-clipboard-list text-red-500 text-xs"></i>
         <div>
-          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{ kpisGlobales.denunciasActivas
-            }}</div>
+          <div class="flex items-center gap-1.5">
+            <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{
+              kpisGlobales.denunciasActivas }}</div>
+            <!-- Tendencia contra el período anterior de igual duración. Solo
+                 aparece con las dos fechas puestas: sin fecha de inicio no hay
+                 un "anterior" comparable. -->
+            <span v-if="tendencia('total')" class="text-[9px] font-black leading-none"
+              :class="tendencia('total').neutro ? 'text-gray-400'
+                : tendencia('total').bueno ? 'text-emerald-600' : 'text-rose-600'"
+              :title="'Frente al período anterior de la misma duración'">
+              <i class="fa-solid text-[7px]"
+                :class="tendencia('total').pct > 0 ? 'fa-arrow-up'
+                  : tendencia('total').pct < 0 ? 'fa-arrow-down' : 'fa-minus'"></i>
+              {{ Math.abs(tendencia('total').pct) }}%
+            </span>
+          </div>
           <div class="text-[9px] text-gray-400 leading-none">Denuncias activas</div>
+        </div>
+      </div>
+
+      <!-- Por cada 1 000 habitantes. El volumen bruto siempre corona a San
+           Marcos por demografía; normalizado se ve quién está peor atendido. -->
+      <div v-if="kpisGlobales.porMil !== null"
+        class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <i class="fa-solid fa-people-group text-sky-500 text-xs"></i>
+        <div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{
+            kpisGlobales.porMil.toFixed(1) }}</div>
+          <div class="text-[9px] text-gray-400 leading-none">Por mil hab.</div>
         </div>
       </div>
       <div
         class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
         <i class="fa-solid fa-hard-hat text-amber-500 text-xs"></i>
         <div>
-          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{ kpisGlobales.intervenciones
-            }}</div>
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{
+            kpisGlobales.intervenciones }}</div>
           <div class="text-[9px] text-gray-400 leading-none">Intervenciones</div>
         </div>
       </div>
@@ -60,11 +97,38 @@
         class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
         <i class="fa-solid fa-bolt text-blue-500 text-xs"></i>
         <div>
-          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{ Math.round((kpisGlobales.resueltas / ((kpisGlobales.denunciasActivas || 0) + (kpisGlobales.resueltas || 1))) * 100) }}%</div>
+          <!-- El cálculo vive en el componente. Aquí estaba en línea y sobre
+               `activas + resueltas`, que ignora las rechazadas: un distrito que
+               rechazara mucho salía artificialmente eficiente. Ahora es
+               resueltas / total. -->
+          <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{ kpisGlobales.eficiencia }}%
+          </div>
           <div class="text-[9px] text-gray-400 leading-none">Eficiencia de Respuesta</div>
         </div>
       </div>
 
+      <!-- Casos fuera del tiempo objetivo de su prioridad. Es el indicador que
+           de verdad acciona a una jefatura: dice dónde se está incumpliendo,
+           no cuánto volumen hay. -->
+      <div v-if="kpisGlobales.fueraDeObjetivo > 0"
+        class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full">
+        <i class="fa-solid fa-triangle-exclamation text-rose-500 text-xs"></i>
+        <div>
+          <div class="text-[11px] font-bold text-rose-600 dark:text-rose-400 leading-none">{{
+            kpisGlobales.fueraDeObjetivo }}</div>
+          <div class="text-[9px] text-gray-400 leading-none">Fuera de plazo</div>
+        </div>
+      </div>
+
+      <!-- Estado de la consulta. Sin esto, un fallo del RPC dejaba ceros en
+           toda la fila, indistinguibles de "no hay casos". -->
+      <div v-if="cargandoPeriodo" class="flex items-center gap-1.5 px-3 text-[9px] text-gray-400">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Calculando…
+      </div>
+      <div v-else-if="errorPeriodo" class="flex items-center gap-1.5 px-3 text-[9px] text-rose-500"
+        :title="errorPeriodo">
+        <i class="fa-solid fa-triangle-exclamation"></i> Indicadores no disponibles
+      </div>
     </div>
 
     <!-- Selector de modo -->
@@ -114,6 +178,15 @@
       </div>
     </div>
 
+    <!-- Rangos rápidos. La tendencia solo existe con las dos fechas puestas, y
+         teclear dos fechas es fricción suficiente como para que nadie la use. -->
+    <div class="flex items-center gap-1">
+      <button v-for="r in RANGOS_RAPIDOS" :key="r.id" @click="aplicarRangoRapido(r.dias)"
+        class="text-[9px] font-bold px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+        {{ r.label }}
+      </button>
+    </div>
+
     <!-- Limpiar -->
     <button v-if="filtroActivo" @click="limpiarFiltroFecha"
       class="flex items-center gap-1 text-[9px] font-bold text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors ml-1">
@@ -122,11 +195,20 @@
 
     <div class="flex-1"></div>
 
-    <!-- Nota DEMO -->
+    <!-- Exportar. Sin esto, quien tenga que llevar la comparativa a una reunión
+         hará una captura de pantalla, y una captura no se suma ni se audita. -->
+    <button @click="exportarComparativo" title="Descargar la comparativa en CSV"
+      class="flex items-center gap-1.5 text-[9px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors">
+      <i class="fa-solid fa-file-csv"></i> Exportar
+    </button>
+
+    <!-- El filtro ahora consulta la base acotando por `created_at`. Decirlo
+         importa: "casos reportados en el período" y "casos cerrados en el
+         período" son cifras distintas, y quien decide con esto tiene que saber
+         cuál está mirando. -->
     <p class="text-[9px] text-gray-400 italic hidden sm:block">
-      <!-- DEMO: proporcional a 365 días base -->
       <i class="fa-solid fa-circle-info mr-0.5 text-indigo-400"></i>
-      Afecta: Denuncias Activas, Intervenciones, Eficiencia de Respuesta
+      Casos <strong class="font-semibold">reportados</strong> en el período, con su estado actual
     </p>
   </div>
 
@@ -134,6 +216,54 @@
   <!-- MAPA LEAFLET                                        -->
   <!-- ══════════════════════════════════════════════════ -->
   <div id="carto-map" style="position:absolute;inset:0;top:82px;width:100%;z-index:0;"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       CAPAS Y HERRAMIENTAS
+       Mismo gestor que el Mapa en Vivo (services/mapa/capas-territoriales.js).
+
+       Aquí NO se ofrecen los límites distritales: en esta vista los distritos
+       SON el cartograma, coloreados por el indicador activo, así que dibujar su
+       contorno encima sería duplicarlos.
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div class="absolute z-30" style="top:98px; right:16px;">
+    <button type="button" @click="menuCapasAbierto = !menuCapasAbierto"
+      title="Capas y herramientas" :aria-expanded="menuCapasAbierto ? 'true' : 'false'"
+      class="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+      :class="menuCapasAbierto ? 'ring-2 ring-blue-400' : ''">
+      <i class="fa-solid fa-layer-group text-gray-600 dark:text-gray-300"></i>
+    </button>
+
+    <div v-if="menuCapasAbierto"
+      class="absolute right-0 mt-2 w-60 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <p class="px-3 pt-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+        <i class="fa-solid fa-map-location-dot mr-1"></i>Límites y territorio
+      </p>
+      <div class="px-2 pb-2 space-y-1">
+        <button v-for="capa in capasCartograma" :key="capa.id"
+          type="button" @click="alternarCapa(capa.id)" :title="capa.ayuda"
+          :aria-pressed="capasActivas[capa.id] ? 'true' : 'false'"
+          class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left"
+          :class="capasActivas[capa.id]
+            ? 'bg-blue-50 dark:bg-blue-900/25'
+            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'">
+          <i class="fa-solid text-sm w-4 text-center" :class="[capa.icono,
+            capasActivas[capa.id] ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400']"></i>
+          <span class="flex-1 text-xs font-medium"
+            :class="capasActivas[capa.id]
+              ? 'text-blue-700 dark:text-blue-400 font-semibold'
+              : 'text-gray-600 dark:text-gray-300'">{{ capa.nombre }}</span>
+          <span class="w-8 h-4 rounded-full relative transition-colors shrink-0"
+            :class="capasActivas[capa.id] ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'">
+            <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
+              :class="capasActivas[capa.id] ? 'left-[18px]' : 'left-0.5'"></span>
+          </span>
+        </button>
+      </div>
+      <p class="px-3 pb-3 text-[10px] text-gray-400 leading-snug">
+        Los límites distritales son el propio cartograma.
+      </p>
+    </div>
+  </div>
 
   <!-- ══════════════════════════════════════════════════ -->
   <!-- SPINNER INICIAL                                     -->
@@ -149,7 +279,12 @@
   <!-- ══════════════════════════════════════════════════ -->
   <!-- PANEL LATERAL RANKING (IZQUIERDA)                  -->
   <!-- ══════════════════════════════════════════════════ -->
-  <div v-if="!cargando && !panelAbierto" class="absolute left-3 bottom-6 z-40 flex flex-col gap-2"
+  <!-- Ya NO se oculta al abrir el detalle. Estaba condicionado a
+       `!panelAbierto`, así que pulsar un distrito del ranking hacía desaparecer
+       el propio ranking y había que cerrar el detalle para elegir otro — justo
+       lo contrario de lo que se espera de una lista comparativa. Los dos
+       paneles están en lados opuestos y no se solapan. -->
+  <div v-if="!cargando" class="absolute left-3 bottom-6 z-40 flex flex-col gap-2"
     style="top:95px; max-height: calc(100% - 115px); overflow-y:auto;">
 
     <!-- Tarjeta leyenda del modo -->
@@ -172,12 +307,19 @@
     <!-- Ranking de distritos -->
     <div
       class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-[200px]">
+      <!-- El título sigue al modo activo. Decía siempre "Ranking Poblacional",
+           incluso cuando la lista estaba ordenada por carga o por eficiencia. -->
       <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1">
-        <i class="fa-solid fa-ranking-star text-amber-500"></i> Ranking Poblacional
+        <i class="fa-solid fa-ranking-star text-amber-500"></i> {{ tituloRanking }}
       </div>
       <div class="space-y-1.5">
+        <!-- El distrito abierto queda resaltado: con el detalle visible hay que
+             poder ver de un vistazo cuál se está mirando y saltar a otro. -->
         <div v-for="(z, idx) in rankingZonas" :key="z.id" @click="seleccionarDistrito(z)"
-          class="flex items-center gap-2 p-1.5 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group">
+          class="flex items-center gap-2 p-1.5 rounded-lg cursor-pointer transition-colors group"
+          :class="distritoSeleccionado && distritoSeleccionado.nombre === z.nombre
+            ? 'bg-blue-50 dark:bg-blue-900/30 ring-1 ring-blue-200 dark:ring-blue-800'
+            : 'hover:bg-gray-50 dark:hover:bg-gray-700'">
           <!-- Posición -->
           <div class="w-4 text-[9px] font-black text-gray-400 text-center flex-shrink-0">
             {{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (idx+1) }}
@@ -223,11 +365,11 @@
 
       <!-- Encabezado del panel -->
       <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800"
-        :style="`background: ${distritoSeleccionado.color}18;`">
+        :style="`background: ${distritoConFiltro.color}18;`">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-xl flex items-center justify-center text-lg"
-            :style="`background:${distritoSeleccionado.color}22;`">
-            {{ distritoSeleccionado.icono }}
+            :style="`background:${distritoConFiltro.color}22;`">
+            {{ distritoConFiltro.icono }}
           </div>
           <div>
             <div class="text-sm font-black text-gray-900 dark:text-white">{{ distritoSeleccionado.nombre }}</div>
@@ -235,8 +377,8 @@
           </div>
         </div>
         <button @click="cerrarPanel"
-          class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-          <i class="fa-solid fa-xmark text-xs"></i>
+          class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Cerrar">
+          <i aria-hidden="true" class="fa-solid fa-xmark text-xs"></i>
         </button>
       </div>
 
@@ -268,28 +410,105 @@
           <div class="col-span-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
             <div class="flex justify-between items-center">
               <div class="text-[9px] text-gray-400 uppercase tracking-wide">Eficiencia de Respuesta</div>
+              <!-- Cálculo en el componente, no en línea y por duplicado -->
               <div class="text-[9px] font-bold text-blue-600">
-                {{ Math.round(((distritoConFiltro.denunciasResueltas||0) / (((distritoConFiltro.denunciasActivas||0) + (distritoConFiltro.denunciasResueltas||0))||1)) * 100) }}% resueltas
+                {{ distritoConFiltro.eficiencia }}% · {{ distritoConFiltro.denunciasResueltas }}/{{
+                distritoConFiltro.totalCasos }}
               </div>
             </div>
             <div class="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-              <div class="bg-blue-600 h-1.5 rounded-full" :style="`width: ${Math.round(((distritoConFiltro.denunciasResueltas||0) / (((distritoConFiltro.denunciasActivas||0) + (distritoConFiltro.denunciasResueltas||0))||1)) * 100)}%`"></div>
+              <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+                :style="`width: ${distritoConFiltro.eficiencia}%`"></div>
+            </div>
+          </div>
+
+          <!-- Incumplimiento de plazo. Es el dato que mueve a una jefatura a
+               hacer algo hoy; el volumen por sí solo no dice si vas bien. -->
+          <div v-if="distritoConFiltro.fueraDeObjetivo > 0"
+            class="col-span-2 bg-rose-50 dark:bg-rose-900/20 rounded-xl p-3 flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
+            <div class="flex-1">
+              <div class="text-[11px] font-black text-rose-700 dark:text-rose-400">
+                {{ distritoConFiltro.fueraDeObjetivo }} fuera de plazo
+              </div>
+              <div class="text-[9px] text-rose-600/80 dark:text-rose-400/70">
+                Superaron el tiempo objetivo de su prioridad
+                <span v-if="distritoConFiltro.criticasAbiertas > 0">
+                  · {{ distritoConFiltro.criticasAbiertas }} crítica(s) abierta(s)</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="distritoConFiltro.horasPromedioCierre !== null"
+            class="col-span-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 flex items-center justify-between">
+            <div class="text-[9px] text-gray-400 uppercase tracking-wide">Tiempo medio de cierre</div>
+            <div class="text-[11px] font-black text-emerald-700 dark:text-emerald-400">
+              {{ distritoConFiltro.horasPromedioCierre }} h
+            </div>
+          </div>
+
+          <!-- Antigüedad del pendiente más viejo. Un distrito con 10 casos
+               abiertos hace seis meses está peor que uno con 40 de ayer, y el
+               recuento por sí solo no distingue esos dos casos. -->
+          <div v-if="distritoConFiltro.diasMasAntiguo !== null"
+            class="col-span-2 rounded-xl p-3 flex items-center justify-between"
+            :class="distritoConFiltro.diasMasAntiguo > 30
+              ? 'bg-rose-50 dark:bg-rose-900/20' : 'bg-gray-50 dark:bg-gray-800'">
+            <div class="text-[9px] text-gray-400 uppercase tracking-wide">Pendiente más antiguo</div>
+            <div class="text-[11px] font-black"
+              :class="distritoConFiltro.diasMasAntiguo > 30
+                ? 'text-rose-700 dark:text-rose-400' : 'text-gray-700 dark:text-gray-300'">
+              {{ distritoConFiltro.diasMasAntiguo }} días
             </div>
           </div>
         </div>
 
-        <!-- Densidad visual -->
-        <div>
+        <!-- Las tres categorías con más casos abiertos.
+             "Este distrito va mal" no dice a quién mandar; "son baches,
+             luminarias y desagües" convierte el diagnóstico en una orden de
+             trabajo. -->
+        <div v-if="distritoConFiltro.categoriasTop.length">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">
+            Dónde se concentra
+          </div>
+          <div class="space-y-1.5">
+            <div v-for="cat in distritoConFiltro.categoriasTop" :key="cat.nombre"
+              class="flex items-center gap-2">
+              <span class="flex-1 text-[10px] text-gray-600 dark:text-gray-300 truncate"
+                :title="cat.nombre">{{ cat.nombre }}</span>
+              <div class="w-16 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 shrink-0">
+                <div class="h-1.5 rounded-full bg-orange-400"
+                  :style="`width:${Math.round((cat.total / distritoConFiltro.categoriasTop[0].total) * 100)}%`"></div>
+              </div>
+              <span class="text-[10px] font-mono font-bold text-gray-700 dark:text-gray-300 w-5 text-right shrink-0">
+                {{ cat.total }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Carga por habitante del distrito. Es el número comparable entre
+             territorios de tamaño muy distinto. -->
+        <div v-if="distritoConFiltro.porMil !== null"
+          class="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-3 flex items-center justify-between">
+          <div class="text-[9px] text-gray-400 uppercase tracking-wide">Carga por habitante</div>
+          <div class="text-[11px] font-black text-sky-700 dark:text-sky-400">
+            {{ distritoConFiltro.porMil.toFixed(1) }} por mil
+          </div>
+        </div>
+
+        <!-- Densidad. El cálculo sale del componente y usa la superficie MEDIDA
+             sobre el polígono oficial; en línea se hacía con la extensión
+             escrita a mano, que se apartaba un 9 % de la real. -->
+        <div v-if="distritoConFiltro.densidad !== null">
           <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1">Densidad Poblacional</div>
           <div class="flex items-center gap-2">
             <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2.5">
               <div class="h-2.5 rounded-full transition-all duration-700"
-                :style="`width:${Math.min(((distritoConFiltro.poblacion||0)/(distritoConFiltro.extensionKm2||1))/40,1)*100}%; background:${distritoConFiltro.color}`">
+                :style="`width:${Math.min(distritoConFiltro.densidad/40,1)*100}%; background:${distritoConFiltro.color}`">
               </div>
             </div>
             <span class="text-[10px] font-mono font-bold text-gray-600 dark:text-gray-300 flex-shrink-0">
-              {{ Math.round((distritoConFiltro.poblacion||0)/(distritoConFiltro.extensionKm2||1)).toLocaleString()
-              }} hab/km²
+              {{ distritoConFiltro.densidad.toLocaleString('es-SV') }} hab/km²
             </span>
           </div>
         </div>
@@ -322,7 +541,7 @@
         <div>
           <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Puntos Destacados</div>
           <div class="space-y-1">
-            <div v-for="dest in (distritoSeleccionado.destacados||[])" :key="dest"
+            <div v-for="dest in distritoConFiltro.destacados" :key="dest"
               class="flex items-center gap-2 text-[10px] text-gray-600 dark:text-gray-300">
               <i class="fa-solid fa-star text-amber-400 text-[8px] flex-shrink-0"></i>
               {{ dest }}
@@ -335,7 +554,7 @@
           <div class="text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">
             <i class="fa-solid fa-briefcase mr-1"></i>Economía Local
           </div>
-          <p class="text-[10px] text-blue-800 dark:text-blue-300">{{ distritoSeleccionado.economia }}</p>
+          <p class="text-[10px] text-blue-800 dark:text-blue-300">{{ distritoConFiltro.economia }}</p>
         </div>
       </div>
 

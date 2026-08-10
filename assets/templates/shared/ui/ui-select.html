@@ -1,0 +1,23 @@
+<div class="min-w-0">
+  <label v-if="etiqueta" :for="id"
+         class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+    {{ etiqueta }}<span v-if="requerido" class="text-rose-500 ml-0.5" aria-hidden="true">*</span>
+  </label>
+
+  <select
+    :id="id"
+    :value="modelValue"
+    :required="requerido"
+    :disabled="deshabilitado"
+    :class="clasesCampo"
+    :aria-invalid="error ? 'true' : null"
+    :aria-describedby="(error || ayuda) ? idAyuda : null"
+    @change="alCambiar">
+    <option v-if="textoVacio" :value="valorVacio">{{ textoVacio }}</option>
+    <option v-for="o in items" :key="o.valor" :value="o.valor">{{ o.texto }}</option>
+    <slot></slot>
+  </select>
+
+  <p v-if="error" :id="idAyuda" class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ error }}</p>
+  <p v-else-if="ayuda" :id="idAyuda" class="mt-1 text-xs text-gray-400">{{ ayuda }}</p>
+</div>

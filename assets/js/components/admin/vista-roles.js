@@ -1,151 +1,173 @@
 // ============================================================
 // COMPONENTE: Roles y Permisos
-// Definición de roles del sistema y matriz de acceso por módulos.
+// Alta, edición y baja de roles + matriz de acceso por módulo, editable.
+//
+// Antes esta pantalla era de solo lectura: el botón "Crear Rol" estaba
+// `disabled` y la matriz solo pintaba casillas. El motivo de fondo no era el
+// frontend — `roles`, `permisos_modulos` y `roles_permisos` tienen RLS activo
+// y solo políticas de SELECT, así que la base rechazaba toda escritura.
+// Requiere `database/migration_v22_gestion_roles.sql`.
+//
+// Los datos de demo se eliminaron a propósito. En una pantalla de control de
+// acceso, una matriz inventada es peor que una vacía: enseña permisos que nadie
+// tiene y esconde los que sí están concedidos.
 // ============================================================
-import { ref, onMounted } from '../../core/vue.js';
-import { db } from '../../core/supabase.js';
+import { ref, computed, onMounted } from '../../core/vue.js';
+import { useRoles } from '../../stores/roles.js';
+import { useNavegacion } from '../../stores/navegacion.js';
+
+const ROL_NUEVO = () => ({ id: null, codigo: '', nombre: '', descripcion: '', activo: true });
+
+// Paleta de la tarjeta por posición. No viene de la BD: `roles` no tiene
+// columna de color y añadirla sería guardar decoración en el modelo de
+// seguridad.
+const COLORES = [
+  { texto: 'text-purple-600 dark:text-purple-300', fondo: 'bg-purple-100 dark:bg-purple-900/40' },
+  { texto: 'text-brand-600 dark:text-brand-300',   fondo: 'bg-brand-50 dark:bg-brand-900/40' },
+  { texto: 'text-amber-600 dark:text-amber-300',   fondo: 'bg-amber-100 dark:bg-amber-900/40' },
+  { texto: 'text-indigo-600 dark:text-indigo-300', fondo: 'bg-indigo-100 dark:bg-indigo-900/40' },
+  { texto: 'text-emerald-600 dark:text-emerald-300', fondo: 'bg-emerald-100 dark:bg-emerald-900/40' },
+  { texto: 'text-rose-600 dark:text-rose-300',     fondo: 'bg-rose-100 dark:bg-rose-900/40' },
+];
+
+const ETIQUETAS_ACCION = {
+  leer:     { titulo: 'Ver',      ayuda: 'Abrir el módulo y consultar sus datos' },
+  escribir: { titulo: 'Editar',   ayuda: 'Crear y modificar registros' },
+  borrar:   { titulo: 'Eliminar', ayuda: 'Dar de baja registros' },
+  exportar: { titulo: 'Exportar', ayuda: 'Descargar datos en CSV o reportes' },
+};
 
 export default {
   name: 'vista-roles',
   setup() {
-    const roles = ref([]);
-    const modulos = ref([]);
-    const rolesPermisos = ref([]);
+    const {
+      roles, modulos, cargando, guardando, error,
+      cargarTodo, guardarRol, eliminarRol,
+      tienePermiso, fijarPermiso, conteoDeRol, ACCIONES,
+    } = useRoles();
+    const { rolUsuario } = useNavegacion();
+
     const rolSeleccionado = ref(null);
-    const cargando = ref(false);
+    const mensaje = ref({ tipo: '', texto: '' });
 
-    // Espejo de public.permisos_modulos (database/migration_v11). El `id` es el
-    // `codigo_modulo`, que es lo que evalúan las policies de la base — ojo: el
-    // módulo de denuncias se llama 'casos' en la BD aunque se muestre como
-    // "Gestión de Denuncias".
-    const MODULOS_DEFAULT = [
-      { id: 'dashboard', label: 'Dashboard y Métricas' },
-      { id: 'mapa', label: 'Mapa en Vivo y Cartograma' },
-      { id: 'casos', label: 'Gestión de Denuncias' },
-      { id: 'intervenciones', label: 'Intervenciones en Campo' },
-      { id: 'reportes', label: 'Generación de Reportes' },
-      { id: 'cuadrillas', label: 'Cuadrillas de Campo' },
-      { id: 'poblacion', label: 'Ciudadanos Registrados' },
-      { id: 'usuarios', label: 'Usuarios y Roles' },
-      { id: 'config', label: 'Configuración del Sistema' }
-    ];
+    // Modal de alta/edición
+    const modalAbierto = ref(false);
+    const formulario = ref(ROL_NUEVO());
+    const errorFormulario = ref('');
 
-    // Espejo de public.roles (database/migration_v13). Solo se usa si la BD no
-    // responde; los ids reales los asigna Postgres.
-    const ROLES_DEFAULT = [
-      { id: 1, codigo: 'superadmin', nombre: 'Superadministrador', descripcion: 'Acceso total al sistema', color: 'text-purple-600', bg: 'bg-purple-100', usuarios: 0 },
-      { id: 2, codigo: 'admin', nombre: 'Administrador', descripcion: 'Gestión operativa del sistema', color: 'text-blue-600', bg: 'bg-blue-100', usuarios: 0 },
-      { id: 3, codigo: 'alcalde', nombre: 'Alcalde', descripcion: 'Consulta total del municipio', color: 'text-amber-600', bg: 'bg-amber-100', usuarios: 0 },
-      { id: 4, codigo: 'directivo', nombre: 'Director / Gerente', descripcion: 'Consulta y exportación de la operación', color: 'text-indigo-600', bg: 'bg-indigo-100', usuarios: 0 },
-      { id: 5, codigo: 'jefe_area', nombre: 'Jefatura de Área', descripcion: 'Gestiona casos e intervenciones de su área', color: 'text-blue-600', bg: 'bg-blue-100', usuarios: 0 },
-      { id: 6, codigo: 'empleado', nombre: 'Personal de Campo', descripcion: 'Ejecuta y actualiza el trabajo asignado', color: 'text-emerald-600', bg: 'bg-emerald-100', usuarios: 0 },
-    ];
+    // Modal de confirmación de borrado
+    const rolABorrar = ref(null);
 
-    // La matriz visual habla de leer / escribir / borrar; roles_permisos guarda
-    // bits CRUD explícitos. Este es el puente entre ambos vocabularios.
-    const COLUMNAS_POR_ACCION = {
-      leer:     ['ver'],
-      escribir: ['crear', 'editar'],
-      borrar:   ['borrar'],
-      exportar: ['exportar'],
-    };
+    // Casilla en curso, para deshabilitar solo esa y no la matriz entera.
+    const casillaEnCurso = ref('');
 
-    // Orden de las columnas de la matriz. La plantilla lo recorre en vez de
-    // repetir cuatro bloques de toggle idénticos.
-    const ACCIONES = Object.keys(COLUMNAS_POR_ACCION);
+    // La escritura está reservada a superadmin por `migration_v22`. Se refleja
+    // en la UI en vez de dejar pulsar botones que la base va a rechazar: un
+    // permiso denegado tras el clic se percibe como una avería.
+    const puedeGestionar = computed(() => rolUsuario.value === 'superadmin');
 
-    async function cargarData() {
-      cargando.value = true;
-      const colors = ['text-purple-600', 'text-blue-600', 'text-emerald-600', 'text-gray-600'];
-      const bgs = ['bg-purple-100', 'bg-blue-100', 'bg-emerald-100', 'bg-gray-100'];
+    const colorDe = (indice) => COLORES[indice % COLORES.length];
 
-      if (db) {
-        const [resRoles, resModulos, resPermisos, resUsuarios] = await Promise.all([
-          db.from('roles').select('*').order('id'),
-          db.from('permisos_modulos').select('*').order('id'),
-          db.from('roles_permisos').select('*'),
-          // El conteo por rol venía hardcodeado a 0, así que la tarjeta decía
-          // "0 usu" incluso con usuarios asignados. Se agrupa en cliente porque
-          // son decenas de filas: un `group by` por RPC no compensa.
-          db.from('usuarios').select('rol_id').eq('activo', true)
-        ]);
+    const etiquetaDe = (accion) => ETIQUETAS_ACCION[accion] || { titulo: accion, ayuda: '' };
 
-        const usuariosPorRol = new Map();
-        for (const u of resUsuarios.data || []) {
-          usuariosPorRol.set(u.rol_id, (usuariosPorRol.get(u.rol_id) || 0) + 1);
-        }
-
-        roles.value = (resRoles.data || ROLES_DEFAULT).map((r, idx) => ({
-          ...r,
-          color: colors[idx % colors.length],
-          bg: bgs[idx % bgs.length],
-          usuarios: usuariosPorRol.get(r.id) || 0
-        }));
-
-        // `dbId` conserva el id numérico porque roles_permisos referencia
-        // permisos_modulos por id, no por código.
-        modulos.value = resModulos.data?.length
-          ? resModulos.data.map(m => ({ id: m.codigo_modulo, dbId: m.id, label: m.nombre_modulo }))
-          : MODULOS_DEFAULT;
-
-        rolesPermisos.value = resPermisos.data || [];
-      } else {
-        // Fallback demo sin DB
-        roles.value = ROLES_DEFAULT;
-        modulos.value = MODULOS_DEFAULT;
-      }
-
-      if (roles.value.length > 0) rolSeleccionado.value = roles.value[0];
-      cargando.value = false;
+    function avisar(tipo, texto) {
+      mensaje.value = { tipo, texto };
+      if (tipo === 'ok') setTimeout(() => { mensaje.value = { tipo: '', texto: '' }; }, 4000);
     }
 
     function seleccionarRol(rol) {
       rolSeleccionado.value = rol;
     }
 
-    function tienePermiso(rolId, moduloId, accion) {
-      const columnas = COLUMNAS_POR_ACCION[accion] || [];
-      if (!columnas.length) return false;
-
-      // Sin datos de la BD: aproximación por código de rol, solo para que la
-      // pantalla no se vea vacía en modo demo.
-      if (!rolesPermisos.value.length) {
-        const cod = roles.value.find(r => r.id === rolId)?.codigo;
-        if (!cod) return false;
-        if (cod === 'superadmin') return true;
-        if (cod === 'admin') return moduloId === 'config' ? accion === 'leer' : true;
-        if (cod === 'alcalde')   return accion === 'leer' || (accion === 'exportar' && moduloId !== 'poblacion');
-        if (cod === 'directivo') return (accion === 'leer' || accion === 'exportar')
-          && !['poblacion', 'usuarios', 'config'].includes(moduloId);
-        if (cod === 'jefe_area') {
-          if (['poblacion', 'usuarios', 'config'].includes(moduloId)) return false;
-          return accion !== 'borrar';
-        }
-        if (cod === 'empleado') {
-          return ['dashboard', 'mapa', 'casos', 'intervenciones', 'cuadrillas'].includes(moduloId)
-            && accion !== 'borrar' && accion !== 'exportar';
-        }
-        return false;
-      }
-
-      // Con datos reales: roles_permisos.permiso_modulo_id apunta al id
-      // numérico de permisos_modulos, no al código del módulo.
-      const dbId = modulos.value.find(m => m.id === moduloId)?.dbId;
-      if (!dbId) return false;
-
-      const permiso = rolesPermisos.value.find(
-        (p) => p.rol_id === rolId && p.permiso_modulo_id === dbId
-      );
-      if (!permiso) return false;
-
-      return columnas.some((col) => !!permiso[col]);
+    // ── Alta / edición ──────────────────────────────────────────────────────
+    function abrirNuevo() {
+      formulario.value = ROL_NUEVO();
+      errorFormulario.value = '';
+      modalAbierto.value = true;
     }
 
-    // onMounted en contexto síncrono de setup() — patrón correcto
-    onMounted(cargarData);
+    function abrirEdicion(rol) {
+      formulario.value = {
+        id: rol.id,
+        codigo: rol.codigo,
+        nombre: rol.nombre,
+        descripcion: rol.descripcion || '',
+        activo: rol.activo !== false,
+        es_sistema: rol.es_sistema === true,
+      };
+      errorFormulario.value = '';
+      modalAbierto.value = true;
+    }
+
+    function cerrarModal() {
+      modalAbierto.value = false;
+      errorFormulario.value = '';
+    }
+
+    async function confirmarGuardado() {
+      errorFormulario.value = '';
+      const resultado = await guardarRol(formulario.value);
+      if (!resultado.ok) { errorFormulario.value = resultado.error; return; }
+
+      cerrarModal();
+      avisar('ok', formulario.value.id ? 'Rol actualizado.' : 'Rol creado.');
+      // Tras crear, se abre el nuevo rol: lo siguiente que se quiere hacer
+      // siempre es asignarle permisos.
+      if (resultado.rol) {
+        rolSeleccionado.value = roles.value.find((r) => r.id === resultado.rol.id) || rolSeleccionado.value;
+      }
+    }
+
+    // ── Baja ────────────────────────────────────────────────────────────────
+    function pedirBorrado(rol) {
+      rolABorrar.value = rol;
+    }
+
+    async function confirmarBorrado() {
+      const rol = rolABorrar.value;
+      if (!rol) return;
+      const resultado = await eliminarRol(rol.id);
+      rolABorrar.value = null;
+
+      if (!resultado.ok) { avisar('error', resultado.error); return; }
+      if (rolSeleccionado.value?.id === rol.id) {
+        rolSeleccionado.value = roles.value[0] || null;
+      }
+      avisar('ok', `Rol "${rol.nombre}" eliminado.`);
+    }
+
+    // ── Matriz ──────────────────────────────────────────────────────────────
+    async function alternar(modulo, accion) {
+      if (!puedeGestionar.value || !rolSeleccionado.value) return;
+
+      const rolId = rolSeleccionado.value.id;
+      const valor = !tienePermiso(rolId, modulo.dbId, accion);
+      casillaEnCurso.value = `${modulo.dbId}-${accion}`;
+
+      const resultado = await fijarPermiso(rolId, modulo.dbId, accion, valor);
+      casillaEnCurso.value = '';
+
+      if (!resultado.ok) avisar('error', resultado.error);
+      else if (mensaje.value.tipo === 'error') mensaje.value = { tipo: '', texto: '' };
+    }
+
+    const enCurso = (modulo, accion) => casillaEnCurso.value === `${modulo.dbId}-${accion}`;
+
+    const marcado = (modulo, accion) =>
+      rolSeleccionado.value ? tienePermiso(rolSeleccionado.value.id, modulo.dbId, accion) : false;
+
+    onMounted(async () => {
+      await cargarTodo();
+      if (roles.value.length) rolSeleccionado.value = roles.value[0];
+    });
 
     return {
-      roles, modulos, rolSeleccionado, seleccionarRol, tienePermiso, cargando, ACCIONES
+      roles, modulos, cargando, guardando, error,
+      rolSeleccionado, seleccionarRol, ACCIONES,
+      puedeGestionar, colorDe, etiquetaDe, conteoDeRol, mensaje,
+      modalAbierto, formulario, errorFormulario, abrirNuevo, abrirEdicion, cerrarModal, confirmarGuardado,
+      rolABorrar, pedirBorrado, confirmarBorrado,
+      alternar, marcado, enCurso,
     };
-  }
+  },
 };

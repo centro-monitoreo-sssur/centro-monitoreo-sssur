@@ -1,0 +1,25 @@
+<div class="min-w-0">
+  <label v-if="etiqueta" :for="id"
+         class="block text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+    {{ etiqueta }}<span v-if="requerido" class="text-rose-500 ml-0.5" aria-hidden="true">*</span>
+  </label>
+
+  <div class="relative">
+    <i v-if="icono" :class="icono"
+       class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" aria-hidden="true"></i>
+    <input
+      :id="id"
+      :type="tipo"
+      :value="modelValue"
+      :placeholder="marcador"
+      :required="requerido"
+      :disabled="deshabilitado"
+      :class="clasesCampo"
+      :aria-invalid="error ? 'true' : null"
+      :aria-describedby="(error || ayuda) ? idAyuda : null"
+      @input="alEscribir">
+  </div>
+
+  <p v-if="error" :id="idAyuda" class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ error }}</p>
+  <p v-else-if="ayuda" :id="idAyuda" class="mt-1 text-xs text-gray-400">{{ ayuda }}</p>
+</div>

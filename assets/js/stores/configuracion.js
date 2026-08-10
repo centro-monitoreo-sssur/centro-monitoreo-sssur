@@ -40,7 +40,15 @@ const DEFAULTS = {
     // mapa creara un punto en vez de seleccionar una incidencia.
     clustering: true,
     heatmap: false,
+
+    // Capas territoriales. Se configuran por separado porque responden a
+    // preguntas distintas: el límite municipal enmarca, el distrital divide
+    // competencias y las colonias localizan una dirección concreta.
+    mostrarMunicipio: false,
     mostrarDistritos: true,
+    // Apagada por defecto: son 153 polígonos y con el municipio entero en
+    // pantalla resultan ilegibles. El operador la enciende al acercarse.
+    mostrarColonias: false,
     // Por encima de este número de puntos visibles el navegador se atasca
     // dibujando marcadores individuales; conviene forzar el mapa de calor.
     umbralHeatmap: 2000,

@@ -7,16 +7,16 @@
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
     <div class="px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <button @click="irA('pwa-empleado')" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-          <i class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
+        <button @click="irA('pwa-empleado')" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Volver">
+          <i aria-hidden="true" class="fa-solid fa-arrow-left text-gray-600 text-sm"></i>
         </button>
         <div>
           <h1 class="text-lg font-semibold text-gray-900">Buzón Offline</h1>
           <p class="text-xs text-gray-500">Sincronización</p>
         </div>
       </div>
-      <button @click="handleSincronizar" class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center" :disabled="!estaOnline || estaSincronizando" :class="{ 'opacity-50 cursor-not-allowed': !estaOnline || estaSincronizando }">
-        <i class="fa-solid fa-sync text-white text-sm" :class="{ 'fa-spin': estaSincronizando }"></i>
+      <button @click="handleSincronizar" class="toque-comodo w-8 h-8 bg-green-500 rounded-full flex items-center justify-center" :disabled="!estaOnline || estaSincronizando" :class="{ 'opacity-50 cursor-not-allowed': !estaOnline || estaSincronizando }" aria-label="Sincronizar">
+        <i aria-hidden="true" class="fa-solid fa-sync text-white text-sm" :class="{ 'fa-spin': estaSincronizando }"></i>
       </button>
     </div>
   </div>

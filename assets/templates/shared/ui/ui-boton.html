@@ -1,0 +1,11 @@
+<button
+  :type="tipo"
+  :class="clases"
+  :disabled="inactivo"
+  :aria-label="etiquetaAccesible || null"
+  :aria-busy="cargando ? 'true' : null"
+  @click="alPulsar">
+  <i v-if="cargando" class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i>
+  <i v-else-if="icono" :class="icono" aria-hidden="true"></i>
+  <slot></slot>
+</button>

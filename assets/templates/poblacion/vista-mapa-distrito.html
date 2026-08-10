@@ -7,8 +7,8 @@
   <div class="absolute top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-lg">
     <div class="px-4 py-3 flex items-center justify-between pt-safe">
       <div class="flex items-center space-x-3">
-        <button @click="irA('pwa-poblacion')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
-          <i class="fa-solid fa-arrow-left text-gray-600"></i>
+        <button @click="irA('pwa-poblacion')" class="toque-comodo w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors" aria-label="Volver">
+          <i aria-hidden="true" class="fa-solid fa-arrow-left text-gray-600"></i>
         </button>
         <div>
           <h1 class="text-lg font-bold text-gray-900">Mapa del Distrito</h1>
@@ -19,11 +19,11 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
-        <button @click="obtenerUbicacion" class="relative w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95">
-          <i class="fa-solid fa-location-crosshairs"></i>
+        <button @click="obtenerUbicacion" class="toque-comodo relative w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95" aria-label="Ir a mi ubicación">
+          <i aria-hidden="true" class="fa-solid fa-location-crosshairs"></i>
         </button>
-        <button @click="mostrarMenuCapas = !mostrarMenuCapas" class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95">
-          <i class="fa-solid fa-layer-group"></i>
+        <button @click="mostrarMenuCapas = !mostrarMenuCapas" class="toque-comodo w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 active:scale-95" aria-label="Capas del mapa">
+          <i aria-hidden="true" class="fa-solid fa-layer-group"></i>
         </button>
       </div>
     </div>
@@ -63,9 +63,9 @@
   <!-- Botón Toggle del Panel de Radio -->
   <button 
     @click="mostrarPanelRadio = !mostrarPanelRadio"
-    class="absolute top-20 right-4 bg-white/95 backdrop-blur-xl rounded-full shadow-xl shadow-gray-900/20 p-3 z-20 border border-gray-100/50 hover:bg-white transition-colors"
-    :class="{ 'ring-2 ring-blue-500': mostrarPanelRadio }">
-    <i class="fa-solid fa-sliders text-gray-600"></i>
+    class="toque-comodo absolute top-20 right-4 bg-white/95 backdrop-blur-xl rounded-full shadow-xl shadow-gray-900/20 p-3 z-20 border border-gray-100/50 hover:bg-white transition-colors"
+    :class="{ 'ring-2 ring-blue-500': mostrarPanelRadio }" aria-label="Ajustes del mapa">
+    <i aria-hidden="true" class="fa-solid fa-sliders text-gray-600"></i>
   </button>
 
   <!-- Panel de Filtro de Radio (colapsable) -->

@@ -19,7 +19,11 @@ export const TILES = [
   { id: 'osm',       nombre: 'OpenStreetMap', icono: 'fa-map',             descripcion: 'Cartografía comunitaria' },
 ];
 
-export const TILE_POR_DEFECTO = 'google';
+// Satélite de arranque: sobre la foto aérea se distinguen caminos y
+// construcciones que el callejero no tiene, y es la referencia que pide el
+// personal de campo. Configuración → Mapa puede sobrescribirlo por
+// instalación (`cfgMapa.estilo`).
+export const TILE_POR_DEFECTO = 'satellite';
 
 /**
  * Herramientas conmutables del panel de capas.
@@ -40,10 +44,28 @@ export const HERRAMIENTAS = [
     grupo: 'visualizacion', claveConfig: 'heatmap', excluyeA: [],
     ayuda: 'Sustituye los marcadores por densidad. Útil por encima de ~2000 puntos.',
   },
+  // ── Capas territoriales ───────────────────────────────────────────────
+  // Antes había un único conmutador llamado `distritos` cuya etiqueta en la
+  // plantilla decía "Límites Municipio": dos cosas distintas bajo un mismo
+  // interruptor, así que no se podía ver el contorno del municipio sin las
+  // divisiones internas, ni al revés.
+  //
+  // El dibujo lo hace `services/mapa/capas-territoriales.js`; aquí solo se
+  // declara qué se ofrece. `grupo: 'territorio'` las separa de las de datos.
   {
-    id: 'distritos', nombre: 'Límites de distrito', icono: 'fa-draw-polygon',
-    grupo: 'visualizacion', claveConfig: 'mostrarDistritos', excluyeA: [],
-    ayuda: 'Dibuja el contorno de los cinco distritos del municipio.',
+    id: 'municipio', nombre: 'Límite municipal', icono: 'fa-location-dot',
+    grupo: 'territorio', claveConfig: 'mostrarMunicipio', excluyeA: [],
+    ayuda: 'Contorno exterior de San Salvador Sur, sin divisiones internas.',
+  },
+  {
+    id: 'distritos', nombre: 'Límites distritales', icono: 'fa-draw-polygon',
+    grupo: 'territorio', claveConfig: 'mostrarDistritos', excluyeA: [],
+    ayuda: 'Contorno de los cinco distritos del municipio.',
+  },
+  {
+    id: 'colonias', nombre: 'Colonias', icono: 'fa-city',
+    grupo: 'territorio', claveConfig: 'mostrarColonias', excluyeA: [],
+    ayuda: 'Colonias, barrios y lotificaciones. Por ahora solo San Marcos.',
   },
   {
     id: 'medicion', nombre: 'Medir distancia', icono: 'fa-ruler-combined',
@@ -58,9 +80,21 @@ export const HERRAMIENTAS = [
 ];
 
 export const GRUPOS_HERRAMIENTAS = [
-  { id: 'visualizacion', titulo: 'Visualización', icono: 'fa-eye' },
-  { id: 'dibujo',        titulo: 'Dibujo y medición', icono: 'fa-pen-ruler' },
+  { id: 'visualizacion', titulo: 'Visualización',      icono: 'fa-eye' },
+  { id: 'territorio',    titulo: 'Límites y territorio', icono: 'fa-map-location-dot' },
+  { id: 'dibujo',        titulo: 'Dibujo y medición',  icono: 'fa-pen-ruler' },
 ];
+
+/** Herramientas de un grupo, en el orden declarado. */
+export const herramientasDelGrupo = (grupo) => HERRAMIENTAS.filter((h) => h.grupo === grupo);
+
+/**
+ * Ids de las capas territoriales. Es lo que el Cartograma necesita ofrecer:
+ * allí no hay agrupación de pines ni mapa de calor, solo límites.
+ */
+export const CAPAS_TERRITORIALES = HERRAMIENTAS
+  .filter((h) => h.grupo === 'territorio')
+  .map((h) => h.id);
 
 /** Botones flotantes sobre el lienzo (columna derecha del mapa). */
 export const BOTONES_FLOTANTES = [

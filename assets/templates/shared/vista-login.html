@@ -78,11 +78,13 @@
               :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errores.password }"
               @input="limpiarError('password')"
               autocomplete="current-password">
-            <button 
-              type="button" 
+            <button
+              type="button"
               @click="mostrarPassword = !mostrarPassword"
-              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
-              <i :class="mostrarPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+              :aria-label="mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              :aria-pressed="mostrarPassword ? 'true' : 'false'"
+              class="toque-comodo absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+              <i :class="mostrarPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'" aria-hidden="true"></i>
             </button>
           </div>
           <p v-if="errores.password" class="mt-2 text-sm text-red-600">{{ errores.password }}</p>

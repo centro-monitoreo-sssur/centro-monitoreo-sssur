@@ -106,7 +106,13 @@
       <vista-departamentos v-else-if="vistaActual==='departamentos'"></vista-departamentos>
       <vista-roles v-else-if="vistaActual==='roles'"></vista-roles>
       <vista-configuracion v-else-if="vistaActual==='config'"></vista-configuracion>
-      <vista-notificaciones v-else-if="vistaActual==='notificaciones'"></vista-notificaciones>
+      <!-- El id del ítem de menú es 'vista-notificaciones' (ver `gruposNav` en
+           stores/navegacion.js) y aquí solo se comparaba contra 'notificaciones':
+           ninguna rama casaba y la vista caía en `vista-placeholder`. Por eso el
+           módulo mostraba "queda como siguiente iteración del backlog" aunque el
+           componente existiera. Se aceptan ambos valores porque 'notificaciones'
+           sigue estando en enlaces antiguos guardados en localStorage. -->
+      <vista-notificaciones v-else-if="vistaActual==='vista-notificaciones' || vistaActual==='notificaciones'"></vista-notificaciones>
       <vista-bitacora v-else-if="vistaActual==='bitacora'"></vista-bitacora>
       <vista-placeholder v-else :titulo="tituloVista"></vista-placeholder>
     </main>

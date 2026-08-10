@@ -1108,3 +1108,77 @@
 .sidebar-tooltip {
   pointer-events: none;
 }
+
+/* ============================================================================
+   ACCESIBILIDAD TÁCTIL Y CONTRASTE SOBRE CARTOGRAFÍA
+   ============================================================================ */
+
+/* ── Objetivos táctiles ──────────────────────────────────────────────────────
+   WCAG 2.2 (2.5.8) pide 24×24 px como mínimo y las guías de Apple y Android
+   recomiendan 44 px. Buena parte de los botones de la PWA están en 40×40, y se
+   usan en la calle: de pie, con una sola mano, a veces con guantes y con el
+   teléfono al sol.
+
+   Se agranda el ÁREA DE TOQUE, no el botón: un pseudo-elemento centrado de
+   44×44 px capta el gesto sin mover ni un píxel el diseño. Alternativa
+   descartada: subir el tamaño real de cada botón obligaba a recolocar barras
+   enteras y a revisar cada plantilla.
+
+   Solo en punteros gruesos (`pointer: coarse`): con ratón el área extra podría
+   solaparse con controles vecinos sin ninguna ventaja. */
+@media (pointer: coarse) {
+  .toque-comodo { position: relative; }
+  .toque-comodo::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%);
+    /* No pinta nada: solo amplía la superficie sensible al dedo. */
+    background: transparent;
+  }
+}
+
+/* ── Contraste de los controles del mapa ─────────────────────────────────────
+   Con la vista satélite por defecto, los controles claros quedaban sobre
+   fotografía aérea: sobre un techo blanco o una cancha desaparecían. Se les da
+   fondo propio y un borde tenue en vez de confiar en el color de la tesela. */
+.leaflet-control-zoom a,
+.leaflet-bar a {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #1f2937 !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.18);
+}
+
+.dark .leaflet-control-zoom a,
+.dark .leaflet-bar a {
+  background: rgba(31, 41, 55, 0.95) !important;
+  color: #f9fafb !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Atribución: sobre satélite era ilegible y es obligatoria por licencia. */
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: #374151 !important;
+  text-shadow: none;
+}
+
+/* Etiquetas propias que van directamente sobre la tesela (medición, nombre de
+   distrito). El borde blanco las despega de cualquier fondo. */
+.mv-medicion-tt,
+.leaflet-tooltip.dp {
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #0a1240 !important;
+  border: 1px solid rgba(0, 27, 160, 0.25) !important;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.22) !important;
+  font-weight: 600;
+}
+
+.mv-medicion-tt::before,
+.leaflet-tooltip.dp::before {
+  border-top-color: rgba(255, 255, 255, 0.96) !important;
+}
