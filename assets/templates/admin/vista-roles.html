@@ -5,107 +5,226 @@
 <div class="h-full min-h-0 flex flex-col max-w-7xl mx-auto w-full">
 
   <!-- CABECERA -->
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Roles y Permisos</h1>
+  <div class="mb-4 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
+    <div class="min-w-0">
+      <h1 class="text-title-md text-gray-900 dark:text-white">Roles y Permisos</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Control de acceso basado en roles (RBAC)</p>
     </div>
-    <!-- Sin handler todavía. Se deja `disabled` en vez de simular que funciona:
-         un botón que responde al hover y no hace nada se reporta como bug. -->
-    <button disabled title="El editor de roles llega en la siguiente entrega"
-            class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-xl text-sm font-semibold cursor-not-allowed">
-      <i class="fa-solid fa-plus mr-2"></i> Crear Rol
-    </button>
+    <ui-boton v-if="puedeGestionar" icono="fa-solid fa-plus" @click="abrirNuevo">Crear rol</ui-boton>
+  </div>
+
+  <!-- Aviso de solo lectura. Se dice el motivo: un botón que desaparece sin
+       explicación se reporta como función perdida. -->
+  <div v-if="!puedeGestionar"
+       class="mb-4 flex items-start gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 flex-shrink-0">
+    <i class="fa-solid fa-lock text-gray-400 mt-0.5" aria-hidden="true"></i>
+    <p class="text-xs text-gray-600 dark:text-gray-300">
+      Estás viendo esta pantalla en <strong>modo consulta</strong>. Modificar roles y permisos
+      está reservado al rol <strong>superadministrador</strong>: quien puede editar la matriz
+      puede concederse a sí mismo cualquier acceso del sistema.
+    </p>
+  </div>
+
+  <!-- Errores de carga y resultado de las operaciones -->
+  <div v-if="error"
+       class="mb-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700/60 dark:bg-amber-900/20 px-4 py-3 flex-shrink-0">
+    <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5" aria-hidden="true"></i>
+    <p class="text-xs text-amber-800 dark:text-amber-200">{{ error }}</p>
+  </div>
+
+  <div v-if="mensaje.texto" role="status"
+       class="mb-4 flex items-start gap-3 rounded-xl px-4 py-3 flex-shrink-0"
+       :class="mensaje.tipo === 'ok'
+         ? 'border border-emerald-300 bg-emerald-50 dark:border-emerald-700/60 dark:bg-emerald-900/20'
+         : 'border border-rose-300 bg-rose-50 dark:border-rose-700/60 dark:bg-rose-900/20'">
+    <i class="fa-solid mt-0.5" :class="mensaje.tipo === 'ok' ? 'fa-circle-check text-emerald-500' : 'fa-circle-exclamation text-rose-500'" aria-hidden="true"></i>
+    <p class="text-xs" :class="mensaje.tipo === 'ok' ? 'text-emerald-800 dark:text-emerald-200' : 'text-rose-800 dark:text-rose-200'">
+      {{ mensaje.texto }}
+    </p>
   </div>
 
   <div class="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
 
-    <!-- LISTA DE ROLES (Sidebar izq) -->
+    <!-- LISTA DE ROLES -->
     <div class="w-full md:w-80 flex-shrink-0 space-y-3 min-h-0 overflow-y-auto pr-1">
-      <div v-for="rol in roles" :key="rol.id" 
+
+      <!-- `v-if` y `v-for` en elementos distintos: juntos son error de
+           compilación en Vue 3, porque el `v-if` se evalúa antes. -->
+      <template v-if="cargando">
+        <div v-for="n in 4" :key="'sk-rol-' + n"
+             class="p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-700">
+          <span class="skeleton block h-4 w-32 rounded mb-2"></span>
+          <span class="skeleton block h-3 w-full rounded"></span>
+        </div>
+      </template>
+
+      <div v-for="(rol, i) in roles" :key="rol.id"
            @click="seleccionarRol(rol)"
-           class="p-4 rounded-2xl border-2 cursor-pointer transition-all relative overflow-hidden group"
-           :class="rolSeleccionado?.id === rol.id ? 'border-blue-500 bg-white dark:bg-gray-800 shadow-md' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'">
-        
-        <div class="flex justify-between items-start mb-1">
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-shield text-sm" :class="rolSeleccionado?.id === rol.id ? 'text-blue-500' : 'text-gray-400'"></i>
-            <h3 class="font-bold text-gray-900 dark:text-white">{{ rol.nombre }}</h3>
+           class="p-4 rounded-2xl border-2 cursor-pointer transition-all relative group"
+           :class="rolSeleccionado?.id === rol.id
+             ? 'border-brand-500 bg-white dark:bg-gray-800 shadow-card'
+             : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-300 dark:hover:border-gray-600'">
+
+        <div class="flex justify-between items-start gap-2 mb-1">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" :class="colorDe(i).fondo">
+              <i class="fa-solid fa-shield text-xs" :class="colorDe(i).texto" aria-hidden="true"></i>
+            </span>
+            <h3 class="font-bold text-gray-900 dark:text-white truncate">{{ rol.nombre }}</h3>
           </div>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-            {{ rol.usuarios }} usu
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 shrink-0">
+            {{ conteoDeRol(rol.id) }} usu
           </span>
         </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400 leading-snug">{{ rol.descripcion }}</p>
+
+        <p class="text-xs text-gray-500 dark:text-gray-400 leading-snug break-words">{{ rol.descripcion }}</p>
+
+        <div class="flex items-center gap-2 mt-2 flex-wrap">
+          <ui-badge tamano="sm" tono="neutro" class="font-mono">{{ rol.codigo }}</ui-badge>
+          <ui-badge v-if="rol.es_sistema" tamano="sm" tono="info" icono="fa-solid fa-lock">Sistema</ui-badge>
+          <ui-badge v-if="rol.activo === false" tamano="sm" tono="peligro">Inactivo</ui-badge>
+        </div>
+
+        <!-- Acciones. Visibles siempre en táctil (no hay hover en un móvil). -->
+        <div v-if="puedeGestionar" class="flex gap-1 mt-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <ui-boton tamano="sm" variante="secundario" icono="fa-solid fa-pen"
+                    :etiqueta-accesible="'Editar el rol ' + rol.nombre"
+                    @click.stop="abrirEdicion(rol)">Editar</ui-boton>
+          <ui-boton v-if="!rol.es_sistema" tamano="sm" variante="fantasma" icono="fa-solid fa-trash"
+                    :etiqueta-accesible="'Eliminar el rol ' + rol.nombre"
+                    @click.stop="pedirBorrado(rol)"></ui-boton>
+        </div>
+      </div>
+
+      <div v-if="!cargando && !roles.length" class="py-10 text-center text-gray-400">
+        <i class="fa-solid fa-shield-halved text-3xl mb-3 opacity-50" aria-hidden="true"></i>
+        <p class="text-xs">No hay roles cargados</p>
       </div>
     </div>
 
-    <!-- MATRIZ DE PERMISOS (Panel principal) -->
-    <div v-if="rolSeleccionado" class="flex-1 min-h-0 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden">
+    <!-- MATRIZ DE PERMISOS -->
+    <div v-if="rolSeleccionado"
+         class="flex-1 min-h-0 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card flex flex-col overflow-hidden">
 
-      <!-- Header del rol seleccionado -->
-      <div class="p-6 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex-shrink-0">
-        <div class="flex justify-between items-start">
-          <div>
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg" :class="[rolSeleccionado.bg, rolSeleccionado.color]">
-                {{ rolSeleccionado.nombre.charAt(0) }}
-              </div>
-              <div>
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ rolSeleccionado.nombre }}</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ rolSeleccionado.descripcion }}</p>
-              </div>
-            </div>
-          </div>
-          <span class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-            <i class="fa-solid fa-eye mr-1.5"></i> Solo lectura
-          </span>
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="text-title-sm text-gray-900 dark:text-white truncate">{{ rolSeleccionado.nombre }}</h2>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {{ puedeGestionar ? 'Marca o desmarca para conceder y revocar. Cada cambio se guarda al instante.' : 'Permisos concedidos a este rol' }}
+          </p>
         </div>
+        <i v-if="guardando" class="fa-solid fa-circle-notch fa-spin text-gray-400 shrink-0" aria-label="Guardando"></i>
       </div>
 
-      <!-- Tabla de matriz -->
-      <div class="p-6 overflow-x-auto flex-1 min-h-0 overflow-y-auto">
-        <h3 class="text-sm font-bold text-gray-800 dark:text-white mb-4 uppercase tracking-wide">Matriz de Acceso por Módulo</h3>
-        
-        <table class="w-full text-left border-collapse">
+      <div class="flex-1 min-h-0 overflow-auto">
+        <table class="w-full text-left border-collapse min-w-[620px]">
           <thead>
-            <tr class="border-b-2 border-gray-200 dark:border-gray-700">
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider w-2/5">Módulo del Sistema</th>
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Leer</th>
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Escribir</th>
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Borrar</th>
-              <!-- `roles_permisos.exportar` existe en BD desde schema.sql:122 y la
-                   matriz nunca lo mostró: se concedía o negaba sin que se viera. -->
-              <th class="py-3 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Exportar</th>
+            <tr class="bg-gray-50 dark:bg-gray-900">
+              <th scope="col" class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                Módulo
+              </th>
+              <th v-for="a in ACCIONES" :key="a" scope="col"
+                  class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-gray-500"
+                  :title="etiquetaDe(a).ayuda">
+                {{ etiquetaDe(a).titulo }}
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
-            <!-- Las cuatro columnas eran cuatro bloques idénticos copiados; al
-                 recorrer ACCIONES, añadir "exportar" fue una sola línea. -->
-            <tr v-for="mod in modulos" :key="mod.id" class="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
-              <td class="py-4 px-4">
-                <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ mod.label }}</span>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tr v-for="m in modulos" :key="m.dbId" class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+              <td class="px-5 py-3">
+                <div class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ m.label }}</div>
+                <div class="text-[10px] font-mono text-gray-400">{{ m.id }}</div>
               </td>
-              <td v-for="accion in ACCIONES" :key="accion" class="py-4 px-4 text-center">
-                <!-- `cursor-default`, no `cursor-pointer`: el toggle está disabled
-                     y prometer interacción que no existe es peor que no ofrecerla. -->
-                <label class="relative inline-block w-9 h-5 cursor-default" :title="'Solo lectura · ' + accion">
-                  <input type="checkbox" class="sr-only peer" :checked="tienePermiso(rolSeleccionado.id, mod.id, accion)" disabled>
-                  <div class="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
-                </label>
+              <td v-for="a in ACCIONES" :key="a" class="px-3 py-3 text-center">
+                <button type="button"
+                        @click="alternar(m, a)"
+                        :disabled="!puedeGestionar || enCurso(m, a)"
+                        :aria-pressed="marcado(m, a) ? 'true' : 'false'"
+                        :aria-label="etiquetaDe(a).titulo + ' en ' + m.label"
+                        class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition-colors
+                               focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600
+                               disabled:cursor-not-allowed"
+                        :class="marcado(m, a)
+                          ? 'bg-emerald-500 text-white hover:bg-emerald-600 disabled:hover:bg-emerald-500'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-300 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600'">
+                  <i v-if="enCurso(m, a)" class="fa-solid fa-circle-notch fa-spin text-[10px]" aria-hidden="true"></i>
+                  <i v-else class="fa-solid text-[10px]" :class="marcado(m, a) ? 'fa-check' : 'fa-minus'" aria-hidden="true"></i>
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!modulos.length">
+              <td :colspan="ACCIONES.length + 1" class="px-5 py-12 text-center text-gray-400">
+                <i class="fa-solid fa-layer-group text-3xl mb-3 block" aria-hidden="true"></i>
+                <p class="text-sm">No hay módulos en <span class="font-mono">permisos_modulos</span></p>
               </td>
             </tr>
           </tbody>
         </table>
-        
-        <div class="mt-6 flex items-start gap-3 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-          <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
-          <p class="text-xs text-blue-800 dark:text-blue-300">
-            Los permisos se aplican automáticamente a todos los usuarios asignados a este rol. Los cambios en los roles predeterminados (SuperAdmin, Admin, etc.) solo pueden ser realizados por un usuario con permisos de SuperAdministrador.
-          </p>
-        </div>
       </div>
     </div>
   </div>
+
+  <!-- MODAL: alta / edición -->
+  <ui-modal :mostrar="modalAbierto"
+            :titulo="formulario.id ? 'Editar rol' : 'Nuevo rol'"
+            icono="fa-solid fa-shield" tamano="sm"
+            @cerrar="cerrarModal">
+    <div class="space-y-4">
+      <ui-input v-model="formulario.nombre" etiqueta="Nombre" :requerido="true"
+                marcador="Jefatura de Distrito"
+                ayuda="Es lo que se muestra en la interfaz."></ui-input>
+
+      <ui-input v-model="formulario.codigo" etiqueta="Código" :requerido="true"
+                marcador="jefe_distrito"
+                :deshabilitado="formulario.es_sistema === true"
+                ayuda="Identificador interno que usan las políticas de seguridad. Minúsculas, números y guion bajo."></ui-input>
+
+      <ui-input v-model="formulario.descripcion" etiqueta="Descripción"
+                marcador="Qué puede hacer este rol"></ui-input>
+
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <input type="checkbox" v-model="formulario.activo"
+               class="rounded border-gray-300 text-brand-600 focus:ring-brand-500">
+        Rol activo
+      </label>
+
+      <p v-if="formulario.es_sistema" class="text-xs text-gray-500 dark:text-gray-400 flex items-start gap-2">
+        <i class="fa-solid fa-lock mt-0.5 shrink-0" aria-hidden="true"></i>
+        Es un rol de sistema: su código no se puede cambiar porque las políticas de la base lo referencian.
+      </p>
+
+      <p v-if="errorFormulario" class="text-xs text-rose-600 dark:text-rose-400">{{ errorFormulario }}</p>
+    </div>
+
+    <template #pie>
+      <ui-boton variante="fantasma" @click="cerrarModal">Cancelar</ui-boton>
+      <ui-boton :cargando="guardando" icono="fa-solid fa-check" @click="confirmarGuardado">
+        {{ formulario.id ? 'Guardar cambios' : 'Crear rol' }}
+      </ui-boton>
+    </template>
+  </ui-modal>
+
+  <!-- MODAL: confirmación de borrado -->
+  <ui-modal :mostrar="!!rolABorrar"
+            titulo="Eliminar rol"
+            icono="fa-solid fa-triangle-exclamation" color-icono="#e11d48" tamano="sm"
+            @cerrar="rolABorrar = null">
+    <p v-if="rolABorrar" class="text-sm text-gray-700 dark:text-gray-300">
+      Se eliminará el rol <strong>{{ rolABorrar.nombre }}</strong> y sus permisos asociados.
+      <span v-if="conteoDeRol(rolABorrar.id) > 0" class="block mt-3 text-rose-600 dark:text-rose-400">
+        Tiene {{ conteoDeRol(rolABorrar.id) }} usuario(s) asignado(s). La base rechazará el borrado
+        hasta que se reasignen a otro rol.
+      </span>
+      <span v-else class="block mt-3 text-gray-500">Esta acción no se puede deshacer.</span>
+    </p>
+
+    <template #pie>
+      <ui-boton variante="fantasma" @click="rolABorrar = null">Cancelar</ui-boton>
+      <ui-boton variante="peligro" :cargando="guardando" icono="fa-solid fa-trash" @click="confirmarBorrado">
+        Eliminar
+      </ui-boton>
+    </template>
+  </ui-modal>
 
 </div>

@@ -7,6 +7,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from '../../core/vue.
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useIntervenciones } from '../../stores/intervenciones.js';
+import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
 export default {
   setup() {
     const { irA } = useNavegacion();
@@ -291,9 +292,15 @@ export default {
     }
 
     // ── Cargar GeoJSON ─────────────────────────────────────────────────────────
-    function cargarDistritos() {
-      if (typeof window.getDistritosGeoJSON !== 'function') return [];
-      const geojson = window.getDistritosGeoJSON();
+    // Cartografía oficial actualizada, la misma que el Mapa en Vivo. El global
+    // `getDistritosGeoJSON()` queda como respaldo: si la descarga falla, es
+    // preferible el trazado antiguo a un cartograma sin polígonos.
+    async function cargarDistritos() {
+      const oficial = await cargarLimitesSSSur();
+      const geojson = oficial
+        || (typeof window.getDistritosGeoJSON === 'function' ? window.getDistritosGeoJSON() : null);
+      if (!geojson || !Array.isArray(geojson.features)) return [];
+
       return geojson.features.map((feat, idx) => {
         const name = feat.properties.nombre;
         const geom = feat.geometry;
@@ -321,7 +328,7 @@ export default {
       if (typeof cargarDenuncias === 'function') cargarDenuncias();
       if (typeof cargarIntervenciones === 'function') cargarIntervenciones();
 
-      nextTick(() => {
+      nextTick(async () => {
         try {
           mapa = L.map('carto-map', {
             center: [13.58059, -89.14238],
@@ -338,7 +345,11 @@ export default {
           // Control de zoom personalizado
           L.control.zoom({ position: 'bottomright' }).addTo(mapa);
 
-          zonas.value = cargarDistritos();
+          // `await` dentro de onMounted: el mapa ya está creado, solo faltan
+          // los polígonos. Sin él, `zonas.value` sería una promesa y el
+          // `forEach` de abajo reventaría con "zonas.value.forEach is not a
+          // function" dejando el cartograma en blanco.
+          zonas.value = await cargarDistritos();
 
           zonas.value.forEach(zona => {
             const poly = L.polygon(zona.coordsReal, {

@@ -2,6 +2,8 @@
 import { ref, onMounted, onUnmounted, nextTick } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
+import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
+import { leerVistaMapa, restaurarVistaMapa, vigilarVistaMapa } from '../../utils/vista-mapa-persistida.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { marcadorDenuncia } from '../../services/marcadores.js';
 import { getCategoriasPorDepartamento } from '../../utils/categorias-denuncias.js';
@@ -21,7 +23,12 @@ export default {
     let capaLimitesRef = null;
     let capaDistritosRef = null;
     let circuloRadioFiltro = null;
-    const estiloTile = ref('google');
+    // Arranca en satélite: sobre la foto aérea se ven caminos, veredas y
+    // construcciones que el callejero de OSM no tiene mapeadas, que es
+    // justo lo que hace falta para ubicar una incidencia en zona rural.
+    const CLAVE_VISTA_MAPA = 'poblacion-mapa-distrito';
+    let _dejarDeVigilarVista = null;
+    const estiloTile = ref(leerVistaMapa(CLAVE_VISTA_MAPA)?.estilo || 'satellite');
     
     // Estado del filtro de radio
     const radioSeleccionado = ref(parseFloat(localStorage.getItem('radio_filtro_mapa') || '2'));
@@ -46,7 +53,11 @@ export default {
         zoomControl: true,
         zoomAnimation: false,
         markerZoomAnimation: false
-      }).setView([13.61229, -89.17036], 13);
+      });
+      if (!restaurarVistaMapa(CLAVE_VISTA_MAPA, mapa.value)) {
+        mapa.value.setView([13.61229, -89.17036], 13);
+      }
+      _dejarDeVigilarVista = vigilarVistaMapa(CLAVE_VISTA_MAPA, mapa.value, () => estiloTile.value);
       
       // Tile base (Google Maps por defecto)
       capaBase.value = construirTile(estiloTile.value).addTo(mapa.value);
@@ -70,26 +81,19 @@ export default {
       cargarLimitesMunicipio();
     }
 
-    function cargarLimitesMunicipio() {
+    // Cartografía oficial (`limites-sssur.geojson`), la misma que el Centro de
+    // Monitoreo y la app de campo. Los 5 distritos SON el municipio, así que
+    // una sola capa sustituye a las dos que se leían de los globales antiguos.
+    async function cargarLimitesMunicipio() {
       if (!mapa.value) return;
 
       const color = obtenerColorLimites();
 
       try {
-        const limites = getMunicipalityGeoJSON();
-        if (limites && limites.features) {
-          if (capaLimitesRef) mapa.value.removeLayer(capaLimitesRef);
-          capaLimitesRef = L.geoJSON(limites, {
-            style: {
-              color,
-              weight: 2.5,
-              opacity: 0.9,
-              fillOpacity: 0
-            }
-          }).addTo(mapa.value);
-        }
+        const distritos = await cargarLimitesSSSur();
+        // El usuario pudo salir de la vista mientras se descargaba.
+        if (!mapa.value) return;
 
-        const distritos = getDistritosGeoJSON();
         if (distritos && distritos.features) {
           if (capaDistritosRef) mapa.value.removeLayer(capaDistritosRef);
           capaDistritosRef = L.geoJSON(distritos, {
@@ -100,7 +104,9 @@ export default {
               fillOpacity: 0
             },
             onEachFeature: (feature, layer) => {
-              const nombre = feature.properties?.name || feature.properties?.NOMBRE || feature.properties?.nombre;
+              const nombre = feature.properties?.nombre;
+              // bindPopup y no tooltip sticky: el tooltip lanzaba error al
+              // desmontar el mapa.
               if (nombre) layer.bindPopup(`<b style="font-family:'Inter',sans-serif;font-size:12px;">${nombre}</b>`);
             }
           }).addTo(mapa.value);
@@ -272,6 +278,9 @@ export default {
     });
 
     onUnmounted(() => {
+      // Sin esto, el vigilante sigue escuchando `moveend` sobre un mapa ya
+      // destruido y escribiendo en localStorage desde una vista que no existe.
+      if (_dejarDeVigilarVista) { _dejarDeVigilarVista(); _dejarDeVigilarVista = null; }
       if (mapa.value) {
         if (capaLimitesRef) { mapa.value.removeLayer(capaLimitesRef); capaLimitesRef = null; }
         if (capaDistritosRef) { mapa.value.removeLayer(capaDistritosRef); capaDistritosRef = null; }

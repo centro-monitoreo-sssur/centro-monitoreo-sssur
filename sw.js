@@ -1,6 +1,40 @@
 const CACHE_VERSION = 'v1.1.0';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
+// ── Caché de teselas del mapa ───────────────────────────────────────────────
+//
+// Guarda ÚNICAMENTE las teselas que el usuario ya vio al navegar. No hay
+// descarga masiva de zonas, y es deliberado: los términos de uso de Google y la
+// política de OpenStreetMap prohíben precargar o almacenar cartografía en bloque.
+// Esto es la caché normal del navegador hecha persistente, nada más.
+//
+// Para qué sirve: la cuadrilla trabaja una y otra vez sobre las mismas zonas.
+// La primera visita necesita señal; a partir de ahí, esa área se ve sin datos.
+// (Ojo: esto NO mejora la precisión del GPS, que es satelital y funciona sin
+// internet. Lo que arregla es no ver cuadros grises bajo tu propia posición.)
+//
+// Va en una caché con nombre propio, fuera del prefijo `cm-sssur-cache-`, para
+// que un despliegue nuevo NO borre el mapa acumulado: perderlo obligaría a
+// recorrer otra vez todo el territorio con señal.
+const CACHE_TESELAS = 'cm-sssur-teselas-v1';
+
+// Tope por número de teselas, no por bytes: la Cache API no reporta el tamaño
+// de cada entrada. ~1200 teselas cubren de sobra las zonas de trabajo
+// habituales de una cuadrilla sin comerse el disco del teléfono.
+const MAX_TESELAS = 1200;
+// Se poda de golpe para no ejecutar el barrido en cada tesela nueva.
+const PODA_TESELAS = 200;
+
+const HOSTS_TESELAS = [
+  'mt0.google.com', 'mt1.google.com', 'mt2.google.com', 'mt3.google.com',
+  'basemaps.cartocdn.com',
+  'tile.openstreetmap.org',
+  'server.arcgisonline.com',
+];
+
+const esTesela = (url) =>
+  HOSTS_TESELAS.some((h) => url.hostname === h || url.hostname.endsWith('.' + h));
+
 // Recursos estáticos mínimos requeridos para la app offline.
 // Hay un manifiesto por contexto: sin ellos, un empleado que instale la PWA de
 // campo la abriría en el Centro de Monitoreo (ver el script en línea de
@@ -108,6 +142,53 @@ function cachePrimero(request) {
   });
 }
 
+/**
+ * Elimina las teselas más antiguas cuando se supera el tope.
+ *
+ * `cache.keys()` devuelve las claves en orden de inserción, así que esto es
+ * FIFO y no LRU estricto: una tesela muy usada puede caer si se insertó pronto.
+ * Un LRU real exigiría reescribir la entrada en cada acierto —un `put` por cada
+ * tesela mostrada— y eso castiga el rendimiento del mapa más de lo que aporta.
+ */
+async function podarTeselas() {
+  try {
+    const cache = await caches.open(CACHE_TESELAS);
+    const claves = await cache.keys();
+    if (claves.length <= MAX_TESELAS) return;
+    const sobran = claves.length - MAX_TESELAS + PODA_TESELAS;
+    await Promise.all(claves.slice(0, sobran).map((k) => cache.delete(k)));
+    console.log(`[Service Worker] Podadas ${sobran} teselas antiguas.`);
+  } catch (e) { /* la caché es un extra, nunca un bloqueo */ }
+}
+
+/**
+ * Teselas: caché primero. Una tesela de un z/x/y dado es el mismo dibujo
+ * durante meses, así que revalidarla en cada movimiento del mapa solo gastaría
+ * datos móviles sin cambiar lo que se ve.
+ *
+ * Se aceptan respuestas opacas (`type: 'opaque'`): los servidores de teselas no
+ * envían CORS, así que el SW no puede leer su estado. Se guardan a ciegas —es
+ * lo que permite servirlas luego sin señal— asumiendo que el navegador infla su
+ * consumo de cuota al contabilizarlas. Por eso el tope es conservador.
+ */
+function teselaPrimero(request) {
+  return caches.open(CACHE_TESELAS).then((cache) =>
+    cache.match(request).then((cacheada) => {
+      if (cacheada) return cacheada;
+      return fetch(request).then((respuesta) => {
+        // `status 0` es lo normal en una respuesta opaca; un error de red
+        // rechaza la promesa y cae al `catch`.
+        if (respuesta && (respuesta.ok || respuesta.type === 'opaque')) {
+          cache.put(request, respuesta.clone())
+            .then(podarTeselas)
+            .catch(() => { /* cuota llena o modo incógnito */ });
+        }
+        return respuesta;
+      }).catch(() => cacheada);
+    })
+  );
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
@@ -117,9 +198,16 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Nunca interceptar Supabase ni orígenes externos (CDN de Vue, Tailwind,
-  // Leaflet, teselas de mapa). Sus respuestas son opacas o `cors` y cachearlas
-  // aquí no aporta nada.
+  // Teselas del mapa: se atienden ANTES del corte por origen externo, que es
+  // justo lo que impedía cachearlas.
+  if (esTesela(url)) {
+    event.respondWith(teselaPrimero(request));
+    return;
+  }
+
+  // Nunca interceptar Supabase ni el resto de orígenes externos (CDN de Vue,
+  // Tailwind, Leaflet). Sus respuestas son opacas o `cors` y cachearlas aquí no
+  // aporta nada.
   if (url.hostname.includes('supabase.co')) return;
   if (url.origin !== self.location.origin) return;
 
@@ -145,7 +233,44 @@ self.addEventListener('fetch', (event) => {
 
 // Mensajería con la app principal
 self.addEventListener('message', (event) => {
+  const responder = (datos) => event.ports?.[0]?.postMessage(datos);
+
   if (event.data === 'GET_VERSION') {
-    event.ports[0].postMessage({ version: CACHE_VERSION });
+    responder({ version: CACHE_VERSION });
+    return;
+  }
+
+  // Estado del mapa guardado, para poder mostrarlo en Configuración. Sin un
+  // dato visible, el almacenamiento acumulado del teléfono es una caja negra
+  // que nadie sabe de dónde sale ni cómo vaciar.
+  if (event.data === 'ESTADO_TESELAS') {
+    event.waitUntil((async () => {
+      try {
+        const cache = await caches.open(CACHE_TESELAS);
+        const claves = await cache.keys();
+        // `navigator.storage.estimate()` da el consumo de TODO el origen, no
+        // solo de esta caché; se envía como referencia, no como dato exacto.
+        const estimacion = navigator.storage?.estimate
+          ? await navigator.storage.estimate()
+          : null;
+        responder({
+          teselas: claves.length,
+          maximo: MAX_TESELAS,
+          usoTotalBytes: estimacion?.usage ?? null,
+          cuotaBytes: estimacion?.quota ?? null,
+        });
+      } catch (e) {
+        responder({ teselas: 0, maximo: MAX_TESELAS, error: e.message });
+      }
+    })());
+    return;
+  }
+
+  if (event.data === 'LIMPIAR_TESELAS') {
+    event.waitUntil(
+      caches.delete(CACHE_TESELAS)
+        .then((ok) => responder({ ok }))
+        .catch((e) => responder({ ok: false, error: e.message }))
+    );
   }
 });

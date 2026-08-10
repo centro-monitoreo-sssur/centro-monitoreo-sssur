@@ -5,6 +5,8 @@ import { L } from '../../core/libs.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { marcadorDenuncia } from '../../services/marcadores.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+import { cargarLimitesSSSur, cargarColoniasSanMarcos } from '../../services/geo-json/cargador.js';
+import { leerVistaMapa, restaurarVistaMapa, vigilarVistaMapa } from '../../utils/vista-mapa-persistida.js';
 
 export default {
   setup() {
@@ -13,13 +15,31 @@ export default {
     
     const mapa = ref(null);
     const mostrarMenuCapas = ref(false);
-    const estiloTile = ref('google');
+    // Arranca en satélite: sobre la foto aérea se ven caminos, veredas y
+    // construcciones que el callejero de OSM no tiene mapeadas, que es
+    // justo lo que hace falta para ubicar una incidencia en zona rural.
+    const CLAVE_VISTA_MAPA = 'empleado-mapa-vivo';
+    let _dejarDeVigilarVista = null;
+    const estiloTile = ref(leerVistaMapa(CLAVE_VISTA_MAPA)?.estilo || 'satellite');
     const capaBase = ref(null);
     let marcadorGPS = null;
     let radioGPS = null;
     let marcadoresLayer = null;
     let capaLimitesRef = null;
     let capaDistritosRef = null;
+    // Capa exclusiva de la app de campo: las 153 colonias de San Marcos.
+    let capaColoniasRef = null;
+
+    // Estado de la petición de GPS, para que el botón informe en vez de
+    // parecer que no hace nada mientras el dispositivo resuelve la posición.
+    const cargandoUbicacion = ref(false);
+    const ubicacionActiva = ref(false);
+    const precisionUbicacion = ref(null);
+    const errorUbicacion = ref('');
+    // Modo seguir: el mapa se recentra solo mientras la cuadrilla se desplaza.
+    // Es lo que evita tener que pulsar "Mi ubicación" en cada esquina.
+    const siguiendo = ref(false);
+    let _watchId = null;
 
     const { tiposDenuncia } = useCatalogos();
 
@@ -39,9 +59,15 @@ export default {
         zoomControl: true,
         zoomAnimation: false,
         markerZoomAnimation: false
-      }).setView([13.61229, -89.17036], 13);
-      
-      // Tile base (Google Maps)
+      });
+      // Vuelve a la zona donde estaba trabajando la cuadrilla. Solo si no hay
+      // nada recordado se encuadra el municipio.
+      if (!restaurarVistaMapa(CLAVE_VISTA_MAPA, mapa.value)) {
+        mapa.value.setView([13.61229, -89.17036], 13);
+      }
+      _dejarDeVigilarVista = vigilarVistaMapa(CLAVE_VISTA_MAPA, mapa.value, () => estiloTile.value);
+
+      // Tile base
       capaBase.value = construirTile(estiloTile.value).addTo(mapa.value);
       
       // Dibujar distritos/limites
@@ -53,8 +79,14 @@ export default {
       // Forzar re-cálculo del tamaño para el padding del tab bar
       setTimeout(() => mapa.value && mapa.value.invalidateSize(), 150);
 
-      // Intentar obtener ubicación GPS real
-      obtenerUbicacion();
+      // NO se pide la ubicación al abrir la vista. Pedir el GPS sin que nadie
+      // lo haya solicitado dispara el permiso del navegador nada más entrar
+      // —y en móvil, si se deniega una vez, el navegador lo recuerda y deja de
+      // preguntar—, consume batería y mueve el mapa por su cuenta. Se pide solo
+      // cuando el empleado pulsa "Mi ubicación".
+      //
+      // El mapa arranca encuadrado en el municipio, que es una referencia útil
+      // de por sí.
     }
     
     const obtenerColorLimites = () => estiloTile.value === 'satellite' ? '#ffffff' : '#1d4ed8';
@@ -63,26 +95,23 @@ export default {
       cargarLimitesMunicipio();
     }
 
-    function cargarLimitesMunicipio() {
+    // Cartografía oficial (`limites-sssur.geojson`), la misma que usan el Mapa
+    // en Vivo del Centro de Monitoreo y el Cartograma. Antes se leían los dos
+    // globales de limites-municipio.js / limites-poligonos.js, con el trazado
+    // anterior: campo y central dibujaban fronteras distintas del municipio.
+    //
+    // Ya no hacen falta dos capas. Los 5 distritos SON el municipio: su unión
+    // es la frontera exterior, así que una sola capa da ambas cosas.
+    async function cargarLimitesMunicipio() {
       if (!mapa.value) return;
 
       const color = obtenerColorLimites();
 
       try {
-        const limites = getMunicipalityGeoJSON();
-        if (limites && limites.features) {
-          if (capaLimitesRef) mapa.value.removeLayer(capaLimitesRef);
-          capaLimitesRef = L.geoJSON(limites, {
-            style: {
-              color,
-              weight: 2.5,
-              opacity: 0.9,
-              fillOpacity: 0
-            }
-          }).addTo(mapa.value);
-        }
+        const distritos = await cargarLimitesSSSur();
+        // El usuario pudo salir de la vista mientras descargaba.
+        if (!mapa.value) return;
 
-        const distritos = getDistritosGeoJSON();
         if (distritos && distritos.features) {
           if (capaDistritosRef) mapa.value.removeLayer(capaDistritosRef);
           capaDistritosRef = L.geoJSON(distritos, {
@@ -93,8 +122,40 @@ export default {
               fillOpacity: 0
             },
             onEachFeature: (feature, layer) => {
-              const nombre = feature.properties?.name || feature.properties?.NOMBRE || feature.properties?.nombre;
+              const nombre = feature.properties?.nombre;
               if (nombre) layer.bindPopup(`<b style="font-family:'Inter',sans-serif;font-size:12px;">${nombre}</b>`);
+            }
+          }).addTo(mapa.value);
+        }
+
+        // Colonias de San Marcos: solo en la app de campo. Es el detalle que
+        // necesita quien está en la calle para nombrar dónde está; en la
+        // consola de dirección serían 153 polígonos de ruido sobre los pines.
+        const colonias = await cargarColoniasSanMarcos();
+        if (!mapa.value) return;
+
+        if (colonias && colonias.features) {
+          if (capaColoniasRef) mapa.value.removeLayer(capaColoniasRef);
+          capaColoniasRef = L.geoJSON(colonias, {
+            style: {
+              color: '#7c3aed',
+              weight: 1,
+              opacity: 0.65,
+              fillColor: '#7c3aed',
+              fillOpacity: 0.06
+            },
+            onEachFeature: (feature, layer) => {
+              const p = feature.properties || {};
+              const viviendas = p.viviendas
+                ? `<div style="font-size:11px;opacity:.7;">${p.viviendas} viviendas</div>`
+                : '';
+              layer.bindPopup(
+                `<b style="font-family:'Inter',sans-serif;font-size:12px;">${p.nombre}</b>${viviendas}`
+              );
+              // Realce al tocar: con 153 polígonos pequeños, sin esto no se
+              // distingue cuál se ha seleccionado en una pantalla de móvil.
+              layer.on('click', () => layer.setStyle({ fillOpacity: 0.22, weight: 2 }));
+              layer.on('popupclose', () => layer.setStyle({ fillOpacity: 0.06, weight: 1 }));
             }
           }).addTo(mapa.value);
         }
@@ -123,44 +184,107 @@ export default {
       });
     }
 
-    function obtenerUbicacion() {
+    /**
+     * Dibuja la posición y su círculo de precisión.
+     * @param {boolean} recentrar mover el mapa al punto. En modo seguir se hace
+     *        con `panTo` para no cambiar el zoom que el usuario haya elegido.
+     */
+    function pintarPosicion(lat, lng, precision, recentrar) {
+      if (!mapa.value) return;
+
+      if (marcadorGPS) mapa.value.removeLayer(marcadorGPS);
+      if (radioGPS) mapa.value.removeLayer(radioGPS);
+
+      radioGPS = L.circle([lat, lng], {
+        radius: precision,
+        color: '#10b981', fillColor: '#10b981', fillOpacity: 0.15, weight: 1,
+      }).addTo(mapa.value);
+
+      marcadorGPS = L.circleMarker([lat, lng], {
+        radius: 8, color: '#fff', weight: 2, fillColor: '#10b981', fillOpacity: 1,
+      }).addTo(mapa.value);
+
+      if (recentrar) {
+        if (siguiendo.value) mapa.value.panTo([lat, lng], { animate: true, duration: 0.5 });
+        else mapa.value.setView([lat, lng], 16);
+      }
+
+      precisionUbicacion.value = Math.round(precision);
+      ubicacionActiva.value = true;
+      errorUbicacion.value = '';
+    }
+
+    /**
+     * Alterna el seguimiento continuo. Tres estados con el mismo botón:
+     * sin ubicación → ubicación puntual → seguimiento → apagado.
+     */
+    function alternarSeguimiento() {
+      if (siguiendo.value) { detenerSeguimiento(); return; }
       if (!navigator.geolocation || !mapa.value) return;
-      
+
+      siguiendo.value = true;
+      _watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          pintarPosicion(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, true);
+          cargandoUbicacion.value = false;
+        },
+        (err) => {
+          // Un error puntual del GPS no apaga el seguimiento: en campo es
+          // normal perder el arreglo un momento al pasar bajo techo.
+          if (err.code === 1) { detenerSeguimiento(); errorUbicacion.value = 'Permiso de ubicación denegado.'; }
+          else console.warn('GPS (seguimiento):', err.message);
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+      );
+
+      // Si la persona arrastra el mapa a mano, quiere mirar otra cosa: seguir
+      // recentrando encima sería pelearse con ella.
+      mapa.value.once('dragstart', detenerSeguimiento);
+    }
+
+    function detenerSeguimiento() {
+      if (_watchId !== null) { navigator.geolocation.clearWatch(_watchId); _watchId = null; }
+      siguiendo.value = false;
+    }
+
+    function obtenerUbicacion() {
+      if (!mapa.value) return;
+      if (!navigator.geolocation) {
+        errorUbicacion.value = 'Este dispositivo no permite geolocalización.';
+        return;
+      }
+
+      cargandoUbicacion.value = true;
+      errorUbicacion.value = '';
+
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           const accuracy = pos.coords.accuracy;
           
-          if (marcadorGPS) mapa.value.removeLayer(marcadorGPS);
-          if (radioGPS) mapa.value.removeLayer(radioGPS);
-          
-          radioGPS = L.circle([lat, lng], {
-            radius: accuracy,
-            color: '#10b981',
-            fillColor: '#10b981',
-            fillOpacity: 0.15,
-            weight: 1
-          }).addTo(mapa.value);
-          
-          marcadorGPS = L.circleMarker([lat, lng], {
-            radius: 8,
-            color: '#fff',
-            weight: 2,
-            fillColor: '#10b981',
-            fillOpacity: 1
-          }).addTo(mapa.value);
-          
-          mapa.value.setView([lat, lng], 16);
+          pintarPosicion(lat, lng, accuracy, true);
+          cargandoUbicacion.value = false;
         },
         (err) => {
+          cargandoUbicacion.value = false;
+          // Antes se devolvía el mapa a las coordenadas por defecto: quien
+          // estaba mirando una zona la perdía por un fallo de GPS que no había
+          // provocado. Ahora el mapa se queda donde está y solo se avisa.
+          errorUbicacion.value =
+            err.code === 1 ? 'Permiso de ubicación denegado. Actívalo en los ajustes del navegador.'
+            : err.code === 3 ? 'El GPS tardó demasiado. Inténtalo de nuevo en un punto despejado.'
+            : 'No se pudo obtener la ubicación.';
           console.warn('GPS Error:', err);
-          // Fallback a coordenadas por defecto
-          mapa.value.setView([13.61229, -89.17036], 13);
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        // 15 s en vez de 5: en campo, con señal débil y bajo techo, el primer
+        // arreglo de GPS rara vez llega en cinco segundos y el timeout corto
+        // hacía fallar la petición justo cuando más falta hace.
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
       );
     }
+
+    function limpiarErrorUbicacion() { errorUbicacion.value = ''; }
 
     const construirTile = (estilo) => {
       if (estilo === 'cartomap') {
@@ -201,9 +325,16 @@ export default {
     });
 
     onUnmounted(() => {
+      // Sin esto, el vigilante sigue escuchando `moveend` sobre un mapa ya
+      // destruido y escribiendo en localStorage desde una vista que no existe.
+      if (_dejarDeVigilarVista) { _dejarDeVigilarVista(); _dejarDeVigilarVista = null; }
+      // El watch de GPS sobrevive al componente si no se cancela: seguiría
+      // consumiendo batería con la vista cerrada.
+      detenerSeguimiento();
       if (mapa.value) {
         if (capaLimitesRef) { mapa.value.removeLayer(capaLimitesRef); capaLimitesRef = null; }
         if (capaDistritosRef) { mapa.value.removeLayer(capaDistritosRef); capaDistritosRef = null; }
+        if (capaColoniasRef) { mapa.value.removeLayer(capaColoniasRef); capaColoniasRef = null; }
         if (marcadorGPS) { mapa.value.removeLayer(marcadorGPS); marcadorGPS = null; }
         if (radioGPS) { mapa.value.removeLayer(radioGPS); radioGPS = null; }
         if (marcadoresLayer) { mapa.value.removeLayer(marcadoresLayer); marcadoresLayer = null; }
@@ -214,7 +345,8 @@ export default {
 
     return {
       irA,
-      obtenerUbicacion,
+      obtenerUbicacion, cargandoUbicacion, ubicacionActiva, precisionUbicacion,
+      errorUbicacion, limpiarErrorUbicacion, siguiendo, alternarSeguimiento,
       mostrarMenuCapas,
       estiloTile,
       cambiarTile

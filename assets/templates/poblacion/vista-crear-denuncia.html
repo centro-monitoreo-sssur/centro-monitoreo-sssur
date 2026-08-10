@@ -150,9 +150,9 @@
 
             <!-- Botón capas -->
             <button @click="mostrarMenuCapas = !mostrarMenuCapas"
-              class="w-12 h-[46px] rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-95 border"
-              :class="mostrarMenuCapas ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'">
-              <i class="fa-solid fa-layer-group text-sm"></i>
+              class="toque-comodo w-12 h-[46px] rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-95 border"
+              :class="mostrarMenuCapas ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'" aria-label="Capas del mapa">
+              <i aria-hidden="true" class="fa-solid fa-layer-group text-sm"></i>
             </button>
           </div>
 
@@ -352,8 +352,8 @@
               </div>
               <!-- Botón eliminar -->
               <button @click="removerFotografia(index)"
-                class="absolute top-2 right-2 w-7 h-7 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-red-500 active:scale-95 transition-all duration-200 shadow-sm">
-                <i class="fa-solid fa-xmark text-[10px]"></i>
+                class="toque-comodo absolute top-2 right-2 w-7 h-7 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-red-500 active:scale-95 transition-all duration-200 shadow-sm" aria-label="Cerrar">
+                <i aria-hidden="true" class="fa-solid fa-xmark text-[10px]"></i>
               </button>
             </div>
           </div>
@@ -410,8 +410,8 @@
   <div v-if="pasoActual === 2"
     class="fixed bottom-4 left-0 right-0 z-40 px-4 pb-1 pt-3 bg-gradient-to-t from-[#f8f9fb] via-[#f8f9fb]/90 to-transparent flex gap-2.5">
     <button @click="anteriorPaso"
-      class="w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm">
-      <i class="fa-solid fa-arrow-left text-sm"></i>
+      class="toque-comodo w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm" aria-label="Volver">
+      <i aria-hidden="true" class="fa-solid fa-arrow-left text-sm"></i>
     </button>
     <button @click="siguientePaso" :disabled="!coordenadasSeleccionadas"
       class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="coordenadasSeleccionadas
@@ -426,8 +426,8 @@
   <div v-if="pasoActual === 3"
     class="fixed bottom-4 left-0 right-0 z-40 px-4 pb-1 pt-3 bg-gradient-to-t from-[#f8f9fb] via-[#f8f9fb]/90 to-transparent flex gap-2.5">
     <button @click="anteriorPaso"
-      class="w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm">
-      <i class="fa-solid fa-arrow-left text-sm"></i>
+      class="toque-comodo w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm" aria-label="Volver">
+      <i aria-hidden="true" class="fa-solid fa-arrow-left text-sm"></i>
     </button>
     <button @click="guardarDenuncia" :disabled="formulario.descripcion.length < 10"
       class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="formulario.descripcion.length >= 10

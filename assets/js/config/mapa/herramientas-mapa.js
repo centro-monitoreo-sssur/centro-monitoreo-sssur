@@ -19,7 +19,11 @@ export const TILES = [
   { id: 'osm',       nombre: 'OpenStreetMap', icono: 'fa-map',             descripcion: 'Cartografía comunitaria' },
 ];
 
-export const TILE_POR_DEFECTO = 'google';
+// Satélite de arranque: sobre la foto aérea se distinguen caminos y
+// construcciones que el callejero no tiene, y es la referencia que pide el
+// personal de campo. Configuración → Mapa puede sobrescribirlo por
+// instalación (`cfgMapa.estilo`).
+export const TILE_POR_DEFECTO = 'satellite';
 
 /**
  * Herramientas conmutables del panel de capas.

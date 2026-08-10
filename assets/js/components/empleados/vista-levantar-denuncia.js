@@ -11,6 +11,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
+import { cargarLimitesSSSur, cargarColoniasSanMarcos } from '../../services/geo-json/cargador.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
 import { almacen } from '../../core/almacen.js';
@@ -129,13 +130,37 @@ export default {
     const marcador = ref(null);
     const coordenadasSeleccionadas = ref('');
     const mostrarMenuCapas = ref(false);
-    const estiloTile = ref('google');
+    // Arranca en satélite: sobre la foto aérea se ven caminos, veredas y
+    // construcciones que el callejero de OSM no tiene mapeadas, que es
+    // justo lo que hace falta para ubicar una incidencia en zona rural.
+    const estiloTile = ref('satellite');
     const capaBase = ref(null);
     const ubicacionActiva = ref(false);
     const marcadorUbicacion = ref(null);
     const circuloPrecision = ref(null);
     const cargandoUbicacion = ref(false);
     const precisionUbicacion = ref(null);
+
+    // Por encima de este radio, el punto ya no identifica un lugar concreto:
+    // ±100 m es una manzana entera, y manda a la cuadrilla a buscar el bache
+    // por la cuadra equivocada. No se bloquea el envío —a veces no hay mejor
+    // señal disponible— pero se exige confirmación explícita.
+    const PRECISION_DUDOSA_M = 100;
+
+    // ¿El punto que se va a reportar viene del GPS o lo colocó la persona?
+    //
+    // El aviso de precisión solo tiene sentido en el primer caso. Si el
+    // empleado arrastró el mapa hasta el bache que está viendo, su dedo es más
+    // fiable que cualquier lectura del receptor, y bloquearle el envío por un
+    // ±150 m que ya no describe ese punto es sencillamente incorrecto.
+    const puntoDesdeGPS = ref(false);
+
+    const precisionDudosa = computed(() =>
+      puntoDesdeGPS.value &&
+      precisionUbicacion.value !== null &&
+      precisionUbicacion.value > PRECISION_DUDOSA_M
+    );
+    const confirmoPrecision = ref(false);
 
     // Estado de validación de jurisdicción
     const validacionJurisdiccion = ref({ dentro: true, mensaje: '' });
@@ -178,38 +203,98 @@ export default {
     // Capas de límites
     let capaLimitesRef = null;
     let capaDistritosRef = null;
+    // Capa exclusiva de la app de campo: las 153 colonias de San Marcos.
+    let capaColoniasRef = null;
+    // Cartografía ya descargada, para uso síncrono dentro de los handlers de
+    // Leaflet. La rellena `cargarLimitesMunicipio()`. La validación de
+    // jurisdicción DEBE comprobar contra el mismo trazado que se dibuja: antes
+    // usaba los globales antiguos y el empleado veía su punto dentro de la
+    // frontera pintada mientras el sistema lo daba por fuera.
+    let limitesCache = null;
+
 
     const obtenerColorLimites = () => estiloTile.value === 'satellite' ? '#ffffff' : '#1d4ed8';
 
-    const cargarLimitesMunicipio = () => {
+        // Cartografía oficial (`limites-sssur.geojson`), la misma que el Centro de
+    // Monitoreo. Antes se leían los globales de limites-municipio.js y
+    // limites-poligonos.js, con el trazado anterior: campo y central dibujaban
+    // fronteras distintas. Los 5 distritos SON el municipio, así que una sola
+    // capa sustituye a las dos que había.
+    const cargarLimitesMunicipio = async () => {
       if (!mapa.value) return;
       const color = obtenerColorLimites();
       try {
-        if (typeof window.getMunicipalityGeoJSON === 'function') {
-          const limites = window.getMunicipalityGeoJSON();
-          if (limites && limites.features) {
-            if (capaLimitesRef) mapa.value.removeLayer(capaLimitesRef);
-            capaLimitesRef = L.geoJSON(limites, {
-              style: { color, weight: 2.5, opacity: 0.9, fillOpacity: 0 }
-            }).addTo(mapa.value);
-          }
+        const distritos = await cargarLimitesSSSur();
+        limitesCache = distritos;
+        // El usuario pudo salir de la vista mientras se descargaba.
+        if (!mapa.value) return;
+
+        if (distritos && distritos.features) {
+          if (capaDistritosRef) mapa.value.removeLayer(capaDistritosRef);
+          capaDistritosRef = L.geoJSON(distritos, {
+            style: {
+              color,
+              weight: 2.5,
+              opacity: 0.9,
+              fillOpacity: 0
+            },
+            onEachFeature: (feature, layer) => {
+              const nombre = feature.properties?.nombre;
+              // bindPopup y no tooltip sticky: el tooltip lanzaba error al
+              // desmontar el mapa.
+              if (nombre) layer.bindPopup(`<b style="font-family:'Inter',sans-serif;font-size:12px;">${nombre}</b>`);
+            }
+          }).addTo(mapa.value);
         }
-        if (typeof window.getDistritosGeoJSON === 'function') {
-          const distritos = window.getDistritosGeoJSON();
-          if (distritos && distritos.features) {
-            if (capaDistritosRef) mapa.value.removeLayer(capaDistritosRef);
-            capaDistritosRef = L.geoJSON(distritos, {
-              style: { color, weight: 2.5, opacity: 0.9, fillOpacity: 0 },
-              onEachFeature: (feature, layer) => {
-                const nombre = feature.properties?.name || feature.properties?.NOMBRE || feature.properties?.nombre;
-                if (nombre) layer.bindPopup(`<b style="font-family:'Inter',sans-serif;font-size:12px;">${nombre}</b>`);
-              }
-            }).addTo(mapa.value);
-          }
+
+        // Colonias de San Marcos: capa exclusiva de la app de campo. Es el
+        // detalle que necesita quien está en la calle para nombrar dónde está.
+        const colonias = await cargarColoniasSanMarcos();
+        if (!mapa.value) return;
+
+        if (colonias && colonias.features) {
+          if (capaColoniasRef) mapa.value.removeLayer(capaColoniasRef);
+          capaColoniasRef = L.geoJSON(colonias, {
+            style: { color: '#7c3aed', weight: 1, opacity: 0.65, fillColor: '#7c3aed', fillOpacity: 0.06 },
+            onEachFeature: (feature, layer) => {
+              const p = feature.properties || {};
+              const viviendas = p.viviendas ? `<div style="font-size:11px;opacity:.7;">${p.viviendas} viviendas</div>` : '';
+              layer.bindPopup(`<b style="font-family:'Inter',sans-serif;font-size:12px;">${p.nombre}</b>${viviendas}`);
+            }
+          }).addTo(mapa.value);
         }
       } catch (error) {
         console.error('Error al cargar límites:', error);
       }
+    };
+
+    /**
+     * Garantiza que el paso 2 tenga un mapa VIVO.
+     *
+     * El bloque del paso 2 se pinta con `v-if`, así que al avanzar al paso 3 su
+     * nodo del DOM se destruye. Al volver, `mapa.value` seguía apuntando a un
+     * contenedor que ya no está en el documento: `invalidateSize()` recalculaba
+     * sobre un elemento huérfano y el mapa se veía en blanco.
+     *
+     * Se detecta comparando contra el documento y, si el contenedor murió, se
+     * destruye el mapa y se rehace sobre el nodo nuevo.
+     */
+    const asegurarMapaPaso2 = () => {
+      const contenedorVivo = mapa.value && document.body.contains(mapa.value.getContainer());
+
+      if (mapa.value && !contenedorVivo) {
+        mapa.value.remove();          // libera listeners del mapa anterior
+        mapa.value = null;
+        marcador.value = null;
+        marcadorUbicacion.value = null;
+        circuloPrecision.value = null;
+        capaLimitesRef = null;
+        capaDistritosRef = null;
+        capaColoniasRef = null;
+      }
+
+      if (!mapa.value) inicializarMapa();
+      else mapa.value.invalidateSize({ pan: false });
     };
 
     const inicializarMapa = () => {
@@ -246,10 +331,12 @@ export default {
         const lng = center.lng;
 
         // Validar jurisdicción
-        const limitesMunicipio = typeof window.getMunicipalityGeoJSON === 'function'
-          ? window.getMunicipalityGeoJSON() : null;
-        const limitesPoligonos = typeof window.getDistritosGeoJSON === 'function'
-          ? window.getDistritosGeoJSON() : null;
+        // Se usa la copia ya resuelta, no `await`: este handler se dispara en
+        // CADA píxel de arrastre del mapa. Un `await` aquí encadenaría cientos
+        // de microtareas y las respuestas podrían llegar desordenadas, dejando
+        // el aviso de jurisdicción de una posición anterior.
+        const limitesMunicipio = limitesCache;
+        const limitesPoligonos = limitesCache;
 
         let validacion = { dentro: true, mensaje: '' };
         if (typeof window.validarJurisdiccion === 'function' && limitesMunicipio) {
@@ -282,6 +369,12 @@ export default {
           circuloPrecision.value = null;
         }
         ubicacionActiva.value = false;
+        // El punto pasa a ser una decisión de la persona, no una lectura del
+        // receptor: desde aquí la precisión del GPS ya no describe este lugar y
+        // no debe condicionar el envío.
+        puntoDesdeGPS.value = false;
+        precisionUbicacion.value = null;
+        confirmoPrecision.value = false;
       });
     };
 
@@ -292,8 +385,9 @@ export default {
         pasoActual.value++;
         if (pasoActual.value === 2) {
           setTimeout(() => {
-            inicializarMapa();
-            if (mapa.value) mapa.value.invalidateSize();
+            asegurarMapaPaso2();
+            // Sin punto elegido todavía se ofrece el GPS: aquí el gesto de
+            // avanzar al paso de ubicación ya expresa la intención.
             if (!coordenadasSeleccionadas.value && !ubicacionActiva.value) {
               obtenerUbicacion();
             }
@@ -306,7 +400,7 @@ export default {
       if (pasoActual.value > 1) {
         pasoActual.value--;
         if (pasoActual.value === 2) {
-          setTimeout(() => { if (mapa.value) mapa.value.invalidateSize(); }, 100);
+          setTimeout(asegurarMapaPaso2, 100);
         }
       }
     };
@@ -315,7 +409,7 @@ export default {
       if (paso < pasoActual.value) {
         pasoActual.value = paso;
         if (paso === 2) {
-          setTimeout(() => { if (mapa.value) mapa.value.invalidateSize(); }, 100);
+          setTimeout(asegurarMapaPaso2, 100);
         }
       }
     };
@@ -365,6 +459,9 @@ export default {
             }
 
             precisionUbicacion.value = precisionMetros;
+            // Nueva lectura ⇒ la confirmación anterior ya no aplica.
+            confirmoPrecision.value = false;
+            puntoDesdeGPS.value = true;
 
             const icono = L.divIcon({
               className: 'ubicacion-icon',
@@ -542,6 +639,21 @@ export default {
 
     const guardarDenuncia = async () => {
       resultadoEnvio.value = null;
+
+      // Precisión insuficiente: se avisa una vez y se deja continuar si la
+      // persona insiste. Bloquear del todo dejaría sin reportar zonas donde el
+      // GPS simplemente no da más.
+      if (precisionDudosa.value && !confirmoPrecision.value) {
+        confirmoPrecision.value = true;
+        resultadoEnvio.value = {
+          tipo: 'advertencia',
+          texto: `La ubicación tiene ±${precisionUbicacion.value} m de margen: puede señalar ` +
+                 'la cuadra equivocada. Muévete a un lugar despejado y actualiza el GPS, o ' +
+                 'arrastra el mapa hasta el punto exacto. Si aun así quieres continuar, ' +
+                 'vuelve a pulsar Guardar.',
+        };
+        return;
+      }
 
       // ── Validación previa ──────────────────────────────────────────────
       // La base vuelve a validar todo esto; aquí se comprueba para no gastar
@@ -738,7 +850,7 @@ export default {
       obtenerUbicacion,
       ubicacionActiva,
       cargandoUbicacion,
-      precisionUbicacion,
+      precisionUbicacion, precisionDudosa, puntoDesdeGPS,
       siguientePaso,
       anteriorPaso,
       irAPaso,

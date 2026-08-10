@@ -18,11 +18,13 @@
       </div>
       
       <!-- Botón cerrar -->
-      <button 
+      <button
+        type="button"
         @click="ocultarToast(toast.id)"
-        class="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+        aria-label="Descartar notificación"
+        class="toque-comodo text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
       >
-        <i class="fa-solid fa-xmark text-sm"></i>
+        <i class="fa-solid fa-xmark text-sm" aria-hidden="true"></i>
       </button>
     </div>
   </div>

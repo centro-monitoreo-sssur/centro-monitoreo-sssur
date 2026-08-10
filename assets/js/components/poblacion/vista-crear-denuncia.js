@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
+import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
 import { categoriasDenuncias, getCategoriasPorTab, getColorClass } from '../../utils/categorias-denuncias.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
 import { validarDenunciaDuplicada, generarResumenSimilares } from '../../utils/validacion-duplicados.js';
@@ -144,8 +145,12 @@ export default {
         const lng = center.lng;
 
         // Validar jurisdicción
-        const limitesMunicipio = typeof getMunicipalityGeoJSON === 'function' ? getMunicipalityGeoJSON() : null;
-        const limitesPoligonos = typeof getDistritosGeoJSON === 'function' ? getDistritosGeoJSON() : null;
+        // Se usa la copia ya resuelta, no `await`: este handler se dispara en
+        // CADA píxel de arrastre del mapa. Un `await` aquí encadenaría cientos
+        // de microtareas y las respuestas podrían llegar desordenadas, dejando
+        // el aviso de jurisdicción de una posición anterior.
+        const limitesMunicipio = limitesCache;
+        const limitesPoligonos = limitesCache;
         
         let validacion = { dentro: true, mensaje: '' };
         if (typeof validarJurisdiccion === 'function' && limitesMunicipio) {
@@ -185,31 +190,34 @@ export default {
     // Capas de límites (referencias para poder actualizarlas al cambiar tile)
     let capaLimitesRef = null;
     let capaDistritosRef = null;
+    // Cartografía ya descargada, para uso síncrono dentro de los handlers de
+    // Leaflet. La rellena `cargarLimitesMunicipio()`. La validación de
+    // jurisdicción DEBE comprobar contra el mismo trazado que se dibuja: antes
+    // usaba los globales antiguos y el empleado veía su punto dentro de la
+    // frontera pintada mientras el sistema lo daba por fuera.
+    let limitesCache = null;
+
 
     // Obtener color de límites según el tile activo
     const obtenerColorLimites = () => estiloTile.value === 'satellite' ? '#ffffff' : '#1d4ed8';
 
     // Cargar límites del municipio en el mapa (mismo estilo que Mapa en Vivo)
-    const cargarLimitesMunicipio = () => {
+        // Cartografía oficial (`limites-sssur.geojson`), la misma que el Centro de
+    // Monitoreo. Antes se leían los globales de limites-municipio.js y
+    // limites-poligonos.js, con el trazado anterior: campo y central dibujaban
+    // fronteras distintas. Los 5 distritos SON el municipio, así que una sola
+    // capa sustituye a las dos que había.
+    const cargarLimitesMunicipio = async () => {
       if (!mapa.value) return;
 
       const color = obtenerColorLimites();
 
       try {
-        const limites = getMunicipalityGeoJSON();
-        if (limites && limites.features) {
-          if (capaLimitesRef) mapa.value.removeLayer(capaLimitesRef);
-          capaLimitesRef = L.geoJSON(limites, {
-            style: {
-              color,
-              weight: 2.5,
-              opacity: 0.9,
-              fillOpacity: 0
-            }
-          }).addTo(mapa.value);
-        }
+        const distritos = await cargarLimitesSSSur();
+        limitesCache = distritos;
+        // El usuario pudo salir de la vista mientras se descargaba.
+        if (!mapa.value) return;
 
-        const distritos = getDistritosGeoJSON();
         if (distritos && distritos.features) {
           if (capaDistritosRef) mapa.value.removeLayer(capaDistritosRef);
           capaDistritosRef = L.geoJSON(distritos, {
@@ -220,8 +228,9 @@ export default {
               fillOpacity: 0
             },
             onEachFeature: (feature, layer) => {
-              const nombre = feature.properties?.name || feature.properties?.NOMBRE || feature.properties?.nombre;
-              // Usamos bindPopup en lugar de sticky tooltip para evitar errores al desmontar el mapa
+              const nombre = feature.properties?.nombre;
+              // bindPopup y no tooltip sticky: el tooltip lanzaba error al
+              // desmontar el mapa.
               if (nombre) layer.bindPopup(`<b style="font-family:'Inter',sans-serif;font-size:12px;">${nombre}</b>`);
             }
           }).addTo(mapa.value);

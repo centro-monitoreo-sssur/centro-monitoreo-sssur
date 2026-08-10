@@ -1,0 +1,55 @@
+<!-- Teleport a <body>: saca el modal de cualquier contexto de apilamiento que
+     haya creado la vista (el grid del Mapa en Vivo, sin ir más lejos). -->
+<teleport to="body">
+  <transition
+    enter-active-class="transition-opacity duration-150"
+    enter-from-class="opacity-0" leave-active-class="transition-opacity duration-150"
+    leave-to-class="opacity-0">
+    <div v-if="mostrar"
+         class="fixed inset-0 z-[10050] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
+         @mousedown="alTocarFondo">
+      <div ref="dialogo"
+           role="dialog"
+           aria-modal="true"
+           :aria-labelledby="titulo ? idTitulo : null"
+           tabindex="-1"
+           class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full flex flex-col max-h-full focus:outline-none"
+           :class="clasesAncho">
+
+        <div v-if="titulo || $slots.cabecera"
+             class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center gap-3 bg-gray-50/60 dark:bg-gray-900/40 rounded-t-2xl">
+          <slot name="cabecera">
+            <div class="flex items-center gap-3 min-w-0">
+              <div v-if="icono"
+                   class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                   :style="colorIcono
+                     ? { backgroundColor: colorIcono, color: '#fff' }
+                     : { backgroundColor: 'var(--brand)', color: '#fff' }">
+                <i :class="icono" aria-hidden="true"></i>
+              </div>
+              <div class="min-w-0">
+                <h3 :id="idTitulo" class="text-title-sm text-gray-900 dark:text-white leading-tight truncate">{{ titulo }}</h3>
+                <p v-if="subtitulo" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{{ subtitulo }}</p>
+              </div>
+            </div>
+          </slot>
+
+          <button type="button" @click="cerrar" aria-label="Cerrar"
+                  class="toque-comodo w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 hover:text-gray-800 hover:bg-gray-200 dark:hover:text-white transition-colors flex items-center justify-center shrink-0
+                         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto">
+          <slot></slot>
+        </div>
+
+        <div v-if="$slots.pie"
+             class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 rounded-b-2xl flex justify-end gap-3">
+          <slot name="pie"></slot>
+        </div>
+      </div>
+    </div>
+  </transition>
+</teleport>

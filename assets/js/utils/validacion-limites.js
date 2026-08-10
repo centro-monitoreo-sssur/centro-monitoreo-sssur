@@ -2,12 +2,26 @@
 // Utilidad para verificar si una coordenada está dentro de la jurisdicción municipal
 // DEMO: Funcionalidad simulada sin Turf.js - reemplazar con Turf.js para validación precisa
 
-// Bounding box del municipio San Salvador Sur (del schema SQL)
+// Bounding box del municipio San Salvador Sur.
+//
+// Derivado de la cartografía oficial `limites-sssur.geojson`, cuyo extremo real
+// es lat 13.4732–13.6784 · lng -89.2381 a -89.0419, más un margen de ~0.01°.
+//
+// Los valores anteriores (lat 13.60–13.80, lng -89.30 a -89.10) dejaban FUERA
+// buena parte del municipio: todo lo que está al sur de 13.60 —la mitad de
+// Panchimalco y de Rosario de Mora— y la franja al este de -89.10. Un empleado
+// levantando una denuncia en esas zonas recibía "fuera de la jurisdicción"
+// sobre territorio que sí es municipal.
+//
+// Ensanchar es seguro: esto es solo un prefiltro rápido. Quien decide de verdad
+// es `estaDentroDelPoligono()` contra la geometría. Un bbox de más solo deja
+// pasar el punto a la comprobación precisa; uno de menos lo rechaza sin
+// llegar a evaluarlo.
 const BBOX_MUNICIPIO = {
-  latMin: 13.60,
-  latMax: 13.80,
-  lngMin: -89.30,
-  lngMax: -89.10
+  latMin: 13.46,
+  latMax: 13.69,
+  lngMin: -89.25,
+  lngMax: -89.03
 };
 
 // Función simple para verificar si un punto está dentro del bounding box
