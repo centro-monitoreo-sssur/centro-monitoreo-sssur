@@ -1,0 +1,51 @@
+---
+# ============================================================================
+# Despliegue automático · Git Version Control de cPanel
+# Centro de Monitoreo SSSur · Municipalidad de San Salvador Sur
+# ----------------------------------------------------------------------------
+# QUÉ RESUELVE
+#
+# La raíz del subdominio es el propio clon del repositorio, así que el frontend
+# se despliega solo con hacer «Update from Remote». Los endpoints PHP no: viven
+# en api-monitoreo/, que no forma parte del repositorio, y hasta ahora se
+# subían a mano por el Administrador de archivos.
+#
+# Subirlos a mano tuvo dos consecuencias, las dos ya vividas:
+#   · Editar archivos del clon deja la copia de trabajo sucia y el siguiente
+#     «Update from Remote» aborta con «Your local changes would be overwritten».
+#   · Es fácil olvidar uno y dejar versiones mezcladas, que es lo que provocó
+#     el «falta JWT_SECRET» cuando el secreto sí estaba puesto.
+#
+# Con este archivo, «Deploy HEAD Commit» copia los endpoints y sus .htaccess a
+# su sitio. Se acabaron las subidas manuales.
+#
+# LO QUE NO TOCA
+#   · config-monitoreo.php — vive solo en el servidor y NO está en el
+#     repositorio. Sobrescribirlo borraría la configuración en cada despliegue,
+#     que es exactamente el problema que la separó del código.
+#   · uploads-monitoreo/**  — son las fotografías subidas desde territorio.
+#
+# CÓMO SE USA
+#   cPanel → Git Version Control → Manage → pestaña «Pull or Deploy»
+#     1. «Update from Remote»  trae el commit nuevo (y con él el frontend)
+#     2. «Deploy HEAD Commit»  ejecuta estas tareas
+#   Las dos exigen que la copia de trabajo esté limpia.
+# ============================================================================
+deployment:
+  tasks:
+    # `cp -f` y no `mv`: los archivos de origen tienen que seguir en el
+    # repositorio, o el siguiente `git status` los daría por borrados y
+    # volveríamos a tener la copia de trabajo sucia.
+    - /bin/mkdir -p api-monitoreo
+    - /bin/cp -f cpanel/subir_evidencia.php    api-monitoreo/subir_evidencia.php
+    - /bin/cp -f cpanel/subir_foto_perfil.php  api-monitoreo/subir_foto_perfil.php
+    - /bin/cp -f cpanel/jwt-monitoreo.php      api-monitoreo/jwt-monitoreo.php
+    - /bin/cp -f cpanel/api-monitoreo.htaccess api-monitoreo/.htaccess
+
+    # Los directorios de subida se crean si no existen, pero su contenido no se
+    # toca nunca. Solo se refresca la protección.
+    - /bin/mkdir -p uploads-monitoreo/evidencias uploads-monitoreo/perfiles
+    - /bin/cp -f cpanel/uploads-evidencias.htaccess uploads-monitoreo/evidencias/.htaccess
+    - /bin/cp -f cpanel/uploads-perfiles.htaccess   uploads-monitoreo/perfiles/.htaccess
+
+    - /bin/chmod 644 api-monitoreo/*.php

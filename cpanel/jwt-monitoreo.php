@@ -1,8 +1,14 @@
 <?php
 /**
  * ============================================================================
- * Verificación de tokens de Supabase · biblioteca compartida
+ * Utilidades compartidas de los endpoints
  * Centro de Monitoreo SSSur · Municipalidad de San Salvador Sur
+ * ----------------------------------------------------------------------------
+ * Contiene lo que usan LOS DOS endpoints: la verificación de tokens y la
+ * detección del tipo real de una imagen. Van juntas por una razón práctica —
+ * cada archivo de este servidor se sube a mano, y un quinto archivo es una
+ * ocasión más de dejar versiones mezcladas— y por una de fondo: duplicar una
+ * comprobación de seguridad garantiza que algún día las dos copias divergan.
  * ----------------------------------------------------------------------------
  * POR QUÉ EXISTE
  *
@@ -41,6 +47,47 @@
 if (!defined('MONITOREO_ENDPOINT')) {
     http_response_code(404);
     exit;
+}
+
+// ─── Tipo real de una imagen ────────────────────────────────────────────────
+
+/**
+ * Devuelve el MIME REAL del archivo leyendo su contenido, o null si no es una
+ * imagen que se pueda interpretar.
+ *
+ * Nunca se mira la extensión ni el `Content-Type` que manda el navegador: los
+ * dos los controla quien envía la petición.
+ *
+ * ⚠ POR QUÉ HAY DOS CAMINOS
+ *   La vía preferida es `finfo`, que lee los números mágicos del archivo. Pero
+ *   este hosting NO trae la extensión `fileinfo` —comprobado: `Class 'finfo'
+ *   not found`— igual que tampoco trae `exif`. Un endpoint que se cae porque
+ *   falta una extensión opcional no es un endpoint, así que hay respaldo.
+ *
+ *   El respaldo es `getimagesize()`, que forma parte del núcleo y también
+ *   decide por CONTENIDO: intenta interpretar la cabecera de la imagen y
+ *   devuelve su tipo. No es una comprobación más débil para este caso; de
+ *   hecho es la más pertinente, porque aquí solo se aceptan imágenes.
+ *
+ *   Y sea cual sea el camino, la defensa que de verdad cierra el asunto está
+ *   después: la imagen se reescribe entera con GD. Un archivo que finja ser
+ *   JPEG no sobrevive al reencodeado.
+ */
+function detectarMimeImagen(string $ruta): ?string
+{
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($ruta);
+        if (is_string($mime) && $mime !== '') {
+            return $mime;
+        }
+    }
+
+    $info = @getimagesize($ruta);
+    if (is_array($info) && !empty($info['mime'])) {
+        return (string) $info['mime'];
+    }
+    return null;
 }
 
 // ─── Lectura del token de la petición ───────────────────────────────────────

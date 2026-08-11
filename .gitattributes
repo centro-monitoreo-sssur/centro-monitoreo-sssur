@@ -1,0 +1,21 @@
+# ============================================================================
+# Finales de línea
+# ----------------------------------------------------------------------------
+# El repositorio guarda CRLF por herencia: se trabaja en Windows con
+# `core.autocrlf=true` y una carpeta sincronizada con MEGA. Cambiar eso ahora
+# reescribiría casi todos los archivos y haría ilegible cualquier diff futuro,
+# así que se deja como está.
+#
+# Pero hay archivos que el SERVIDOR interpreta, y ahí el CRLF sí importa.
+# ============================================================================
+
+# .cpanel.yml lo lee el desplegador de cPanel y ejecuta cada línea como una
+# orden de shell. Según cómo normalice el analizador, un retorno de carro puede
+# quedar pegado al final del comando: `/bin/mkdir -p api-monitoreo\r` no existe,
+# y el despliegue falla con un error que no menciona el CRLF por ninguna parte.
+.cpanel.yml text eol=lf
+
+# Los .htaccess los lee Apache, que sí tolera CRLF, pero por coherencia con lo
+# anterior y porque acaban en un servidor Linux.
+.htaccess text eol=lf
+*.htaccess text eol=lf

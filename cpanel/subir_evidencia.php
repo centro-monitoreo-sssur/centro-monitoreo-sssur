@@ -28,8 +28,9 @@
  *      y no puede fabricarlos.
  *   2. El nombre del archivo lo decide el servidor a partir del `sub` del
  *      token. El cliente no elige ruta ni nombre: no hay path traversal.
- *   3. El tipo se valida por CONTENIDO con finfo, y después la imagen se
- *      reescribe. Un archivo que finja ser JPEG no sobrevive al reencodeado.
+ *   3. El tipo se valida por CONTENIDO —finfo si está, getimagesize si no— y
+ *      después la imagen se reescribe entera. Un archivo que finja ser JPEG no
+ *      sobrevive al reencodeado.
  *   4. Límite de subidas por usuario y hora: una cuenta comprometida no puede
  *      llenar el disco del servidor.
  *   5. El directorio de destino lleva un .htaccess que impide ejecutar nada.
@@ -91,8 +92,11 @@
  *   · Extensión `gd`  · OBLIGATORIA. Sin ella el endpoint responde 500 con
  *     explicación, porque no puede reescribir la imagen.
  *   · Extensión `exif` · RECOMENDADA. Sin ella no se puede leer la orientación
- *     de la cámara y toda foto tomada en vertical se guarda girada 90°. Se
- *     activa en cPanel → Select PHP Version → Extensions → exif.
+ *     de la cámara y toda foto tomada en vertical se guarda girada 90°.
+ *   · Extensión `fileinfo` · RECOMENDADA. Sin ella el tipo se detecta con
+ *     getimagesize, que también lee el contenido. No falla, pero conviene.
+ *   Las dos se activan en cPanel → Select PHP Version → Extensions.
+ *   Este servidor NO trae ninguna de las dos: comprobado.
  * ============================================================================
  */
 
@@ -191,6 +195,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     responder(405, ['error' => 'Método no permitido.']);
 }
 
+/* Extensiones imprescindibles, comprobadas ANTES de hacer nada.
+   Este hosting trae un PHP mínimo: ya faltaban `exif` y `fileinfo`. Sin esta
+   comprobación, una extensión ausente se manifiesta como un error fatal —un
+   500 en blanco, sin cuerpo JSON— y el cliente no puede decir qué pasó. Con
+   ella, el mensaje nombra la extensión y dónde activarla.
+
+   `gd` es la única imprescindible: sin ella no se puede reescribir la imagen,
+   que es la defensa que garantiza que lo guardado es una imagen y nada más.
+   `fileinfo` y `exif` son deseables y tienen respaldo. */
+if (!extension_loaded('gd')) {
+    responder(500, [
+        'error' => 'El servidor no tiene la extensión GD, imprescindible para procesar '
+                 . 'imágenes. Actívala en cPanel → Select PHP Version → Extensions → gd.',
+    ]);
+}
+
 // ─── VERIFICACIÓN DEL JWT ───────────────────────────────────────────────────
 //
 // La verificación vive en jwt-monitoreo.php porque los dos endpoints la
@@ -218,6 +238,19 @@ $carga = verificarJwtSupabase(
 );
 if ($carga === null) {
     responder(401, ['error' => 'Sesión inválida o caducada. Vuelve a iniciar sesión.']);
+}
+
+/* Identificador del empleado, saneado.
+   Sale del `sub` del token —nunca de nada que mande el cliente— y de él salen
+   el nombre del archivo y la clave del contador por hora. El filtro deja solo
+   caracteres de UUID: sin él, un `sub` con barras o puntos permitiría escribir
+   fuera del directorio.
+
+   Va aquí y no más abajo porque el límite por hora lo necesita antes de
+   decidir si admite la subida. */
+$idUsuario = preg_replace('/[^a-zA-Z0-9\-]/', '', (string) $carga['sub']);
+if ($idUsuario === '') {
+    responder(400, ['error' => 'Identificador de usuario no válido.']);
 }
 
 // ─── LÍMITE POR USUARIO Y HORA ──────────────────────────────────────────────
@@ -306,22 +339,18 @@ if ($archivo['size'] <= 0 || $archivo['size'] > MAX_BYTES) {
     responder(413, ['error' => 'La imagen supera el tamaño máximo de 3 MB.']);
 }
 
-// El tipo real, leído del contenido. Ni la extensión ni el Content-Type del
-// navegador sirven: los controla quien envía la petición.
-$finfo = new finfo(FILEINFO_MIME_TYPE);
-$tipoReal = $finfo->file($archivo['tmp_name']);
+// El tipo real, leído del CONTENIDO. `detectarMimeImagen` usa finfo si está
+// disponible y getimagesize si no: este servidor no trae la extensión
+// fileinfo. Ver su comentario en jwt-monitoreo.php.
+$tipoReal = detectarMimeImagen($archivo['tmp_name']);
 
-if (!isset(TIPOS_PERMITIDOS[$tipoReal])) {
+if ($tipoReal === null || !isset(TIPOS_PERMITIDOS[$tipoReal])) {
     responder(415, ['error' => 'Formato no admitido. Usa JPG, PNG o WebP.']);
 }
 
 $dimensiones = @getimagesize($archivo['tmp_name']);
 if ($dimensiones === false) {
     responder(415, ['error' => 'El archivo no es una imagen legible.']);
-}
-
-if (!extension_loaded('gd')) {
-    responder(500, ['error' => 'El servidor no tiene la extensión GD instalada.']);
 }
 
 // ─── REESCRITURA DE LA IMAGEN ───────────────────────────────────────────────

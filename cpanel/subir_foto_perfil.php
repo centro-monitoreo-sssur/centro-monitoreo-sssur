@@ -17,8 +17,9 @@
  *   2. El nombre del archivo lo decide el servidor, nunca el cliente: se deriva
  *      del `sub` del token. Así un usuario no puede sobrescribir la foto de
  *      otro ni escribir fuera del directorio (path traversal).
- *   3. El tipo se valida por CONTENIDO con finfo, no por extensión ni por el
- *      Content-Type que envía el navegador — ambos son manipulables.
+ *   3. El tipo se valida por CONTENIDO —finfo si está, getimagesize si no—, no
+ *      por extensión ni por el Content-Type que envía el navegador: ambos los
+ *      controla quien envía la petición.
  *   4. El directorio de destino lleva un .htaccess que impide ejecutar PHP.
  *      Es la defensa que convierte "subieron un .php disfrazado" en un archivo
  *      inerte en vez de en ejecución remota.
@@ -147,12 +148,12 @@ if ($archivo['size'] <= 0 || $archivo['size'] > MAX_BYTES) {
     responder(413, ['error' => 'La imagen supera el tamaño máximo de 2 MB.']);
 }
 
-// El tipo real, leído del contenido. Ni la extensión ni el Content-Type del
-// navegador sirven: los controla quien envía la petición.
-$finfo = new finfo(FILEINFO_MIME_TYPE);
-$tipoReal = $finfo->file($archivo['tmp_name']);
+// El tipo real, leído del CONTENIDO. `detectarMimeImagen` usa finfo si está
+// disponible y getimagesize si no: este servidor no trae la extensión
+// fileinfo. Ver su comentario en jwt-monitoreo.php.
+$tipoReal = detectarMimeImagen($archivo['tmp_name']);
 
-if (!isset(TIPOS_PERMITIDOS[$tipoReal])) {
+if ($tipoReal === null || !isset(TIPOS_PERMITIDOS[$tipoReal])) {
     responder(415, ['error' => 'Formato no admitido. Usa JPG, PNG o WebP.']);
 }
 

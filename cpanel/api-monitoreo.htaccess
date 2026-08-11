@@ -54,3 +54,15 @@ Options -Indexes
 <FilesMatch "\.example\.php$">
     Require all denied
 </FilesMatch>
+
+# 7. Los registros de error de PHP.
+#    cPanel deja un `error_log` en la carpeta donde falla un script. Publica
+#    rutas absolutas del servidor, nombres de usuario del sistema y trazas
+#    internas: es un mapa gratis para quien busque por dónde entrar.
+#
+#    En este servidor ya devuelve 403 por configuración global, pero eso puede
+#    cambiar con una actualización del panel y nadie se enteraría. La regla
+#    explícita cuesta tres líneas.
+<FilesMatch "^(error_log|.*\.log)$">
+    Require all denied
+</FilesMatch>

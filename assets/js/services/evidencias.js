@@ -11,19 +11,17 @@
 import { db } from '../core/supabase.js';
 import { comprimirImagenABlob } from '../utils/image-compressor.js';
 
-// Rellenar con la URL del endpoint una vez subido a cPanel. Mientras esté
-// vacío, `evidenciasConfiguradas` es false: la interfaz avisa de que las fotos
-// no se enviarán en lugar de fingir que sí.
+// Endpoint de subida en el cPanel institucional.
 //
-// Valor esperado en producción:
-//   https://monitoreo.sansalvadorsur.gob.sv/api-monitoreo/subir_evidencia.php
+// Es el MISMO origen que sirve el frontend en producción, así que el navegador
+// no aplica CORS. Se deja absoluto y no relativo porque en desarrollo la app se
+// sirve desde Live Server, y '/api-monitoreo/…' apuntaría a localhost.
 //
-// Es el MISMO origen que sirve el frontend, así que el navegador no aplica
-// CORS. Ponerlo como ruta relativa —'/api-monitoreo/subir_evidencia.php'—
-// también funciona y sobrevive a un cambio de dominio, pero se deja absoluto
-// porque en desarrollo el frontend se sirve desde Live Server y la ruta
-// relativa apuntaría a localhost.
-export const ENDPOINT_EVIDENCIAS = '';
+// Vaciar esta constante desactiva la subida de forma controlada:
+// `evidenciasConfiguradas` pasa a false y la interfaz avisa de que las fotos no
+// se enviarán, en lugar de fallar al pulsar.
+export const ENDPOINT_EVIDENCIAS =
+  'https://monitoreo.sansalvadorsur.gob.sv/api-monitoreo/subir_evidencia.php';
 
 export const evidenciasConfiguradas = Boolean(ENDPOINT_EVIDENCIAS);
 

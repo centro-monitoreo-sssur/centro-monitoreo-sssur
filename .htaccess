@@ -1,0 +1,67 @@
+# ============================================================================
+# Raíz del subdominio monitoreo.sansalvadorsur.gob.sv
+# Centro de Monitoreo SSSur · Municipalidad de San Salvador Sur
+# ----------------------------------------------------------------------------
+# POR QUÉ EXISTE
+#
+# La raíz de documentos del subdominio ES un clon del repositorio, desplegado
+# con Git Version Control de cPanel. Eso tiene una consecuencia que no es
+# evidente: TODO lo que hay en el repositorio queda servido por HTTP, no solo
+# el frontend.
+#
+# Comprobado en producción antes de escribir esto:
+#   /database/schema.sql                    → 200, el modelo de datos completo
+#   /database/migration_v30_gestion_de_caso.sql → 200, las policies y las RPC
+#   /docs/contexto/02-EQUIPO_TECNICO.md     → 200, documentación interna
+#   /cpanel/subir_evidencia.php             → 500, ejecutándose una SEGUNDA copia
+#                                             del endpoint, sin configuración
+#
+# Nada de eso es una brecha por sí solo —la seguridad está en la RLS del
+# servidor, no en que el esquema sea secreto— pero le entrega a cualquiera el
+# mapa completo: nombres de tablas, firmas de las RPC y la lógica exacta de las
+# policies que tendría que sortear. Y la copia del endpoint en /cpanel/ es
+# superficie de ataque que no hace ninguna falta.
+#
+# Este archivo cierra lo que no es web y deja pasar lo que sí.
+#
+# ⚠ Se sirve desde la RAÍZ del sitio: un error aquí tumba la aplicación entera.
+#   Por eso solo hay reglas de denegación, ninguna reescritura.
+# ============================================================================
+
+# ── 1. Carpetas que no son parte del sitio ─────────────────────────────────
+# `cpanel/` es el ORIGEN de los endpoints; las copias vivas están en
+# api-monitoreo/ y esas sí se sirven. Servir las dos multiplica la superficie
+# y hace ambiguo cuál está en uso.
+RedirectMatch 404 ^/(database|docs|cpanel|node_modules)(/|$)
+
+# ── 2. Archivos de desarrollo sueltos en la raíz ───────────────────────────
+<FilesMatch "\.(md|sql|yml|yaml|jsonl|log|bak|example\.php)$">
+    Require all denied
+</FilesMatch>
+
+# ── 3. Todo lo que empieza por punto ───────────────────────────────────────
+# .git suele estar bloqueado por la configuración del servidor —aquí ya
+# devuelve 403— pero no conviene depender de eso: si algún día cambia, el
+# repositorio entero, con su historial, queda descargable.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/\.git(/|$)
+
+# ── 4. Sin listados de directorio ──────────────────────────────────────────
+Options -Indexes
+
+# ── 5. El service worker no se cachea ──────────────────────────────────────
+# sw.js decide qué se cachea del resto. Si él mismo queda cacheado, un
+# despliegue nuevo no llega nunca a los teléfonos que ya tienen la PWA
+# instalada: siguen ejecutando el service worker viejo con su lista vieja.
+<Files "sw.js">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+</Files>
+
+# ── 6. Cabeceras de seguridad básicas ──────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

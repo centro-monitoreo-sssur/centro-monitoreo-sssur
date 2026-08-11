@@ -13,13 +13,12 @@
 import { db } from '../core/supabase.js';
 import { comprimirImagenABlob } from '../utils/image-compressor.js';
 
-// Rellenar con la URL del endpoint una vez subido a cPanel. Mientras esté
-// vacío, `almacenamientoConfigurado` es false y la interfaz ofrece pegar una
-// URL en vez de subir un archivo — degradar es mejor que fallar al pulsar.
-//
-// Valor esperado en producción:
-//   https://monitoreo.sansalvadorsur.gob.sv/api-monitoreo/subir_foto_perfil.php
-export const ENDPOINT_FOTOS = '';
+// Endpoint de subida en el cPanel institucional. Vaciar esta constante
+// desactiva la subida de forma controlada: `almacenamientoConfigurado` pasa a
+// false y la interfaz ofrece pegar una URL en vez de subir un archivo, que es
+// mejor que fallar al pulsar.
+export const ENDPOINT_FOTOS =
+  'https://monitoreo.sansalvadorsur.gob.sv/api-monitoreo/subir_foto_perfil.php';
 
 export const almacenamientoConfigurado = Boolean(ENDPOINT_FOTOS);
 
