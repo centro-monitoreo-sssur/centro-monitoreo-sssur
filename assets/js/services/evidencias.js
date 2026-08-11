@@ -84,7 +84,15 @@ export async function subirEvidencia(archivo) {
   try {
     const respuesta = await fetch(ENDPOINT_EVIDENCIAS, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },  // sin Content-Type: lo pone FormData con su boundary
+      // Se envían DOS cabeceras con el mismo token, y no es redundancia inútil:
+      // el Apache del hosting descarta `Authorization` cuando PHP corre como
+      // CGI/FastCGI —comprobado—, mientras que una cabecera propia pasa
+      // intacta. El servidor acepta la primera que le llegue.
+      // Sin Content-Type: lo pone FormData con su boundary.
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Monitoreo-Token': token,
+      },
       body: cuerpo,
     });
 

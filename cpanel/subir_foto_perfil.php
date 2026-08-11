@@ -11,9 +11,9 @@
  * operación de campo. cPanel no tiene esa presión.
  *
  * SEGURIDAD — este endpoint es público en Internet, así que:
- *   1. Exige un JWT de Supabase válido y NO caducado (firma HS256 verificada
- *      contra el JWT Secret del proyecto). Sin esto cualquiera podría subir
- *      archivos al servidor de la alcaldía.
+ *   1. Exige un JWT de Supabase válido y NO caducado, verificado con ES256
+ *      contra la clave pública del JWKS (ver jwt-monitoreo.php). Sin esto
+ *      cualquiera podría subir archivos al servidor de la alcaldía.
  *   2. El nombre del archivo lo decide el servidor, nunca el cliente: se deriva
  *      del `sub` del token. Así un usuario no puede sobrescribir la foto de
  *      otro ni escribir fuera del directorio (path traversal).
@@ -35,32 +35,38 @@
  *   2. Crea
  *        public_html/monitoreo.sansalvadorsur.gob.sv/uploads-monitoreo/perfiles/
  *      y copia allí el .htaccess adjunto (cpanel/uploads-perfiles.htaccess).
- *   3. Rellena las constantes de CONFIGURACIÓN.
- *   4. El JWT Secret está en Supabase → Project Settings → API → JWT Secret.
- *      NO es la anon key ni la service_role.
- *   5. Copia la URL pública del endpoint en ENDPOINT_FOTOS, dentro de
+ *   3. Sube también jwt-monitoreo.php y config-monitoreo.php a la misma
+ *      carpeta: este endpoint los necesita.
+ *   4. Copia la URL pública del endpoint en ENDPOINT_FOTOS, dentro de
  *      assets/js/services/fotos-perfil.js
  * ============================================================================
  */
 
 // ─── CONFIGURACIÓN ──────────────────────────────────────────────────────────
 
-/** JWT Secret del proyecto Supabase. Settings → API → JWT Secret. */
-const JWT_SECRET = 'PEGA_AQUI_EL_JWT_SECRET_DE_SUPABASE';
+/**
+ * La configuración vive en config-monitoreo.php, no aquí: así reemplazar este
+ * endpoint no borra los ajustes. Ver config-monitoreo.example.php.
+ */
+define('MONITOREO_ENDPOINT', true);
+
+$rutaConfig = __DIR__ . '/config-monitoreo.php';
+if (!is_file($rutaConfig)) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'error' => 'Falta config-monitoreo.php junto a este endpoint. ' .
+                   'Copialo desde cpanel/config-monitoreo.example.php.',
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+require_once $rutaConfig;
 
 /** Ruta absoluta del directorio de subida. Debe terminar en barra. */
 const DIR_DESTINO = __DIR__ . '/../uploads-monitoreo/perfiles/';
 
 /** URL pública que corresponde a DIR_DESTINO. Debe terminar en barra. */
 const URL_PUBLICA = 'https://monitoreo.sansalvadorsur.gob.sv/uploads-monitoreo/perfiles/';
-
-/** Orígenes autorizados a llamar a este endpoint (CORS). */
-const ORIGENES_PERMITIDOS = [
-    'https://monitoreo.sansalvadorsur.gob.sv',
-    'http://monitoreo.sansalvadorsur.gob.sv',   // mientras no haya certificado
-    'http://127.0.0.1:5500',   // Live Server en desarrollo
-    'http://localhost:5500',
-];
 
 const MAX_BYTES = 2097152; // 2 MB — el cliente ya comprime a ~200 KB
 
@@ -77,7 +83,9 @@ if (in_array($origen, ORIGENES_PERMITIDOS, true)) {
     header('Access-Control-Allow-Origin: ' . $origen);
     header('Vary: Origin');
 }
-header('Access-Control-Allow-Headers: Authorization, Content-Type');
+// `X-Monitoreo-Token` es la vía que sobrevive a Apache en CGI/FastCGI, que
+// descarta `Authorization`. Ver leerTokenPortador() en jwt-monitoreo.php.
+header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Monitoreo-Token');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Content-Type: application/json; charset=utf-8');
 
@@ -99,69 +107,30 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 
 // ─── VERIFICACIÓN DEL JWT ───────────────────────────────────────────────────
+//
+// La verificación vive en jwt-monitoreo.php porque los dos endpoints la
+// necesitan. Duplicarla garantizaría que algún día divergieran, y una
+// comprobación de identidad divergente es la peor clase de divergencia.
+//
+// El proyecto firma con ES256 desde que Supabase migró a JWT Signing Keys, así
+// que se verifica contra la clave pública del JWKS. El servidor ya no guarda
+// ningún secreto de firma: puede comprobar tokens y no puede fabricarlos.
 
-/** Base64 URL-safe → binario. */
-function base64UrlDecode(string $dato): string|false
-{
-    $relleno = strlen($dato) % 4;
-    if ($relleno) {
-        $dato .= str_repeat('=', 4 - $relleno);
-    }
-    return base64_decode(strtr($dato, '-_', '+/'), true);
-}
+require_once __DIR__ . '/jwt-monitoreo.php';
 
-/**
- * Verifica un JWT HS256 de Supabase y devuelve su payload.
- * Devuelve null si la firma no cuadra, el algoritmo no es el esperado o el
- * token ya caducó.
- */
-function verificarJwt(string $token, string $secreto): ?array
-{
-    $partes = explode('.', $token);
-    if (count($partes) !== 3) {
-        return null;
-    }
-    [$cabecera64, $carga64, $firma64] = $partes;
-
-    $cabecera = json_decode((string) base64UrlDecode($cabecera64), true);
-    // Rechazar explícitamente cualquier algoritmo distinto: aceptar el que
-    // declare el token es la vulnerabilidad clásica de "alg: none".
-    if (!is_array($cabecera) || ($cabecera['alg'] ?? '') !== 'HS256') {
-        return null;
-    }
-
-    $firmaEsperada = hash_hmac('sha256', $cabecera64 . '.' . $carga64, $secreto, true);
-    $firmaRecibida = base64UrlDecode($firma64);
-    if ($firmaRecibida === false || !hash_equals($firmaEsperada, $firmaRecibida)) {
-        return null;   // hash_equals: comparación en tiempo constante
-    }
-
-    $carga = json_decode((string) base64UrlDecode($carga64), true);
-    if (!is_array($carga)) {
-        return null;
-    }
-    if (!isset($carga['exp']) || time() >= (int) $carga['exp']) {
-        return null;   // token caducado
-    }
-    if (empty($carga['sub'])) {
-        return null;   // sin identificador de usuario no hay nombre de archivo
-    }
-    return $carga;
-}
-
-if (JWT_SECRET === 'PEGA_AQUI_EL_JWT_SECRET_DE_SUPABASE') {
-    responder(500, ['error' => 'El endpoint no ha sido configurado: falta JWT_SECRET.']);
-}
-
-$cabeceras = function_exists('getallheaders') ? getallheaders() : [];
-$autorizacion = $cabeceras['Authorization'] ?? $cabeceras['authorization']
-    ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
-
-if (!preg_match('/^Bearer\s+(.+)$/i', trim($autorizacion), $coincidencia)) {
+// `leerTokenPortador` mira en los cuatro sitios donde puede acabar la cabecera
+// Authorization según cómo Apache entregue la petición. Ver su comentario.
+$token = leerTokenPortador();
+if ($token === null) {
     responder(401, ['error' => 'Falta el token de sesión.']);
 }
 
-$carga = verificarJwt($coincidencia[1], JWT_SECRET);
+$carga = verificarJwtSupabase(
+    $token,
+    SUPABASE_URL,
+    DIR_PRIVADO . 'cache/',
+    JWT_SECRET_LEGACY
+);
 if ($carga === null) {
     responder(401, ['error' => 'Sesión inválida o caducada. Vuelve a iniciar sesión.']);
 }

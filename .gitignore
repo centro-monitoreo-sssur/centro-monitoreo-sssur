@@ -58,3 +58,9 @@ plan-implementacion-mejoras-dbd5f3.md
 PROPUESTA_HIBRIDA_CPANEL_SUPABASE.md
 recomendacion_de_mejoras.md
 RECOMENDACIONES_ARQUITECTURA_BACKEND.md
+# Configuración de los endpoints de cPanel.
+# Contiene el JWT Secret de Supabase, que es una LLAVE MAESTRA: con él se
+# pueden firmar tokens válidos en nombre de cualquier usuario, incluido el
+# superadministrador. Nunca debe llegar al repositorio.
+# La plantilla sí se versiona: cpanel/config-monitoreo.example.php
+cpanel/

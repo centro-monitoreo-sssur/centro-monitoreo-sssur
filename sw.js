@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.1.3';
+const CACHE_VERSION = 'v1.1.4';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
 // ── Caché de teselas del mapa ───────────────────────────────────────────────

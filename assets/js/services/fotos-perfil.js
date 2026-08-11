@@ -73,7 +73,14 @@ export async function subirFotoPerfil(archivo) {
   try {
     const respuesta = await fetch(ENDPOINT_FOTOS, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },  // sin Content-Type: lo pone FormData con su boundary
+      // Dos cabeceras con el mismo token: el Apache del hosting descarta
+      // `Authorization` en CGI/FastCGI y una cabecera propia pasa intacta.
+      // Ver el comentario equivalente en services/evidencias.js.
+      // Sin Content-Type: lo pone FormData con su boundary.
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'X-Monitoreo-Token': token,
+      },
       body: cuerpo,
     });
 
