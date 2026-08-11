@@ -63,4 +63,3 @@ RECOMENDACIONES_ARQUITECTURA_BACKEND.md
 # pueden firmar tokens válidos en nombre de cualquier usuario, incluido el
 # superadministrador. Nunca debe llegar al repositorio.
 # La plantilla sí se versiona: cpanel/config-monitoreo.example.php
-cpanel/

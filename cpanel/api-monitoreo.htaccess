@@ -1,0 +1,56 @@
+# ============================================================================
+# Configuración de la carpeta de endpoints
+# Copiar como  public_html/monitoreo.sansalvadorsur.gob.sv/api-monitoreo/.htaccess
+# ----------------------------------------------------------------------------
+# POR QUÉ HACE FALTA
+#
+# Apache NO entrega la cabecera `Authorization` a los scripts cuando PHP corre
+# como CGI o FastCGI —que es la configuración habitual en cPanel—. La descarta
+# antes de llamar al script, por una precaución pensada para la autenticación
+# HTTP nativa.
+#
+# El efecto es desconcertante: el navegador envía el token, el servidor lo
+# recibe, y PHP no lo ve. El endpoint responde «Falta el token de sesión»
+# aunque la sesión sea perfectamente válida. Comprobado en este servidor.
+#
+# Estas reglas vuelven a inyectar la cabecera en el entorno del script.
+# ============================================================================
+
+# 1. Reinyección por reescritura. Es la vía que funciona en más versiones de
+#    Apache, y va guardada por IfModule para no tumbar el sitio si mod_rewrite
+#    no estuviera cargado.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# 2. Segunda vía, por si la primera no aplica. No se pisan entre sí.
+<IfModule mod_setenvif.c>
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
+# 3. Si con lo anterior el endpoint sigue diciendo «Falta el token de sesión»,
+#    DESCOMENTA la línea siguiente. Es la directiva específica para esto, pero
+#    exige Apache 2.4.13 o superior: en versiones anteriores provoca un
+#    error 500 en toda la carpeta, y por eso viene desactivada.
+#
+# CGIPassAuth On
+
+# ----------------------------------------------------------------------------
+# 4. Nada de listados: el contenido de esta carpeta no se enumera.
+# ----------------------------------------------------------------------------
+Options -Indexes
+
+# 5. Los archivos que NO son endpoints no se sirven.
+#    Ya se defienden solos —config-monitoreo.php y jwt-monitoreo.php devuelven
+#    404 si se les pide sueltos, por la constante MONITOREO_ENDPOINT— pero es
+#    mejor que ni siquiera lleguen a ejecutarse.
+<FilesMatch "^(config-monitoreo|jwt-monitoreo)\.php$">
+    Require all denied
+</FilesMatch>
+
+# 6. Y menos aún la plantilla de configuración, si alguien la sube por error.
+<FilesMatch "\.example\.php$">
+    Require all denied
+</FilesMatch>
