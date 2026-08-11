@@ -1,0 +1,55 @@
+# ============================================================================
+# Protección del directorio de evidencia fotográfica
+# Copiar como  public_html/monitoreo.sansalvadorsur.gob.sv/uploads-monitoreo/evidencias/.htaccess
+# ----------------------------------------------------------------------------
+# Se aplica también a las subcarpetas AAAA/MM: Apache hereda el .htaccess del
+# directorio padre, así que no hay que replicarlo en cada mes.
+#
+# Es la red de seguridad del endpoint de subida: aunque subir_evidencia.php
+# valida por contenido Y reescribe la imagen con GD, un directorio de subidas
+# donde el servidor ejecuta código está a un paso de la ejecución remota. Las
+# dos defensas son independientes a propósito.
+# ============================================================================
+
+# 1. Nada se ejecuta: ni PHP ni CGI.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phps .cgi .pl .py
+RemoveType    .php .phtml .php3 .php4 .php5 .php7 .php8 .phps
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Cualquier intento de pedir un script devuelve 403, aunque exista.
+    RewriteRule \.(php|phtml|php[0-9]|phps|cgi|pl|py|sh|htaccess)$ - [F,L,NC]
+</IfModule>
+
+# 2. Solo se sirven imágenes, y siempre como contenido inerte.
+#    El endpoint reescribe todo a JPEG, así que basta con esa extensión; las
+#    demás se dejan por si alguna vez se admite otro formato.
+<FilesMatch "\.(jpg|jpeg|png|webp)$">
+    ForceType application/octet-stream
+    Header set Content-Disposition "inline"
+    # El nombre lleva marca de tiempo y sufijo aleatorio, así que una URL
+    # siempre apunta al mismo contenido: se puede cachear indefinidamente.
+    Header set Cache-Control "public, max-age=31536000, immutable"
+    # Evita que un navegador reinterprete el contenido como otra cosa.
+    Header set X-Content-Type-Options "nosniff"
+</FilesMatch>
+
+# 3. Sin listado de directorio.
+#    Aquí importa más que en los perfiles: el listado expondría el volumen de
+#    denuncias por mes y el UUID del empleado que levantó cada una.
+Options -Indexes -ExecCGI
+
+# 4. Nada que no sea una imagen se sirve, ni siquiera para descarga.
+<FilesMatch "^(?!.*\.(jpg|jpeg|png|webp)$).*$">
+    Require all denied
+</FilesMatch>

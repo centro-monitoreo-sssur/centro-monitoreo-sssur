@@ -38,6 +38,18 @@ const CAMPOS_NUMERICOS = [
 // un dato, no como una ausencia.
 const CAMPOS_NULABLES = ['horas_promedio_cierre', 'dias_mas_antiguo', 'area_km2', 'poblacion'];
 
+/**
+ * Acumulador a cero, DERIVADO de `CAMPOS_NUMERICOS`.
+ *
+ * Antes los totales partían de un objeto literal escrito a mano. Al añadir
+ * `intervenciones_activas` a la lista de campos pero no al literal, el
+ * acumulador hacía `undefined + 3` y el KPI de Intervenciones mostraba **NaN**
+ * en pantalla. Derivarlo elimina la posibilidad de que las dos listas vuelvan a
+ * separarse.
+ */
+const baseDeTotales = () =>
+  CAMPOS_NUMERICOS.reduce((acc, campo) => { acc[campo] = 0; return acc; }, {});
+
 // PostgREST serializa `count()` y `numeric` como cadena para no perder
 // precisión en JavaScript. Si no se convierten, `a + b` concatena en vez de
 // sumar y los totales del tablero salen como "1203" en lugar de 15.
@@ -190,8 +202,7 @@ export function useTerritorio() {
 
   // Agregado del ámbito: lo que va en la franja de KPIs de la consola.
   const totalesDelAmbito = computed(() => {
-    const base = { total: 0, pendientes: 0, en_curso: 0, resueltas: 0,
-                   rechazadas: 0, fuera_de_objetivo: 0, criticas_abiertas: 0 };
+    const base = baseDeTotales();
     return distritosDelAmbito.value.reduce((acc, d) => {
       CAMPOS_NUMERICOS.forEach((c) => { acc[c] += d[c]; });
       return acc;
@@ -224,8 +235,7 @@ export function useTerritorio() {
   });
 
   const totalesPeriodo = computed(() => {
-    const base = { total: 0, pendientes: 0, en_curso: 0, resueltas: 0,
-                   rechazadas: 0, fuera_de_objetivo: 0, criticas_abiertas: 0 };
+    const base = baseDeTotales();
     return periodoDelAmbito.value.reduce((acc, d) => {
       CAMPOS_NUMERICOS.forEach((c) => { acc[c] += d[c]; });
       return acc;
@@ -240,11 +250,9 @@ export function useTerritorio() {
   });
 
   const totalesPrevios = computed(() => {
-    const base = { total: 0, pendientes: 0, en_curso: 0, resueltas: 0,
-                   rechazadas: 0, fuera_de_objetivo: 0, criticas_abiertas: 0,
-                   intervenciones_activas: 0 };
+    const base = baseDeTotales();
     return previoDelAmbito.value.reduce((acc, d) => {
-      Object.keys(base).forEach((c) => { acc[c] += d[c] || 0; });
+      CAMPOS_NUMERICOS.forEach((c) => { acc[c] += d[c] || 0; });
       return acc;
     }, base);
   });

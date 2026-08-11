@@ -1,0 +1,450 @@
+<!-- ============================================================
+     VISTA: Cuadrillas de Campo
+     Equipos operativos y su composición.
+     ============================================================ -->
+<!-- `min-h-0` es obligatorio: un ítem flex tiene min-height:auto y se niega a
+     encogerse por debajo de su contenido. El padding lo pone <main>. -->
+<div class="h-full min-h-0 flex flex-col">
+
+  <!-- Indicadores -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 flex-shrink-0">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-people-group text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cuadrillas</p>
+        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ totalCuadrillas }}</p>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activas</p>
+        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ cuadrillasActivas }}</p>
+      </div>
+    </div>
+    <!-- Una cuadrilla activa sin líder es un problema operativo: no hay a quién
+         llamar por radio. Por eso tiene indicador propio y no se esconde en la
+         lista. -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-user-slash text-amber-600 dark:text-amber-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sin líder</p>
+        <p class="text-2xl font-extrabold" :class="cuadrillasSinLider ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'">
+          {{ cuadrillasSinLider }}
+        </p>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-helmet-safety text-violet-600 dark:text-violet-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Personal asignado</p>
+        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ personalAsignado }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aviso de error de carga -->
+  <div v-if="error" class="mb-4 flex-shrink-0 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-3">
+    <i class="fas fa-triangle-exclamation text-red-500 mt-0.5"></i>
+    <p class="text-xs text-red-700 dark:text-red-300">{{ error }}</p>
+  </div>
+
+  <!-- Lista principal -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
+
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50 flex-shrink-0">
+      <div class="flex-1">
+        <h3 class="text-sm font-bold text-gray-800 dark:text-white">Cuadrillas de campo</h3>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+          Mostrando <span class="font-semibold text-gray-700 dark:text-gray-300">{{ cuadrillasFiltradas.length }}</span> de {{ totalCuadrillas }}
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <!-- El buscador alcanza también a los integrantes -->
+          <input v-model="filtroBusqueda" type="search" placeholder="Cuadrilla o integrante…"
+            class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all w-[190px]">
+        </div>
+
+        <select v-model="filtroDepartamento"
+          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          <option value="">Todos los departamentos</option>
+          <option v-for="d in departamentos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+        </select>
+
+        <select v-model="filtroEstado"
+          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          <option value="">Cualquier estado</option>
+          <option value="activo">Activas</option>
+          <option value="inactivo">Inactivas</option>
+          <option value="sin_lider">Sin líder</option>
+        </select>
+
+        <button v-if="hayFiltros" @click="limpiarFiltros"
+          class="px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <i class="fas fa-eraser mr-1"></i> Limpiar
+        </button>
+
+        <button v-if="puedeCrearCuadrilla" @click="abrirModalEditar(null)"
+          class="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm">
+          <i class="fas fa-plus mr-1"></i> Nueva cuadrilla
+        </button>
+      </div>
+    </div>
+
+    <!-- Cuerpo -->
+    <div class="flex-1 min-h-0 overflow-y-auto">
+
+      <div v-if="cargando" class="p-10 text-center text-gray-400">
+        <i class="fas fa-circle-notch fa-spin text-2xl mb-3"></i>
+        <p class="text-xs">Cargando cuadrillas…</p>
+      </div>
+
+      <!-- Vacío real y vacío por filtro son cosas distintas y se dicen distinto:
+           uno pide crear la primera cuadrilla, el otro pide quitar un filtro. -->
+      <div v-else-if="!cuadrillasFiltradas.length" class="p-10 text-center">
+        <i class="fas fa-people-group text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+        <p v-if="hayFiltros" class="text-xs text-gray-500 dark:text-gray-400">
+          Ninguna cuadrilla coincide con los filtros.
+        </p>
+        <template v-else>
+          <p class="text-sm font-semibold text-gray-600 dark:text-gray-300">Todavía no hay cuadrillas</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Las cuadrillas son los equipos a los que se asignan los casos en territorio.
+          </p>
+        </template>
+      </div>
+
+      <div v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+        <div v-for="c in cuadrillasFiltradas" :key="c.id"
+          class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              :class="c.activo ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700'">
+              <i class="fas fa-people-group"
+                :class="c.activo ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'"></i>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ c.nombre }}</h4>
+                <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300">
+                  {{ c.codigo }}
+                </span>
+                <span v-if="!c.activo"
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200">
+                  Inactiva
+                </span>
+                <span v-else-if="!c.lider"
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                  Sin líder
+                </span>
+              </div>
+
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                {{ nombreDelDepartamento(c.departamento_id) }}
+                · Creada el {{ formatearFecha(c.created_at) }}
+              </p>
+
+              <!-- Composición resumida. El líder va primero y destacado. -->
+              <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                <span v-if="!c.totalIntegrantes" class="text-[11px] italic text-gray-400">
+                  Sin integrantes asignados
+                </span>
+                <span v-for="i in c.integrantes" :key="i.usuarioId"
+                  class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full"
+                  :class="i.esLider
+                    ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200'
+                    : (i.activo ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                                : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 line-through')">
+                  <i v-if="i.esLider" class="fas fa-star text-[8px]"></i>
+                  {{ i.nombre }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <button @click="abrirIntegrantes(c)"
+                class="px-2.5 py-1.5 text-xs font-semibold rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                :title="puedeEditarCuadrilla ? 'Gestionar integrantes' : 'Ver integrantes'">
+                <i class="fas fa-user-group mr-1"></i>{{ c.totalIntegrantes }}
+              </button>
+              <button v-if="puedeEditarCuadrilla" @click="abrirModalEditar(c)"
+                class="w-8 h-8 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                aria-label="Editar cuadrilla">
+                <i class="fas fa-pen text-xs"></i>
+              </button>
+              <button v-if="puedeEditarCuadrilla" @click="abrirModalEstado(c)"
+                class="w-8 h-8 rounded-lg transition-colors"
+                :class="c.activo
+                  ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
+                  : 'text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'"
+                :aria-label="c.activo ? 'Desactivar cuadrilla' : 'Reactivar cuadrilla'">
+                <i class="fas text-xs" :class="c.activo ? 'fa-power-off' : 'fa-rotate-left'"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MODAL · alta y edición
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div v-if="modalEditar" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    @click.self="cerrarModalEditar">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+          <i class="fas fa-people-group text-blue-600 dark:text-blue-400 text-sm"></i>
+        </div>
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white">
+          {{ cuadrillaEnEdicion?.id ? 'Editar cuadrilla' : 'Nueva cuadrilla' }}
+        </h3>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+            Código
+          </label>
+          <input v-model="cuadrillaEnEdicion.codigo" type="text" maxlength="20"
+            placeholder="Ej: CUAD-VIA-01"
+            class="w-full px-3 py-2 text-sm font-mono uppercase border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none">
+          <p class="text-[10px] text-gray-400 mt-1">Debe ser único. Se guarda en mayúsculas.</p>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+            Nombre
+          </label>
+          <input v-model="cuadrillaEnEdicion.nombre" type="text" maxlength="120"
+            placeholder="Ej: Cuadrilla de bacheo — turno matutino"
+            class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+            Departamento
+          </label>
+          <select v-model="cuadrillaEnEdicion.departamento_id"
+            class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none">
+            <option value="">Selecciona un departamento…</option>
+            <option v-for="d in departamentos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
+          </select>
+          <p class="text-[10px] text-gray-400 mt-1">
+            Determina qué unidad responde por el trabajo de esta cuadrilla.
+          </p>
+        </div>
+
+        <div v-if="errorFormulario"
+          class="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 flex items-start gap-2">
+          <i class="fas fa-circle-exclamation text-red-500 text-xs mt-0.5"></i>
+          <p class="text-[11px] text-red-700 dark:text-red-300">{{ errorFormulario }}</p>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 bg-gray-50 dark:bg-gray-800/50">
+        <button @click="cerrarModalEditar" :disabled="guardando"
+          class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
+          Cancelar
+        </button>
+        <button @click="guardarCambios" :disabled="guardando"
+          class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50">
+          <i v-if="guardando" class="fas fa-circle-notch fa-spin mr-1"></i>
+          {{ guardando ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MODAL · composición de la cuadrilla
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div v-if="modalIntegrantes && cuadrillaAbierta"
+    class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    @click.self="cerrarIntegrantes">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+
+      <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 flex-shrink-0">
+        <div class="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+          <i class="fas fa-user-group text-violet-600 dark:text-violet-400 text-sm"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ cuadrillaAbierta.nombre }}</h3>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">
+            {{ cuadrillaAbierta.totalIntegrantes }} integrante(s) ·
+            {{ nombreDelDepartamento(cuadrillaAbierta.departamento_id) }}
+          </p>
+        </div>
+        <button @click="cerrarIntegrantes"
+          class="w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          aria-label="Cerrar">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div v-if="errorComposicion"
+        class="mx-5 mt-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 flex items-start gap-2 flex-shrink-0">
+        <i class="fas fa-circle-exclamation text-red-500 text-xs mt-0.5"></i>
+        <p class="text-[11px] text-red-700 dark:text-red-300">{{ errorComposicion }}</p>
+      </div>
+
+      <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-gray-700 overflow-hidden">
+
+        <!-- Columna izquierda · quiénes están -->
+        <div class="flex flex-col min-h-0 overflow-y-auto">
+          <p class="px-5 pt-4 pb-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 flex-shrink-0">
+            Integrantes
+          </p>
+          <div v-if="!cuadrillaAbierta.totalIntegrantes" class="px-5 py-8 text-center">
+            <i class="fas fa-user-plus text-2xl text-gray-300 dark:text-gray-600 mb-2"></i>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              Todavía no hay nadie en esta cuadrilla.
+            </p>
+          </div>
+          <div v-else class="px-3 pb-4 space-y-1">
+            <div v-for="i in cuadrillaAbierta.integrantes" :key="i.usuarioId"
+              class="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                :class="i.esLider ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-gray-100 dark:bg-gray-700'">
+                <i class="fas text-xs"
+                  :class="i.esLider ? 'fa-star text-amber-600 dark:text-amber-400' : 'fa-user text-gray-400'"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{{ i.nombre }}</p>
+                <p class="text-[10px] text-gray-400 truncate">
+                  {{ i.esLider ? 'Líder de cuadrilla' : (i.puesto || 'Integrante') }}
+                  <span v-if="!i.activo" class="text-red-500 font-semibold">· usuario inactivo</span>
+                </p>
+              </div>
+              <template v-if="puedeEditarCuadrilla">
+                <button @click="alternarLider(i)" :disabled="guardando"
+                  class="w-7 h-7 rounded-lg transition-colors disabled:opacity-40"
+                  :class="i.esLider
+                    ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                    : 'text-gray-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'"
+                  :title="i.esLider ? 'Quitar como líder' : 'Nombrar líder'">
+                  <i class="fas fa-star text-[11px]"></i>
+                </button>
+                <button @click="quitar(i.usuarioId)" :disabled="guardando"
+                  class="w-7 h-7 rounded-lg text-gray-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-40"
+                  title="Sacar de la cuadrilla">
+                  <i class="fas fa-user-minus text-[11px]"></i>
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna derecha · a quién añadir -->
+        <div v-if="puedeEditarCuadrilla" class="flex flex-col min-h-0">
+          <div class="px-5 pt-4 pb-2 flex-shrink-0">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Añadir personal</p>
+            <div class="relative">
+              <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+              <input v-model="busquedaPersonal" type="search" placeholder="Buscar por nombre o usuario…"
+                class="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+
+          <div class="flex-1 min-h-0 overflow-y-auto px-3 pb-4 space-y-1">
+            <p v-if="!personalDisponible.length" class="px-2 py-6 text-center text-xs text-gray-400">
+              Nadie más coincide con la búsqueda.
+            </p>
+            <button v-for="u in personalDisponible" :key="u.id"
+              @click="anadir(u.id)" :disabled="guardando"
+              class="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-40">
+              <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                <i class="fas fa-user text-gray-400 text-xs"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{{ u.nombreCompleto }}</p>
+                <!-- Que alguien ya esté en otra cuadrilla no lo impide, pero
+                     tiene que verse antes de pulsar: no es un accidente. -->
+                <p class="text-[10px] truncate"
+                  :class="u.otrasCuadrillas ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'">
+                  <span v-if="u.otrasCuadrillas">
+                    <i class="fas fa-triangle-exclamation text-[8px]"></i>
+                    Ya está en {{ u.nombreOtra }}<span v-if="u.otrasCuadrillas > 1"> y {{ u.otrasCuadrillas - 1 }} más</span>
+                  </span>
+                  <span v-else>{{ u.puesto_cargo || 'Sin puesto registrado' }}</span>
+                </p>
+              </div>
+              <i class="fas fa-user-plus text-gray-300 text-[11px]"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sin permiso de edición la columna derecha no aparece; se explica por qué -->
+        <div v-else class="flex items-center justify-center p-8">
+          <p class="text-xs text-gray-400 text-center">
+            <i class="fas fa-lock mb-2 block text-lg"></i>
+            Tu rol permite consultar la composición, no modificarla.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MODAL · activar / desactivar
+       ══════════════════════════════════════════════════════════════════════ -->
+  <div v-if="modalEstado && cuadrillaParaEstado"
+    class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    @click.self="cerrarModalEstado">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div class="p-5 text-center">
+        <div class="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-3"
+          :class="cuadrillaParaEstado.activo ? 'bg-red-50 dark:bg-red-900/30' : 'bg-emerald-50 dark:bg-emerald-900/30'">
+          <i class="fas text-lg"
+            :class="cuadrillaParaEstado.activo
+              ? 'fa-power-off text-red-600 dark:text-red-400'
+              : 'fa-rotate-left text-emerald-600 dark:text-emerald-400'"></i>
+        </div>
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white">
+          {{ cuadrillaParaEstado.activo ? 'Desactivar' : 'Reactivar' }} «{{ cuadrillaParaEstado.nombre }}»
+        </h3>
+        <!-- No se ofrece borrar: `casos.cuadrilla_responsable_id` apunta aquí y
+             un borrado dejaría casos históricos sin poder decir quién los
+             atendió. Se explica en lugar de esconderlo. -->
+        <p v-if="cuadrillaParaEstado.activo" class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          Dejará de ofrecerse al asignar casos. Su historial y sus integrantes se conservan,
+          y puede reactivarse cuando haga falta.
+        </p>
+        <p v-else class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          Volverá a estar disponible para asignarle casos.
+        </p>
+
+        <div v-if="errorEstado"
+          class="mt-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-left">
+          <p class="text-[11px] text-red-700 dark:text-red-300">{{ errorEstado }}</p>
+        </div>
+      </div>
+      <div class="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-center gap-2 bg-gray-50 dark:bg-gray-800/50">
+        <button @click="cerrarModalEstado" :disabled="guardando"
+          class="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
+          Cancelar
+        </button>
+        <button @click="confirmarCambioDeEstado" :disabled="guardando"
+          class="px-4 py-2 text-xs font-bold text-white rounded-lg transition-colors shadow-sm disabled:opacity-50"
+          :class="cuadrillaParaEstado.activo ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'">
+          <i v-if="guardando" class="fas fa-circle-notch fa-spin mr-1"></i>
+          {{ cuadrillaParaEstado.activo ? 'Desactivar' : 'Reactivar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -11,50 +11,68 @@ const denuncias = ref([]);
 const cargandoDenuncias = ref(true);
 const filtroTipo = ref(null);
 
+/* Una sola definición de columnas para la carga inicial y para la relectura de
+   Realtime. Si divergen, un caso recién cambiado aparecería con menos datos que
+   el resto — y sería un fallo intermitente, de los peores de diagnosticar. */
+const COLUMNAS_CASO = `
+  id,
+  correlativo,
+  titulo,
+  descripcion,
+  estado_codigo,
+  resolucion,
+  created_at,
+  updated_at,
+  fecha_recibido,
+  fecha_asignado,
+  fecha_cierre,
+  ubicacion,
+  direccion_referencia,
+  categoria_id,
+  departamento_actual_id,
+  distrito_id,
+  prioridad_id,
+  canal_reporte_id,
+  usuario_responsable_id,
+  cuadrilla_responsable_id,
+  caso_padre_id
+`;
+
+/* ⚠ TOPE SILENCIOSO. Con más de 200 casos visibles, los indicadores que se
+   calculan sobre esta lista MIENTEN, y nada lo advierte. `hayMasCasos` lo
+   expone para que la interfaz pueda decirlo; la solución de fondo es paginar
+   por cursor o filtrar por período, y está pendiente. */
+const TOPE_CASOS = 200;
+const hayMasCasos = ref(false);
+
 async function cargarDenuncias() {
   cargandoDenuncias.value = true;
   try {
     if (db) {
-      // Schema v4: tabla `casos`. Seleccionamos los campos necesarios para UI + mapa.
       // RLS en Supabase ya filtra lo que el usuario autenticado puede ver.
       const { data, error } = await db
         .from('casos')
-        .select(`
-          id,
-          correlativo,
-          titulo,
-          descripcion,
-          estado_codigo,
-          created_at,
-          updated_at,
-          fecha_recibido,
-          fecha_asignado,
-          fecha_cierre,
-          ubicacion,
-          direccion_referencia,
-          categoria_id,
-          departamento_actual_id,
-          distrito_id,
-          prioridad_id,
-          canal_reporte_id,
-          usuario_responsable_id,
-          cuadrilla_responsable_id,
-          caso_padre_id
-        `)
+        .select(COLUMNAS_CASO)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(TOPE_CASOS);
       if (error) throw error;
       // Mapear `casos` al formato esperado por los componentes UI (compatibilidad)
       denuncias.value = (data || []).map((c) => mapearCasoADenuncia(c, { nombreDistrito }));
+      hayMasCasos.value = (data || []).length >= TOPE_CASOS;
     } else {
       await new Promise((r) => setTimeout(r, 400));
       denuncias.value = []; // Sin mock si la BD está vacía
+      hayMasCasos.value = false;
     }
   } catch (e) {
     console.error('Error cargando casos:', e);
     denuncias.value = []; // Sin mock, es mejor no mentir en producción
+    hayMasCasos.value = false;
   } finally {
+    // El índice de Realtime tiene que quedar alineado con la lista recién
+    // cargada; si no, el primer parcheo escribiría en la posición equivocada.
+    reconstruirIndice();
     cargandoDenuncias.value = false;
   }
 }
@@ -131,6 +149,9 @@ function mapearCasoADenuncia(caso, catalogo = {}) {
     titulo: caso.titulo,
     descripcion: caso.descripcion,
     estado: caso.estado_codigo,       // frontend usa `estado` → apunta a estado_codigo
+    // La resolución la escribe el cierre (RPC `cerrar_caso_campo` desde campo,
+    // `cambiar_estado_caso` desde la consola) y el panel de gestión la muestra.
+    resolucion: caso.resolucion,
     lat,
     lng,
     direccion: caso.direccion_referencia,
@@ -169,6 +190,102 @@ function mapearCasoADenuncia(caso, catalogo = {}) {
 //      ya no es el suyo.
 let canalCasos = null;
 
+/** Estado del canal, para que la consola pueda avisar si se cae. */
+const estadoRealtime = ref('CERRADO');
+
+/* ── Parcheo incremental ─────────────────────────────────────────────────────
+   La versión anterior hacía `cargarDenuncias()` completo ante CUALQUIER evento:
+   200 filas releídas, en TODOS los clientes conectados, cada vez que alguien
+   tocaba un caso. Con veinte personas en el centro y un empleado cerrando
+   partes, eran 4 000 filas por cierre.
+
+   Ahora se relee SOLO la fila afectada. Y no se usa el `new` que trae el evento
+   —que vendría gratis— por dos razones:
+
+     · El payload sale de la TABLA, no de la vista: `ubicacion` llega en WKB y
+       sin los nombres de catálogo, y su serialización depende de la versión de
+       Realtime. Releer usa exactamente la misma consulta que la carga inicial.
+     · Si un cambio saca la fila del alcance del usuario —reasignar un caso a
+       otro distrito, por ejemplo— la relectura devuelve vacío y el caso
+       desaparece de la lista. Con el payload crudo se quedaría en pantalla un
+       caso que la RLS ya no autoriza a ver.
+
+   `indicePorId` da la posición en O(1). Se reconstruye solo cuando la lista
+   cambia de tamaño, que es lo raro; un UPDATE —lo frecuente— no la mueve. */
+let indicePorId = new Map();
+
+function reconstruirIndice() {
+  indicePorId = new Map(denuncias.value.map((d, i) => [d.id, i]));
+}
+
+/** Posición que le corresponde a un caso en la lista, ordenada por fecha desc. */
+function posicionPorFecha(creado) {
+  const t = new Date(creado).getTime();
+  const lista = denuncias.value;
+  // Recorrido lineal a propósito: un caso nuevo es casi siempre el más
+  // reciente, así que sale en la primera comparación.
+  for (let i = 0; i < lista.length; i++) {
+    if (new Date(lista[i].created_at).getTime() <= t) return i;
+  }
+  return lista.length;
+}
+
+function upsertCaso(fila) {
+  const mapeado = mapearCasoADenuncia(fila, { nombreDistrito });
+  const indice = indicePorId.get(mapeado.id);
+
+  if (indice !== undefined) {
+    denuncias.value[indice] = mapeado;   // misma posición: el índice sigue válido
+    return;
+  }
+  denuncias.value.splice(posicionPorFecha(mapeado.created_at), 0, mapeado);
+  reconstruirIndice();
+}
+
+function quitarCaso(id) {
+  const indice = indicePorId.get(id);
+  if (indice === undefined) return;
+  denuncias.value.splice(indice, 1);
+  reconstruirIndice();
+}
+
+/* Coalescencia de eventos.
+   Aplicar una asignación toca el caso y su historial, y un cierre desde campo
+   dispara varios cambios seguidos. Sin agrupar, cada uno sería una consulta.
+   Se juntan los ids de 150 ms y se resuelven con un solo `in (...)`. */
+let idsPendientes = new Set();
+let temporizadorRefresco = null;
+
+function programarRefresco(id) {
+  idsPendientes.add(id);
+  if (temporizadorRefresco) return;
+  temporizadorRefresco = setTimeout(resolverPendientes, 150);
+}
+
+async function resolverPendientes() {
+  temporizadorRefresco = null;
+  const ids = [...idsPendientes];
+  idsPendientes.clear();
+  if (!ids.length || !db) return;
+
+  try {
+    const { data, error } = await db
+      .from('casos').select(COLUMNAS_CASO).in('id', ids).is('deleted_at', null);
+    if (error) throw error;
+
+    const devueltos = new Set((data || []).map((c) => c.id));
+    // Lo que se pidió y no volvió ya no es visible para este usuario: o se
+    // borró, o un cambio lo sacó de su alcance.
+    for (const id of ids) if (!devueltos.has(id)) quitarCaso(id);
+    for (const fila of data || []) upsertCaso(fila);
+  } catch (e) {
+    // Sin recarga completa de respaldo: dejaría la puerta abierta a la
+    // avalancha que este mecanismo viene a evitar. Se registra y se sigue; el
+    // siguiente evento volverá a intentarlo.
+    console.error('[realtime] No se pudo refrescar los casos cambiados:', e.message);
+  }
+}
+
 async function suscribirRealtime() {
   if (!db || canalCasos) return;
 
@@ -186,11 +303,22 @@ async function suscribirRealtime() {
 
   canalCasos = db
     .channel('casos-live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'casos' }, () => cargarDenuncias())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'casos' }, (evento) => {
+      if (evento.eventType === 'DELETE') {
+        // En un DELETE solo llega `old`, y con REPLICA IDENTITY por defecto
+        // solo trae la clave primaria. Es todo lo que hace falta.
+        if (evento.old?.id != null) quitarCaso(evento.old.id);
+        return;
+      }
+      const id = evento.new?.id;
+      if (id != null) programarRefresco(id);
+    })
     .subscribe((estado) => {
       // El estado del canal es información operativa en un centro de
       // monitoreo: si el tiempo real se cae, el operador está mirando datos
-      // congelados sin saberlo.
+      // congelados sin saberlo. Por eso se publica en un `ref` y no solo en
+      // la consola: la interfaz puede avisarlo.
+      estadoRealtime.value = estado;
       if (estado === 'SUBSCRIBED')   console.info('[realtime] Escuchando cambios en casos.');
       if (estado === 'CHANNEL_ERROR') console.error('[realtime] Canal en error; el SDK reintentará.');
       if (estado === 'TIMED_OUT')     console.warn('[realtime] Tiempo de espera agotado al suscribir.');
@@ -198,6 +326,16 @@ async function suscribirRealtime() {
 }
 
 async function desuscribirRealtime() {
+  // Los refrescos en vuelo se descartan aunque no haya canal: si la sesión se
+  // cerró, esa consulta se ejecutaría con el token del usuario anterior o
+  // fallaría, y en ningún caso su resultado debe entrar en la lista.
+  if (temporizadorRefresco) {
+    clearTimeout(temporizadorRefresco);
+    temporizadorRefresco = null;
+  }
+  idsPendientes.clear();
+  estadoRealtime.value = 'CERRADO';
+
   if (!db || !canalCasos) return;
   const canal = canalCasos;
   canalCasos = null;         // antes del await: evita una doble baja si se llama dos veces
@@ -235,6 +373,8 @@ export function useDenuncias() {
     cargarDenuncias,
     suscribirRealtime,
     desuscribirRealtime,
+    estadoRealtime,
+    hayMasCasos,
     nombreDeTipo,
     colorDeTipo,
   };

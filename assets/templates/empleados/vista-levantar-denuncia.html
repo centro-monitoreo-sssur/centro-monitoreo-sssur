@@ -531,7 +531,10 @@
           <div v-if="formulario.fotos.length > 0 && !formulario.fotoProcesando" class="grid grid-cols-2 gap-3 mt-3">
             <div v-for="(foto, index) in formulario.fotos" :key="index"
               class="relative rounded-xl overflow-hidden h-32 border border-gray-100 shadow-sm">
-              <img :src="foto" class="w-full h-full object-cover" alt="Evidencia adjunta">
+              <!-- `foto` guarda las dos formas de la imagen: `vistaPrevia` es
+                   el DataURL que se pinta aquí, y `archivo` el Blob que se
+                   sube. Ver el comentario de utils/image-compressor.js. -->
+              <img :src="foto.vistaPrevia" class="w-full h-full object-cover" alt="Evidencia adjunta">
               <!-- Overlay oscuro sutil -->
               <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
               <!-- Badge de optimización -->
@@ -623,7 +626,10 @@
       class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="puedeEnviar
         ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700'
         : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
-      <span v-if="guardando"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Enviando…</span>
+      <!-- Subir dos fotos por una conexión móvil tarda lo suficiente como para
+           que un «Enviando…» genérico parezca que la app se colgó. -->
+      <span v-if="subiendoFotos"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Subiendo fotografías…</span>
+      <span v-else-if="guardando"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Enviando…</span>
       <span v-else-if="faltaParaEnviar">{{ faltaParaEnviar }}</span>
       <span v-else>Enviar denuncia <i class="fa-solid fa-paper-plane ml-2"></i></span>
     </button>
@@ -640,14 +646,19 @@
         'bg-red-600 text-white':     resultadoEnvio.tipo === 'error',
         'bg-amber-600 text-white':   resultadoEnvio.tipo === 'advertencia'
       }">
+      <!-- La clave estaba repetida: 'fa-triangle-exclamation' aparecía dos
+           veces y la segunda anulaba a la primera, así que 'advertencia' se
+           quedaba sin icono. Se fusionan en una sola condición. -->
       <i class="mt-0.5 fa-solid" :class="{
           'fa-circle-check':         resultadoEnvio.tipo === 'ok',
           'fa-cloud-arrow-up':       resultadoEnvio.tipo === 'encolado',
-          'fa-triangle-exclamation': resultadoEnvio.tipo === 'advertencia',
-          'fa-triangle-exclamation': resultadoEnvio.tipo === 'error'
+          'fa-triangle-exclamation': resultadoEnvio.tipo === 'advertencia' || resultadoEnvio.tipo === 'error'
         }"></i>
       <span class="flex-1">{{ resultadoEnvio.texto }}</span>
-      <button v-if="resultadoEnvio.tipo === 'error'" @click="resultadoEnvio = null"
+      <!-- Una advertencia también se puede descartar: informa de algo que el
+           empleado debe leer, no de un éxito que se va solo. -->
+      <button v-if="resultadoEnvio.tipo === 'error' || resultadoEnvio.tipo === 'advertencia'"
+        @click="resultadoEnvio = null"
         class="toque-comodo opacity-80 hover:opacity-100" aria-label="Cerrar aviso">
         <i class="fa-solid fa-xmark"></i>
       </button>

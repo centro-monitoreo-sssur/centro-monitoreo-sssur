@@ -302,6 +302,24 @@
           <div class="text-[9px] text-gray-400">{{ MODOS.find(m=>m.id===modoActivo)?.desc }}</div>
         </div>
       </div>
+
+      <!-- Leyenda de la cifra del mapa. Sobre los polígonos solo va el número;
+           qué representa se escribe aquí UNA vez en lugar de cinco, junto con
+           la advertencia de lectura. En densidad y por habitante la cifra es el
+           peso demográfico, no la métrica: las razones no admiten cuota de un
+           total, y esas van en el ranking con su unidad. -->
+      <div v-if="leyendaCifra"
+        class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-1.5">
+          <i class="fa-solid fa-percent text-[8px] text-gray-400"></i>
+          <span class="text-[9px] text-gray-500 dark:text-gray-400">
+            Cifra del mapa: <strong class="font-semibold text-gray-700 dark:text-gray-200">{{ leyendaCifra }}</strong>
+          </span>
+        </div>
+        <div v-if="explicacionEtiqueta" class="text-[9px] text-gray-400 leading-snug mt-0.5 pl-3">
+          {{ explicacionEtiqueta }}
+        </div>
+      </div>
     </div>
 
     <!-- Ranking de distritos -->
@@ -333,8 +351,18 @@
                 {{ z.nombre }}
               </span>
             </div>
-            <div class="text-[9px] text-gray-400 font-mono mt-0.5 pl-3.5">
-              {{ getMetricaLabel(z, modoActivo) }}
+            <div class="text-[9px] text-gray-400 font-mono mt-0.5 pl-3.5 flex items-center gap-1.5">
+              <!-- Aquí sí va la métrica con su unidad —«3 132 hab/km²»—, que es
+                   lo que no cabe sobre el polígono. -->
+              <span>{{ getMetricaLabel(z, modoActivo) }}</span>
+              <!-- Y detrás, el mismo porcentaje que rotula el mapa, para que la
+                   lista y los polígonos no digan cosas distintas del mismo
+                   distrito. -->
+              <span v-if="porcentajeDe(z, modoActivo) !== null"
+                class="font-sans font-bold text-gray-500 dark:text-gray-300"
+                :title="'Cifra rotulada sobre el mapa: ' + leyendaCifra">
+                · {{ porcentajeDe(z, modoActivo) }}%
+              </span>
             </div>
           </div>
           <i class="fa-solid fa-chevron-right text-[8px] text-gray-300 group-hover:text-blue-400 flex-shrink-0"></i>

@@ -7,9 +7,12 @@
 // (`ui-tabla`, `ui-modal`, `ui-input`, `ui-select`). La vista se queda con lo
 // que es suyo —filtrar, ordenar, paginar y exportar— y deja de repetir markup.
 // ============================================================
-import { ref, computed, watch } from '../../core/vue.js';
+import { ref, computed, watch, onMounted } from '../../core/vue.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+import { useGestionCasos } from '../../stores/gestion-casos.js';
+import { useCuadrillas } from '../../stores/cuadrillas.js';
+import { usePermisos } from '../../stores/permisos.js';
 // badge.js es la fuente única de estados. Esta vista tenía su propia copia y en
 // ella faltaba `en_revision`, así que ese estado se pintaba como "Desconocido".
 // `colorEstado` y no `badgeEstado`: la plantilla ya pone su propio tamaño.
@@ -27,8 +30,19 @@ const COLUMNAS = [
 export default {
   name: 'vista-denuncias',
   setup() {
-    const { denuncias, cargandoDenuncias } = useDenuncias();
-    const { tiposDenuncia } = useCatalogos();
+    const { denuncias, cargandoDenuncias, cargarDenuncias } = useDenuncias();
+    const { tiposDenuncia, flujoDeCategoria } = useCatalogos();
+    const {
+      guardando, historial, cargandoHistorial,
+      asignarCaso, cambiarEstadoCaso, cargarHistorial,
+    } = useGestionCasos();
+    // Se reutiliza el store de cuadrillas en lugar de volver a consultar
+    // personal y equipos: su estado es de módulo, así que la carga se comparte
+    // con la pantalla de Cuadrillas y no se repite.
+    const { cuadrillasAsignables, personal, cargarCuadrillas } = useCuadrillas();
+    const { puedeEditar } = usePermisos();
+
+    const puedeGestionar = computed(() => puedeEditar('casos'));
 
     // Filtros
     const busqueda = ref('');
@@ -195,14 +209,138 @@ export default {
 
     const formatearId = (id) => '#' + String(id).padStart(5, '0');
 
-    // Modal de Detalles
-    const denunciaSeleccionada = ref(null);
+    // ── Modal de detalle y gestión ────────────────────────────────────────
+    // Se guarda el ID y no el objeto. Tras cada operación el store recarga los
+    // casos y REEMPLAZA las filas: una referencia al objeto viejo seguiría
+    // mostrando el estado anterior al cambio que se acaba de hacer.
+    const casoAbiertoId = ref(null);
+    const denunciaSeleccionada = computed(() =>
+      (denuncias.value || []).find((d) => d.id === casoAbiertoId.value) || null
+    );
+
+    // Borrador del formulario de gestión. Separado de la denuncia para que
+    // cerrar el modal sin guardar no deje cambios a medias en el store.
+    const gestion = ref({ usuarioId: '', cuadrillaId: '', estado: '', observacion: '', resolucion: '' });
+    const errorGestion = ref('');
+    const avisoGestion = ref('');
+
+    function sincronizarBorrador() {
+      const d = denunciaSeleccionada.value;
+      gestion.value = {
+        usuarioId: d?.responsable || '',
+        cuadrillaId: d?.cuadrilla || '',
+        estado: d?.estado || '',
+        observacion: '',
+        resolucion: '',
+      };
+    }
+
     function abrirDetalle(denuncia) {
-      denunciaSeleccionada.value = denuncia;
+      errorGestion.value = '';
+      avisoGestion.value = '';
+      casoAbiertoId.value = denuncia.id;
+      sincronizarBorrador();
+      cargarHistorial(denuncia.id);
     }
+
     function cerrarDetalle() {
-      denunciaSeleccionada.value = null;
+      casoAbiertoId.value = null;
+      historial.value = [];
     }
+
+    /** Estados que ofrece el flujo de la categoría del caso abierto. */
+    const estadosDelCaso = computed(() => {
+      const d = denunciaSeleccionada.value;
+      if (!d) return [];
+      const flujo = flujoDeCategoria(d.tipo_id);
+      // Sin flujo cargado se cae al vocabulario por defecto de migration_v9, que
+      // es el que tienen las 17 categorías base.
+      return flujo.length
+        ? flujo.map((e) => ({ id: e.id, nombre: e.nombre || etiquetaEstado(e.id), esFinal: e.es_final === true }))
+        : estadosPosibles.map((c) => ({ id: c, nombre: etiquetaEstado(c), esFinal: c === 'resuelta' || c === 'rechazada' }));
+    });
+
+    /** El estado elegido cierra el caso: entonces la resolución es obligatoria. */
+    const cierraElCaso = computed(() =>
+      !!estadosDelCaso.value.find((e) => e.id === gestion.value.estado && e.esFinal)
+    );
+
+    const hayCambioDeAsignacion = computed(() => {
+      const d = denunciaSeleccionada.value;
+      if (!d) return false;
+      return (gestion.value.usuarioId || null) !== (d.responsable || null)
+          || String(gestion.value.cuadrillaId || '') !== String(d.cuadrilla || '');
+    });
+
+    const hayCambioDeEstado = computed(() => {
+      const d = denunciaSeleccionada.value;
+      return !!d && !!gestion.value.estado && gestion.value.estado !== d.estado;
+    });
+
+    /** Nombre presentable de quien figura como responsable. */
+    const nombreDePersona = (id) => {
+      if (!id) return '';
+      const u = (personal.value || []).find((p) => p.id === id);
+      return u ? u.nombreCompleto : 'Usuario no disponible';
+    };
+
+    const nombreDeCuadrilla = (id) => {
+      if (!id) return '';
+      const c = (cuadrillasAsignables.value || []).find((x) => String(x.id) === String(id));
+      return c ? c.nombre : 'Cuadrilla no disponible';
+    };
+
+    /**
+     * Tras una operación hay que releer: la RPC escribió en el servidor y el
+     * store todavía tiene la fila anterior. Realtime también lo haría, pero
+     * depender de él dejaría la pantalla desactualizada si el canal está caído,
+     * y quien acaba de pulsar un botón espera ver el resultado.
+     */
+    async function refrescarTrasOperacion(mensaje) {
+      await cargarDenuncias();
+      await cargarHistorial(casoAbiertoId.value);
+      sincronizarBorrador();
+      avisoGestion.value = mensaje;
+    }
+
+    async function guardarAsignacion() {
+      if (guardando.value) return;
+      errorGestion.value = '';
+      avisoGestion.value = '';
+      const res = await asignarCaso({
+        casoId: casoAbiertoId.value,
+        usuarioId: gestion.value.usuarioId || null,
+        cuadrillaId: gestion.value.cuadrillaId || null,
+        observacion: gestion.value.observacion,
+      });
+      if (!res.ok) { errorGestion.value = res.error; return; }
+      await refrescarTrasOperacion(res.resultado?.mensaje || 'Asignación guardada.');
+    }
+
+    async function guardarEstado() {
+      if (guardando.value) return;
+      errorGestion.value = '';
+      avisoGestion.value = '';
+      // El servidor lo vuelve a comprobar; esto solo evita el viaje de ida y
+      // vuelta para recibir el mismo mensaje.
+      if (cierraElCaso.value && !gestion.value.resolucion.trim()
+          && !denunciaSeleccionada.value?.resolucion) {
+        errorGestion.value = 'Para cerrar el caso hay que registrar cómo se resolvió.';
+        return;
+      }
+      const res = await cambiarEstadoCaso({
+        casoId: casoAbiertoId.value,
+        estado: gestion.value.estado,
+        observacion: gestion.value.observacion,
+        resolucion: gestion.value.resolucion,
+      });
+      if (!res.ok) { errorGestion.value = res.error; return; }
+      await refrescarTrasOperacion(res.resultado?.mensaje || 'Estado actualizado.');
+    }
+
+    // Los selectores de personal y cuadrillas se alimentan del store de
+    // cuadrillas; si esta pantalla se abre primero, hay que pedirlos aquí.
+    onMounted(() => { cargarCuadrillas(); });
 
     return {
       COLUMNAS, cargandoDenuncias,
@@ -212,7 +350,13 @@ export default {
       itemsPorPagina, cambiarTamanoPagina, ordenar,
       seleccion, exportarSeleccion, limpiarSeleccion,
       getCategoria, badgeEstado, etiquetaEstado, formatearFecha, formatearId,
-      denunciaSeleccionada, abrirDetalle, cerrarDetalle, exportarCSV, estadosOpciones
+      denunciaSeleccionada, abrirDetalle, cerrarDetalle, exportarCSV, estadosOpciones,
+      // Gestión del caso
+      puedeGestionar, gestion, errorGestion, avisoGestion, guardando,
+      estadosDelCaso, cierraElCaso, hayCambioDeAsignacion, hayCambioDeEstado,
+      cuadrillasAsignables, personal, nombreDePersona, nombreDeCuadrilla,
+      guardarAsignacion, guardarEstado,
+      historial, cargandoHistorial,
     };
   }
 };

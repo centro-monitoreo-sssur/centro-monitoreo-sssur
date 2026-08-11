@@ -23,12 +23,23 @@
  *      Es la defensa que convierte "subieron un .php disfrazado" en un archivo
  *      inerte en vez de en ejecución remota.
  *
+ * DÓNDE VA
+ *   Bajo la raíz del subdominio del Centro de Monitoreo, junto al endpoint de
+ *   evidencias. NO en public_html/api/, que pertenece al dominio principal y a
+ *   otro sistema. Ver el encabezado de subir_evidencia.php para el árbol
+ *   completo y el porqué.
+ *
  * INSTALACIÓN
- *   1. Sube este archivo a /public_html/api/subir_foto_perfil.php
- *   2. Crea /public_html/uploads/perfiles/ y copia allí el .htaccess adjunto.
- *   3. Rellena las tres constantes de CONFIGURACIÓN.
+ *   1. Sube este archivo a
+ *        public_html/monitoreo.sansalvadorsur.gob.sv/api-monitoreo/
+ *   2. Crea
+ *        public_html/monitoreo.sansalvadorsur.gob.sv/uploads-monitoreo/perfiles/
+ *      y copia allí el .htaccess adjunto (cpanel/uploads-perfiles.htaccess).
+ *   3. Rellena las constantes de CONFIGURACIÓN.
  *   4. El JWT Secret está en Supabase → Project Settings → API → JWT Secret.
  *      NO es la anon key ni la service_role.
+ *   5. Copia la URL pública del endpoint en ENDPOINT_FOTOS, dentro de
+ *      assets/js/services/fotos-perfil.js
  * ============================================================================
  */
 
@@ -38,14 +49,15 @@
 const JWT_SECRET = 'PEGA_AQUI_EL_JWT_SECRET_DE_SUPABASE';
 
 /** Ruta absoluta del directorio de subida. Debe terminar en barra. */
-const DIR_DESTINO = __DIR__ . '/../uploads/perfiles/';
+const DIR_DESTINO = __DIR__ . '/../uploads-monitoreo/perfiles/';
 
 /** URL pública que corresponde a DIR_DESTINO. Debe terminar en barra. */
-const URL_PUBLICA = 'https://sansalvadorsur.gob.sv/uploads/perfiles/';
+const URL_PUBLICA = 'https://monitoreo.sansalvadorsur.gob.sv/uploads-monitoreo/perfiles/';
 
 /** Orígenes autorizados a llamar a este endpoint (CORS). */
 const ORIGENES_PERMITIDOS = [
-    'https://sansalvadorsur.gob.sv',
+    'https://monitoreo.sansalvadorsur.gob.sv',
+    'http://monitoreo.sansalvadorsur.gob.sv',   // mientras no haya certificado
     'http://127.0.0.1:5500',   // Live Server en desarrollo
     'http://localhost:5500',
 ];

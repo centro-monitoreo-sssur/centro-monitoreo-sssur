@@ -1,6 +1,6 @@
 # ============================================================================
 # Protección del directorio de fotos de perfil
-# Copiar como  /public_html/uploads/perfiles/.htaccess
+# Copiar como  public_html/monitoreo.sansalvadorsur.gob.sv/uploads-monitoreo/perfiles/.htaccess
 # ----------------------------------------------------------------------------
 # Es la red de seguridad del endpoint de subida: si algún día se colara un
 # archivo ejecutable pese a la validación por contenido, aquí queda inerte.

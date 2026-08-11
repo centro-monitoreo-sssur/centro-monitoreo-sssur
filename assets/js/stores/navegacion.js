@@ -348,12 +348,14 @@ const gruposNav = [
     id: 'organizacion',
     label: 'Organización',
     icono: 'fa-sitemap',
-    // Direcciones, Distritos y Cuadrillas entran en este grupo cuando existan
-    // sus vistas. No se listan todavía: una entrada de menú que no abre nada
-    // es peor que una ausencia.
+    // Direcciones y Distritos entran en este grupo cuando existan sus vistas.
+    // No se listan todavía: una entrada de menú que no abre nada es peor que
+    // una ausencia.
     items: [
-      { id: 'departamentos', label: 'Departamentos', icono: 'fa-building',    modulo: 'config' },
-      { id: 'usuarios',      label: 'Usuarios',      icono: 'fa-user-shield', modulo: 'usuarios' },
+      { id: 'departamentos', label: 'Departamentos', icono: 'fa-building',      modulo: 'config' },
+      { id: 'catalogo',      label: 'Catálogo',      icono: 'fa-tags',          modulo: 'categorias' },
+      { id: 'cuadrillas',    label: 'Cuadrillas',    icono: 'fa-people-group',  modulo: 'cuadrillas' },
+      { id: 'usuarios',      label: 'Usuarios',      icono: 'fa-user-shield',   modulo: 'usuarios' },
     ],
   },
   {

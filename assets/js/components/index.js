@@ -36,6 +36,8 @@ import vistaUsuarios      from './admin/vista-usuarios.js';
 import vistaRoles         from './admin/vista-roles.js';
 import vistaBitacora      from './admin/vista-bitacora.js';
 import vistaDepartamentos from './admin/vista-departamentos.js';
+import vistaCuadrillas    from './admin/vista-cuadrillas.js';
+import vistaCatalogo      from './admin/vista-catalogo.js';
 import vistaPoblacion     from './admin/vista-poblacion.js';
 import vistaNotificaciones from './admin/vista-notificaciones.js';
 // Piezas de la consola de monitoreo territorial
@@ -95,6 +97,8 @@ export const componentes = {
   'vista-roles':            { comp: vistaRoles,            tpl: 'admin/vista-roles' },
   'vista-bitacora':         { comp: vistaBitacora,         tpl: 'admin/vista-bitacora' },
   'vista-departamentos':    { comp: vistaDepartamentos,    tpl: 'admin/vista-departamentos' },
+  'vista-cuadrillas':       { comp: vistaCuadrillas,       tpl: 'admin/vista-cuadrillas' },
+  'vista-catalogo':         { comp: vistaCatalogo,         tpl: 'admin/vista-catalogo' },
   'vista-poblacion':        { comp: vistaPoblacion,        tpl: 'admin/vista-poblacion' },
   'vista-notificaciones':    { comp: vistaNotificaciones,   tpl: 'admin/vista-notificaciones' },
 

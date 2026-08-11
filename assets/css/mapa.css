@@ -1292,3 +1292,48 @@
   .mv-dcard,
   .mv-dcard__barra-fill { transition: none; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CARTOGRAMA · cifra sobre el polígono
+   SOLO el número: la unidad y la nota de lectura van en la tarjeta «Modo
+   activo», y el topónimo ya lo imprime el mapa base. Con cinco distritos,
+   cualquier texto extra por polígono multiplica por cinco el ruido.
+   ══════════════════════════════════════════════════════════════════════════ */
+.carto-pct {
+  /* Se anula por completo el chrome del tooltip de Leaflet: aquí no queremos
+     una burbuja, sino una cifra flotando sobre la forma. */
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  white-space: nowrap;
+  text-align: center;
+  /* Sin esto el tooltip intercepta el ratón y el polígono deja de ser
+     pulsable justo en su centro, que es donde la gente hace clic. */
+  pointer-events: none;
+}
+
+/* Leaflet dibuja una flechita en todos los tooltips. Sobra. */
+.carto-pct::before { display: none !important; }
+
+.carto-pct__valor {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  /* Única pieza de texto del rótulo, así que puede permitirse ser grande:
+     se lee de un vistazo sin competir con el topónimo del mapa base. */
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1;
+  color: #1f2937;
+  /* Contorno claro en lugar de sombra: el polígono cambia de color con el modo
+     y una sombra oscura desaparecería sobre el relleno naranja. */
+  paint-order: stroke fill;
+  -webkit-text-stroke: 3px rgba(255, 255, 255, 0.92);
+}
+
+.dark .carto-pct__valor { color: #f9fafb; -webkit-text-stroke-color: rgba(17, 24, 39, 0.85); }
+
+/* En pantallas estrechas los cinco distritos quedan muy juntos. */
+@media (max-width: 767.98px) {
+  .carto-pct__valor { font-size: 15px; }
+}

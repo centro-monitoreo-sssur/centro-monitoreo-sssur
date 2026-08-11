@@ -11,11 +11,14 @@
 // es un formulario abierto en Internet.
 // ============================================================
 import { db } from '../core/supabase.js';
-import { comprimirImagen } from '../utils/image-compressor.js';
+import { comprimirImagenABlob } from '../utils/image-compressor.js';
 
 // Rellenar con la URL del endpoint una vez subido a cPanel. Mientras esté
 // vacío, `almacenamientoConfigurado` es false y la interfaz ofrece pegar una
 // URL en vez de subir un archivo — degradar es mejor que fallar al pulsar.
+//
+// Valor esperado en producción:
+//   https://monitoreo.sansalvadorsur.gob.sv/api-monitoreo/subir_foto_perfil.php
 export const ENDPOINT_FOTOS = '';
 
 export const almacenamientoConfigurado = Boolean(ENDPOINT_FOTOS);
@@ -53,7 +56,13 @@ export async function subirFotoPerfil(archivo) {
   try {
     // 512×512 y calidad 0.82: es una foto de perfil, nunca se muestra a más de
     // 200 px. Subir el original multiplicaría por veinte el espacio ocupado.
-    comprimida = await comprimirImagen(archivo, 512, 512, 0.82);
+    //
+    // ⚠ Un Blob, NO un DataURL. Esto era un fallo latente: `FormData.append`
+    // con una cadena la envía como campo de texto y descarta el nombre de
+    // archivo, así que en el servidor `$_FILES['foto']` llegaba vacío y el
+    // endpoint respondía «No se recibió ningún archivo válido». No se había
+    // manifestado porque ENDPOINT_FOTOS sigue sin configurar.
+    comprimida = await comprimirImagenABlob(archivo, 512, 512, 0.82);
   } catch (e) {
     return { ok: false, error: 'No se pudo procesar la imagen: ' + e.message };
   }

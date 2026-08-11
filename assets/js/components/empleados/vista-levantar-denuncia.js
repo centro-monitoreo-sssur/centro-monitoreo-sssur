@@ -13,7 +13,8 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { cargarLimitesSSSur, cargarColoniasSanMarcos } from '../../services/geo-json/cargador.js';
 import { useCatalogos } from '../../stores/catalogos.js';
-import { comprimirImagen } from '../../utils/image-compressor.js';
+import { comprimirImagenDual } from '../../utils/image-compressor.js';
+import { subirEvidencias, evidenciasConfiguradas } from '../../services/evidencias.js';
 import { almacen } from '../../core/almacen.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
@@ -544,7 +545,10 @@ export default {
     // `alert()`. Un cuadro modal del navegador en un teléfono, a pleno sol y con
     // guantes, es la peor forma posible de confirmar que un parte se registró.
     const guardando = ref(false);
-    const resultadoEnvio = ref(null);   // { tipo: 'ok'|'error'|'encolado', texto }
+    // Subir dos fotos por una conexión móvil en territorio tarda lo suficiente
+    // como para que, sin aviso, el empleado crea que la app se colgó.
+    const subiendoFotos = ref(false);
+    const resultadoEnvio = ref(null);   // { tipo: 'ok'|'error'|'encolado'|'advertencia', texto }
 
     /* ─── Denunciante ────────────────────────────────────────────────────
        Quien reporta NO es quien registra. El empleado queda siempre como
@@ -705,9 +709,8 @@ export default {
         titulo: categoria ? categoria.nombre : null,
         canal: 'pwa_empleado',
         referenciaCliente,
-        // Las fotografías se suben a cPanel y viajan como URL. Mientras el
-        // endpoint de evidencias no esté conectado, se envía lista vacía: es
-        // preferible un caso sin fotos a un caso que no se registra.
+        // Las fotografías se suben a cPanel ANTES de crear el caso y viajan
+        // como URL: la RPC recibe enlaces, no archivos. Se rellena más abajo.
         adjuntos: [],
         denunciante: {
           anonimo: denunciante.value.anonimo,
@@ -721,12 +724,45 @@ export default {
 
       try {
         if (estaOnline.value) {
+          /* ── Evidencia fotográfica ───────────────────────────────────────
+             Se sube ANTES de crear el caso porque la RPC recibe URLs ya
+             subidas, no archivos.
+
+             Un fallo aquí NO cancela el reporte. El empleado está en el sitio,
+             muchas veces con mala cobertura, y perder la denuncia por una foto
+             que no subió sería el peor de los dos resultados. Se registra el
+             caso con las que hayan subido y se le dice exactamente cuántas
+             fueron: lo que no se puede es dejarle creer que subieron todas. */
+          let avisoFotos = '';
+          if (formulario.value.fotos.length) {
+            if (!evidenciasConfiguradas) {
+              avisoFotos = ' Las fotografías NO se enviaron: falta configurar el ' +
+                           'servidor de imágenes.';
+            } else {
+              subiendoFotos.value = true;
+              const envio = await subirEvidencias(
+                formulario.value.fotos.map((f) => f.archivo)
+              );
+              subiendoFotos.value = false;
+              datosReporte.adjuntos = envio.adjuntos;
+              if (!envio.completo) {
+                avisoFotos = ` Se enviaron ${envio.adjuntos.length} de ` +
+                             `${formulario.value.fotos.length} fotografías.`;
+              }
+            }
+          }
+
           const resultado = await registrarCasoEnCampo(datosReporte);
 
           if (resultado.ok) {
             almacen.borrar(CLAVE_CATEGORIA);
-            resultadoEnvio.value = { tipo: 'ok', texto: resultado.mensaje };
-            setTimeout(() => irA('pwa-empleado'), 1500);
+            resultadoEnvio.value = {
+              tipo: avisoFotos ? 'advertencia' : 'ok',
+              texto: resultado.mensaje + avisoFotos,
+            };
+            // Con aviso se deja más tiempo en pantalla: un mensaje que hay que
+            // leer y desaparece en segundo y medio es un mensaje que no existe.
+            setTimeout(() => irA('pwa-empleado'), avisoFotos ? 4000 : 1500);
             return;
           }
 
@@ -741,6 +777,13 @@ export default {
         }
 
         // Sin conexión, o el envío no llegó a salir del teléfono.
+        //
+        // ⚠ Las fotografías NO viajan al buzón. El buzón vive en localStorage,
+        // que solo guarda texto: meterlas exigiría convertirlas a base64, y dos
+        // fotos ocuparían ~1,4 MB de los ~5 MB del almacén. Bastarían tres o
+        // cuatro reportes encolados para llenarlo y hacer que el siguiente se
+        // perdiera. Entre perder las fotos y perder el reporte entero, se
+        // pierden las fotos — y se dice, que es la parte que importa.
         const encolado = agregarOperacion({
           tipo: TIPOS_OPERACION.LEVANTAR_DENUNCIA,
           datos: datosReporte,
@@ -755,13 +798,18 @@ export default {
         }
 
         almacen.borrar(CLAVE_CATEGORIA);
+        const perdioFotos = formulario.value.fotos.length > 0;
         resultadoEnvio.value = {
-          tipo: 'encolado',
-          texto: 'Sin señal. El reporte quedó en el buzón y se enviará solo al recuperar cobertura.',
+          tipo: perdioFotos ? 'advertencia' : 'encolado',
+          texto: 'Sin señal. El reporte quedó en el buzón y se enviará solo al recuperar cobertura.'
+            + (perdioFotos
+                ? ' Las fotografías NO se guardaron: vuelve a tomarlas cuando haya cobertura.'
+                : ''),
         };
-        setTimeout(() => irA('pwa-empleado'), 2200);
+        setTimeout(() => irA('pwa-empleado'), perdioFotos ? 4500 : 2200);
       } finally {
         guardando.value = false;
+        subiendoFotos.value = false;
       }
     };
 
@@ -787,9 +835,16 @@ export default {
 
       try {
         for (const file of validFiles) {
-          // Comprimir a max 1080px y jpeg quality 0.75 (aprox max 5MB, usualmente < 1MB)
-          const dataUrl = await comprimirImagen(file, 1080, 1080, 0.75);
-          formulario.value.fotos.push(dataUrl);
+          // Se guardan las DOS formas de la imagen: el DataURL para la vista
+          // previa y el Blob para subirlo. Comprimir dos veces sería dibujar el
+          // canvas dos veces en un teléfono de gama media.
+          //
+          // 1024×1024 y calidad 0.6 son los valores que fija
+          // docs/arquitectura/CONTEXTO_CRITICO.md §3 para no agotar la cuota;
+          // antes se usaba 1080/0.75, que producía archivos por encima del
+          // límite de 500 KB acordado.
+          const foto = await comprimirImagenDual(file, 1024, 1024, 0.6);
+          formulario.value.fotos.push(foto);
         }
       } catch (error) {
         console.error('Error al procesar la imagen:', error);
@@ -867,6 +922,7 @@ export default {
       procesarFotografia,
       removerFotografia,
       guardando,
+      subiendoFotos,
       resultadoEnvio,
       puedeEnviar,
       faltaParaEnviar,

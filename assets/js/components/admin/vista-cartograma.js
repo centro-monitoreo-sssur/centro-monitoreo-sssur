@@ -318,6 +318,127 @@ export default {
       }
     }
 
+    /* ─── Rótulo sobre el polígono ────────────────────────────────────────
+       El peso de cada distrito, escrito encima de su forma, para poder leer el
+       mapa sin pasar el ratón por cada uno.
+
+       SOBRE EL MAPA SIEMPRE VA UN PORCENTAJE QUE SUMA 100. Sobre el polígono
+       cabe una sola cifra, y tiene que ser una que el Alcalde pueda cuadrar de
+       cabeza con los KPIs de arriba. La única clase de número que lo permite es
+       la CUOTA DE UN TOTAL ADITIVO:
+
+         · Los 166 671 habitantes del municipio se reparten entre los cinco
+           distritos. «San Marcos, 34 %» se comprueba contra la cabecera.
+         · Los casos activos, igual.
+
+       Lo que NO puede ir sobre el polígono son las razones: densidad (hab/km²)
+       y carga por habitante (casos/1000). Sumar 3 132 + 1 154 hab/km² no es la
+       densidad de nada, así que no existe un total del que puedan ser cuota.
+       Un intento anterior las rotuló contra el distrito más alto y San Marcos
+       salió «100 %» por ser el más denso: los cinco sumaban 213 y el tablero
+       parecía roto. Esas métricas van al RANKING, con su unidad, donde hay
+       sitio para explicarlas.
+
+       Por tanto, la cifra del mapa es:
+
+         · densidad y percapita → % de la POBLACIÓN del municipio. Es el
+           denominador de ambas métricas y es lo que da sentido a la
+           deformación: la forma dice cuán denso, el número cuánta gente.
+         · denuncias            → % de los CASOS ACTIVOS del municipio.
+         · eficiencia           → ya es un porcentaje del propio distrito.
+
+       El modo 'geo' no rotula nada: no hay métrica que representar. */
+    const REFERENCIA_MAPA = {
+      densidad:   'poblacion',  // razón     → sobre el mapa, el peso demográfico
+      percapita:  'poblacion',
+      denuncias:  'casos',      // aditiva   → cuota del total de casos activos
+      eficiencia: 'propio',     // ya es un %→ el valor tal cual
+    };
+
+    /* De qué base sale la cuota. El total se toma de `kpisGlobales`, EL MISMO
+       objeto que alimenta la cabecera, para que el 34 % del mapa y los 166 671
+       habitantes de arriba no puedan discrepar nunca. */
+    const BASES_CUOTA = {
+      poblacion: { modo: 'geo',       total: (g) => g.poblacion },
+      casos:     { modo: 'denuncias', total: (g) => g.denunciasActivas },
+    };
+
+    /* Valor SIN convertir los ausentes en cero. `getMetricaValor` los coacciona
+       a 0 porque ordena la lista, pero rotular «0 hab/km²» en un distrito sin
+       censo es inventar un dato: ahí no va etiqueta. */
+    function metricaCruda(zona, modo) {
+      const k = getKPIDistrito(zona.nombre);
+      switch (modo) {
+        case 'densidad':   return densidadDe(k);
+        case 'percapita':  return porMilHab(k);
+        case 'denuncias':  return activasDe(k);
+        case 'eficiencia': return k.total ? eficienciaDe(k) : null;
+        default:           return k.poblacion || k.perfil?.poblacion || null;
+      }
+    }
+
+    /* Qué es la cifra del mapa, para la leyenda de la tarjeta «Modo activo».
+       Se escribe UNA vez ahí y no cinco veces sobre los polígonos: un texto
+       idéntico en los cinco distritos es tinta que no distingue a ninguno. */
+    const LEYENDA_CIFRA = {
+      densidad:   '% de la población del municipio',
+      percapita:  '% de la población del municipio',
+      denuncias:  '% de los casos activos del municipio',
+      eficiencia: '% de casos resueltos del propio distrito',
+    };
+    const leyendaCifra = computed(() => LEYENDA_CIFRA[modoActivo.value] || '');
+
+    /**
+     * El número que se escribe sobre un polígono, o `null` si no hay dato.
+     *
+     * Una sola cifra, sin nombre y sin unidad. Una versión anterior ponía valor,
+     * unidad, topónimo y comparación: con cinco distritos eran veinte piezas de
+     * texto que se pisaban entre sí y tapaban el mapa. El nombre ya lo imprime
+     * el mapa base, la unidad va en la leyenda y la métrica cruda en el ranking.
+     * Sobre la forma queda lo único que distingue a un distrito de otro.
+     */
+    function etiquetaDePoligono(zona, modo) {
+      const tipo = REFERENCIA_MAPA[modo];
+      if (!tipo) return null;                       // modo 'geo'
+
+      if (tipo === 'propio') {
+        const valor = metricaCruda(zona, modo);     // la eficiencia YA es un %
+        return Number.isFinite(valor) ? Math.round(valor) + '%' : null;
+      }
+
+      const pct = porcentajeDe(zona, modo);
+      return pct === null ? null : pct + '%';
+    }
+
+    /**
+     * Cuota del distrito sobre el total del municipio, o `null` si en ese modo
+     * un porcentaje no significaría nada (eficiencia) o falta el dato.
+     * O(1): el total sale de `kpisGlobales`, ya calculado para la cabecera.
+     */
+    function porcentajeDe(zona, modo) {
+      const base = BASES_CUOTA[REFERENCIA_MAPA[modo]];
+      if (!base) return null;                       // 'geo' y 'propio'
+
+      const valor = metricaCruda(zona, base.modo);
+      if (!Number.isFinite(valor)) return null;
+
+      // Sin total no hay cuota. Devolver 0 % daría a entender que el distrito
+      // no aporta nada, cuando lo que pasa es que no hay dato del que repartir.
+      const total = base.total(kpisGlobales.value);
+      if (!total) return null;
+      return Math.round((valor / total) * 100);
+    }
+
+    /* La advertencia de lectura, en una línea. Acompaña a la leyenda, no al
+       mapa: es una nota de método y se lee una vez. */
+    const EXPLICACION_ETIQUETA = {
+      denuncias:  'Los cinco distritos suman 100 %.',
+      eficiencia: 'Cada distrito sobre su propio total, no sobre el municipio.',
+      densidad:   'La forma indica la densidad; el ranking, los hab/km².',
+      percapita:  'La forma indica los casos por mil hab.; el ranking, la tasa.',
+    };
+    const explicacionEtiqueta = computed(() => EXPLICACION_ETIQUETA[modoActivo.value] || '');
+
     // El encabezado decía siempre "Ranking Poblacional", en los cinco modos.
     const tituloRanking = computed(() => ({
       densidad:   'Ranking por densidad',
@@ -349,6 +470,51 @@ export default {
     }
 
     // ── Animación de cambio de modo ────────────────────────────────────────────
+    /* Etiquetas permanentes con el porcentaje.
+
+       Son `L.tooltip` con `permanent: true` ancladas al centroide, no marcadores:
+       un tooltip no captura el clic, así que el polígono sigue siendo pulsable
+       a través de la etiqueta. Con un `L.marker` habría zonas muertas justo en
+       el centro de cada distrito, que es donde la gente pulsa.
+
+       Se guardan en un `Map` aparte —`let` plano, nunca un ref— y se retiran
+       por completo en el modo geográfico en lugar de ocultarse por CSS: dejar
+       cinco tooltips vacíos sobre el mapa entorpece el ratón sin aportar nada. */
+    let etiquetas = new Map();
+
+    function quitarEtiquetas() {
+      for (const t of etiquetas.values()) {
+        if (mapa) mapa.removeLayer(t);
+      }
+      etiquetas.clear();
+    }
+
+    function pintarEtiquetas(modo) {
+      quitarEtiquetas();
+      if (!mapa || !REFERENCIA_MAPA[modo]) return;   // 'geo' no rotula
+
+      for (const zona of zonas.value) {
+        const rotulo = etiquetaDePoligono(zona, modo);
+        if (!rotulo) continue;                       // sin dato: no se inventa un 0
+
+        const etiqueta = L.tooltip({
+          permanent: true,
+          direction: 'center',
+          className: 'carto-pct',
+          interactive: false,      // el clic atraviesa hasta el polígono
+        })
+          .setLatLng(zona.centroid)
+          .setContent(`<span class="carto-pct__valor">${rotulo}</span>`)
+          .addTo(mapa);
+
+        etiquetas.set(zona.id, etiqueta);
+      }
+    }
+
+    // Los indicadores llegan asíncronos y el período se puede cambiar: sin esto
+    // las etiquetas se quedarían con el porcentaje del primer cálculo.
+    watch([periodoDelAmbito, zonas], () => pintarEtiquetas(modoActivo.value));
+
     function animarHaciaModo(modo) {
       if (cargandoAnimacion.value || !mapa) return;
       cargandoAnimacion.value = true;
@@ -373,6 +539,11 @@ export default {
         const fillColor = esGeo ? zona.colorOriginal : modoConf.color;
         poly.setStyle({ fillColor, color: fillColor });
       });
+
+      // De inmediato, no al terminar la animación: la deformación escala cada
+      // polígono alrededor de SU centroide, así que el punto de anclaje de la
+      // etiqueta no se mueve y puede pintarse ya.
+      pintarEtiquetas(modo);
 
       function frame(ahora) {
         const t = Math.min((ahora - inicio) / duracion, 1);
@@ -602,6 +773,7 @@ export default {
       // El gestor suelta sus capas ANTES de destruir el mapa: después, el
       // contenedor ya no existe y `removeLayer` fallaría.
       if (gestorCapas) { gestorCapas.destruir(); gestorCapas = null; }
+      quitarEtiquetas();   // antes de destruir el mapa: después ya no hay de dónde quitarlas
       if (mapa) { mapa.remove(); mapa = null; }
       capas.clear();
     });
@@ -611,6 +783,7 @@ export default {
       MODOS, rankingZonas, kpisGlobales,
       distritoSeleccionado, distritoConFiltro, panelAbierto,
       animarHaciaModo, getMetricaLabel, tituloRanking,
+      porcentajeDe, explicacionEtiqueta, leyendaCifra,
       // Estado de la consulta de indicadores
       cargandoPeriodo, errorPeriodo,
       seleccionarDistrito, cerrarPanel, irAMapaDistrito,

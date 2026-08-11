@@ -108,17 +108,19 @@
     </template>
   </ui-tabla>
 
-  <!-- MODAL DETALLE -->
+  <!-- MODAL DETALLE Y GESTIÓN -->
   <ui-modal
     :mostrar="!!denunciaSeleccionada"
     :titulo="denunciaSeleccionada ? 'Denuncia ' + formatearId(denunciaSeleccionada.id) : ''"
     :subtitulo="denunciaSeleccionada ? formatearFecha(denunciaSeleccionada.created_at) : ''"
     :icono="denunciaSeleccionada ? 'fa-solid ' + getCategoria(denunciaSeleccionada.tipo_id).icono : ''"
     :color-icono="denunciaSeleccionada ? getCategoria(denunciaSeleccionada.tipo_id).color_hex : ''"
-    tamano="md"
+    tamano="lg"
     @cerrar="cerrarDetalle">
 
     <div v-if="denunciaSeleccionada" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- ── Columna izquierda · el caso ── -->
       <div>
         <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Descripción del problema</h4>
         <p class="text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700 break-words">
@@ -134,22 +136,156 @@
           </div>
         </div>
 
-        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-5">Estado actual</h4>
-        <ui-badge tono="ninguno" :class="badgeEstado(denunciaSeleccionada.estado)">{{ etiquetaEstado(denunciaSeleccionada.estado) }}</ui-badge>
+        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-5">Estado y responsables</h4>
+        <div class="flex flex-wrap items-center gap-2">
+          <ui-badge tono="ninguno" :class="badgeEstado(denunciaSeleccionada.estado)">{{ etiquetaEstado(denunciaSeleccionada.estado) }}</ui-badge>
+          <span v-if="denunciaSeleccionada.responsable"
+            class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+            <i class="fa-solid fa-user text-[9px]"></i> {{ nombreDePersona(denunciaSeleccionada.responsable) }}
+          </span>
+          <span v-if="denunciaSeleccionada.cuadrilla"
+            class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300">
+            <i class="fa-solid fa-people-group text-[9px]"></i> {{ nombreDeCuadrilla(denunciaSeleccionada.cuadrilla) }}
+          </span>
+          <!-- Sin responsable NI cuadrilla el caso no es «una intervención»: en
+               los indicadores figura como abierto y sin nadie trabajando en él.
+               Decirlo aquí evita que pase inadvertido. -->
+          <span v-if="!denunciaSeleccionada.responsable && !denunciaSeleccionada.cuadrilla"
+            class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+            <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> Sin asignar
+          </span>
+        </div>
+
+        <template v-if="denunciaSeleccionada.resolucion">
+          <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-5">Resolución registrada</h4>
+          <p class="text-sm text-gray-800 dark:text-gray-200 bg-emerald-50/60 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800 break-words">
+            {{ denunciaSeleccionada.resolucion }}
+          </p>
+        </template>
+
+        <!-- Bitácora del caso. Sale de `historial_estados_caso`, que es donde
+             las RPC de la v30 escriben en la misma transacción que el cambio. -->
+        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-5">Bitácora</h4>
+        <div v-if="cargandoHistorial" class="text-xs text-gray-400 py-2">
+          <i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Cargando…
+        </div>
+        <p v-else-if="!historial.length" class="text-xs text-gray-400 italic py-2">
+          Sin movimientos registrados todavía.
+        </p>
+        <ol v-else class="space-y-2 max-h-52 overflow-y-auto pr-1">
+          <li v-for="h in historial" :key="h.id" class="flex gap-2">
+            <div class="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
+              :class="h.esCambioDeEstado ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+            <div class="min-w-0 flex-1">
+              <p class="text-[11px] text-gray-700 dark:text-gray-200">
+                <template v-if="h.esCambioDeEstado">
+                  <span class="text-gray-400">{{ etiquetaEstado(h.anterior) }}</span>
+                  <i class="fa-solid fa-arrow-right text-[8px] mx-1 text-gray-400"></i>
+                  <strong class="font-semibold">{{ etiquetaEstado(h.nuevo) }}</strong>
+                </template>
+                <template v-else>{{ h.observacion }}</template>
+              </p>
+              <p v-if="h.esCambioDeEstado && h.observacion" class="text-[10px] text-gray-500 break-words">{{ h.observacion }}</p>
+              <p class="text-[10px] text-gray-400">{{ h.autor }} · {{ formatearFecha(h.fecha) }}</p>
+            </div>
+          </li>
+        </ol>
       </div>
 
+      <!-- ── Columna derecha · gestión ── -->
       <div>
-        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Evidencia fotográfica</h4>
-        <div class="aspect-video bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-gray-400">
-          <i class="fa-solid fa-image text-3xl mb-2 opacity-50" aria-hidden="true"></i>
-          <span class="text-xs">Imagen no disponible</span>
+        <template v-if="puedeGestionar">
+          <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Asignar responsable</h4>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Persona responsable</label>
+              <select v-model="gestion.usuarioId"
+                class="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">Sin responsable</option>
+                <option v-for="p in personal" :key="p.id" :value="p.id">{{ p.nombreCompleto }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">Cuadrilla</label>
+              <select v-model="gestion.cuadrillaId"
+                class="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="">Sin cuadrilla</option>
+                <option v-for="c in cuadrillasAsignables" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+              </select>
+              <!-- Solo se listan cuadrillas activas: asignar a una desactivada
+                   es mandar trabajo a un equipo que ya no opera. -->
+              <p v-if="!cuadrillasAsignables.length" class="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+                No hay cuadrillas activas. Créalas en Organización → Cuadrillas.
+              </p>
+            </div>
+            <ui-boton variante="secundario" tamano="sm" bloque
+              :cargando="guardando" :deshabilitado="!hayCambioDeAsignacion"
+              @click="guardarAsignacion">
+              Guardar asignación
+            </ui-boton>
+          </div>
+
+          <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-5">Cambiar estado</h4>
+          <div class="space-y-2">
+            <div>
+              <!-- Los estados salen del flujo de ESTA categoría, no de una lista
+                   fija: cada categoría declara el suyo en estados_flujo. -->
+              <select v-model="gestion.estado"
+                class="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none">
+                <option v-for="e in estadosDelCaso" :key="e.id" :value="e.id">
+                  {{ e.nombre }}{{ e.esFinal ? ' (cierra el caso)' : '' }}
+                </option>
+              </select>
+            </div>
+
+            <div v-if="cierraElCaso">
+              <label class="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                Cómo se resolvió <span class="text-red-500">*</span>
+              </label>
+              <textarea v-model="gestion.resolucion" rows="3" maxlength="1000"
+                placeholder="Qué se hizo, con qué recursos y cuándo."
+                class="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
+              <p class="text-[10px] text-gray-400 mt-1">
+                Obligatoria al cerrar: seis meses después es lo único que explica qué se hizo.
+              </p>
+            </div>
+
+            <ui-boton variante="primario" tamano="sm" bloque
+              :cargando="guardando" :deshabilitado="!hayCambioDeEstado"
+              @click="guardarEstado">
+              Aplicar cambio de estado
+            </ui-boton>
+          </div>
+
+          <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-5">Nota para la bitácora</h4>
+          <textarea v-model="gestion.observacion" rows="2" maxlength="500"
+            placeholder="Opcional. Se guarda junto a la acción que realices."
+            class="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
+
+          <div v-if="errorGestion"
+            class="mt-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 flex items-start gap-2">
+            <i class="fa-solid fa-circle-exclamation text-red-500 text-xs mt-0.5"></i>
+            <p class="text-[11px] text-red-700 dark:text-red-300">{{ errorGestion }}</p>
+          </div>
+          <div v-else-if="avisoGestion"
+            class="mt-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 flex items-start gap-2">
+            <i class="fa-solid fa-circle-check text-emerald-500 text-xs mt-0.5"></i>
+            <p class="text-[11px] text-emerald-700 dark:text-emerald-300">{{ avisoGestion }}</p>
+          </div>
+        </template>
+
+        <!-- Sin permiso de edición no se ofrecen controles muertos; se dice por qué -->
+        <div v-else class="h-full flex items-center justify-center rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-8">
+          <p class="text-xs text-gray-400 text-center">
+            <i class="fa-solid fa-lock block text-lg mb-2"></i>
+            Tu rol permite consultar la denuncia, no gestionarla.
+          </p>
         </div>
       </div>
     </div>
 
     <template #pie>
       <ui-boton variante="fantasma" @click="cerrarDetalle">Cerrar</ui-boton>
-      <ui-boton variante="primario" icono="fa-solid fa-users">Asignar cuadrilla</ui-boton>
     </template>
   </ui-modal>
 
