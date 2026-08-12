@@ -21,7 +21,11 @@ const esStandalone = () => {
 const registrarSW = async () => {
   if ('serviceWorker' in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register('./sw.js');
+      // Ruta absoluta y ámbito explícito. Desde /campo/ una ruta relativa
+      // pediría `/campo/sw.js` —que no existe— y además el service worker
+      // quedaría acotado a esa carpeta. Se quiere UNO solo cubriendo el
+      // origen entero: las tres aplicaciones comparten código y caché.
+      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('[PWA] Service Worker registrado exitosamente', registration.scope);
 
       // Obtener la versión desde el SW

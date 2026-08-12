@@ -7,22 +7,30 @@
   <title>Centro de Monitoreo Municipal | San Salvador Sur</title>
   
   <!-- PWA & Mobile Install -->
-  <link rel="manifest" href="./manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <script>
-    // Un manifest POR CONTEXTO. Con uno solo, `start_url: "./"` hacía que un
-    // empleado que instalara la PWA de campo la abriera en el Centro de
-    // Monitoreo: el acceso directo perdía el `?contexto=empleados` y la app
-    // arrancaba en la aplicación equivocada.
+    // Un manifest POR APLICACIÓN, elegido según la RUTA.
+    //
+    // Antes las tres se distinguían por `?contexto=`, y eso bastaba para
+    // arrancar en la correcta pero no para poder instalarlas: el `scope` de un
+    // manifiesto se compara solo por ruta y la cadena de consulta se ignora.
+    // Los tres resolvían a `scope: "/"`, así que la primera aplicación que se
+    // instalaba se apropiaba del origen y en las otras el navegador ofrecía
+    // «Abrir en la aplicación» en vez de «Instalar».
+    //
+    // Ahora cada una vive bajo su propia ruta —/panel/, /campo/, /ciudadano/—
+    // que el .htaccess reescribe a este mismo index.html.
     //
     // Va aquí, en línea y justo detrás del <link>, porque el navegador lee el
     // manifiesto muy pronto —antes de que se evalúe ningún módulo ES— para
     // decidir si ofrece instalar.
     (function () {
-      var contexto = new URLSearchParams(location.search).get('contexto');
-      var instalables = { empleados: 1, poblacion: 1 };
-      if (contexto && instalables[contexto]) {
+      var porRuta = { campo: 'empleados', ciudadano: 'poblacion' };
+      var primerTramo = location.pathname.split('/')[1];
+      var manifiesto = porRuta[primerTramo];
+      if (manifiesto) {
         var etiqueta = document.querySelector('link[rel="manifest"]');
-        if (etiqueta) etiqueta.href = './manifest-' + contexto + '.json';
+        if (etiqueta) etiqueta.href = '/manifest-' + manifiesto + '.json';
       }
     })();
   </script>

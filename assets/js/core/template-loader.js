@@ -4,10 +4,16 @@
 //
 // NOTA: las plantillas se obtienen con fetch(), por lo que el proyecto
 // debe servirse por HTTP (no funciona abriéndolo como file://).
+//
+// La ruta es ABSOLUTA a propósito. Las tres aplicaciones viven bajo rutas
+// distintas —/panel/, /campo/, /ciudadano/— que el .htaccess reescribe a este
+// mismo index.html. Una ruta relativa se resolvería contra el documento, así
+// que desde /campo/ pediría `/campo/assets/templates/...` y no existe ninguna
+// plantilla ahí: se caerían TODAS las vistas de las dos PWA.
 
 async function cargarPlantilla(nombre) {
   try {
-    const res = await fetch(`assets/templates/${nombre}.html`, { cache: 'no-cache' });
+    const res = await fetch(`/assets/templates/${nombre}.html`, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
   } catch (e) {

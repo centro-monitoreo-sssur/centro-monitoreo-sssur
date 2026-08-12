@@ -2,6 +2,7 @@
 // DEMO: Validaciones y registro simulado - reemplazar con API real
 import { ref, reactive } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { CONTEXTOS, RUTAS_CONTEXTO } from '../../core/app-contexto.js';
 
 export default {
   setup() {
@@ -49,8 +50,9 @@ export default {
     
     const cancelarRegistro = () => {
       if (confirm('¿Estás seguro de cancelar el registro? Perderás los datos ingresados.')) {
-        // Redirigir al login manteniendo el contexto de población
-        window.location.href = window.location.pathname + '?contexto=poblacion';
+        // Al login manteniendo el contexto de población. Es una RUTA, no un
+        // parámetro: ver RUTAS_CONTEXTO en core/app-contexto.js.
+        window.location.href = RUTAS_CONTEXTO[CONTEXTOS.POBLACION];
       }
     };
     

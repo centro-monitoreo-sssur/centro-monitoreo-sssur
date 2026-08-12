@@ -5,7 +5,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { usePermisos } from '../../stores/permisos.js';
-import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
+import { CONTEXTO, CONTEXTOS, RUTAS_CONTEXTO } from '../../core/app-contexto.js';
 
 export default {
   setup() {
@@ -199,14 +199,16 @@ export default {
       irA('registro-poblacion');
     };
 
+    // Cada aplicación tiene su propia RUTA, no un parámetro: es lo que permite
+    // instalar las tres a la vez. Ver RUTAS_CONTEXTO en core/app-contexto.js.
+    // Sigue siendo una navegación completa, que es lo que exige el cambio de
+    // contexto para no dejar la sesión escrita en la partición equivocada.
     const irAEmpleados = () => {
-      // Redirigir al login de empleados
-      window.location.href = window.location.pathname + '?contexto=empleados';
+      window.location.href = RUTAS_CONTEXTO[CONTEXTOS.EMPLEADOS];
     };
 
     const irACiudadanos = () => {
-      // Redirigir al login de ciudadanos
-      window.location.href = window.location.pathname + '?contexto=poblacion';
+      window.location.href = RUTAS_CONTEXTO[CONTEXTOS.POBLACION];
     };
 
     return {

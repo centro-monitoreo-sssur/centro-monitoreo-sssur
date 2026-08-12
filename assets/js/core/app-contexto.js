@@ -31,6 +31,25 @@ const CONTEXTOS_VALIDOS = new Set(Object.values(CONTEXTOS));
 
 const PARAMETRO_URL = 'contexto';
 
+// Una RUTA por aplicación. Es lo que permite instalar las tres a la vez: el
+// `scope` de un manifiesto se compara solo por ruta —la cadena de consulta se
+// ignora—, así que mientras las tres colgaban de `/` el navegador las trataba
+// como una sola aplicación ya instalada.
+//
+// El .htaccess reescribe las tres al mismo index.html sin cambiar la URL.
+export const RUTAS_CONTEXTO = Object.freeze({
+  [CONTEXTOS.MONITOREO]: '/panel/',
+  [CONTEXTOS.EMPLEADOS]: '/campo/',
+  [CONTEXTOS.POBLACION]: '/ciudadano/',
+});
+
+// Índice inverso: primer tramo de la ruta → contexto.
+const CONTEXTO_POR_TRAMO = Object.freeze({
+  panel:     CONTEXTOS.MONITOREO,
+  campo:     CONTEXTOS.EMPLEADOS,
+  ciudadano: CONTEXTOS.POBLACION,
+});
+
 // La URL es la ÚNICA fuente de verdad. No hay respaldo en `sessionStorage`, y
 // es deliberado: la aplicación no tiene enrutador, así que la URL nunca cambia
 // sin recarga y no existe navegación interna que pueda perder el parámetro.
@@ -50,13 +69,29 @@ function resolverContexto() {
   // ya; se limpia para no dejar basura en pestañas que venían de antes.
   try { sessionStorage.removeItem('contexto_acceso'); } catch { /* da igual */ }
 
-  const enUrl = new URLSearchParams(window.location.search).get(PARAMETRO_URL);
+  // 1. La RUTA manda. Es la fuente de verdad desde que cada aplicación tiene
+  //    la suya, y es lo único que ve el navegador para decidir el ámbito de
+  //    una PWA instalada.
+  const tramo = window.location.pathname.split('/')[1];
+  const porRuta = CONTEXTO_POR_TRAMO[tramo];
+  if (porRuta) return porRuta;
 
-  // Sin parámetro, la URL base SIGNIFICA Centro de Monitoreo. Un valor
-  // inventado (`?contexto=admin`) tampoco abre nada: degrada al mismo sitio,
-  // donde los permisos deciden qué puede ver quien entre.
-  if (!enUrl) return CONTEXTOS.MONITOREO;
-  return CONTEXTOS_VALIDOS.has(enUrl) ? enUrl : CONTEXTOS.MONITOREO;
+  // 2. `?contexto=` sigue reconociéndose para no romper los enlaces y accesos
+  //    directos anteriores al cambio de rutas. No se limita a resolver el
+  //    contexto: redirige a la ruta nueva, porque quedarse en `/` significaría
+  //    seguir fuera del ámbito del manifiesto y la aplicación no se podría
+  //    instalar. Es una navegación completa, que es justo lo que este módulo
+  //    exige para cambiar de contexto.
+  const enUrl = new URLSearchParams(window.location.search).get(PARAMETRO_URL);
+  if (enUrl && CONTEXTOS_VALIDOS.has(enUrl)) {
+    window.location.replace(RUTAS_CONTEXTO[enUrl]);
+    return enUrl;
+  }
+
+  // 3. Sin ruta ni parámetro reconocibles, Centro de Monitoreo. Un valor
+  //    inventado (`?contexto=admin`) degrada al mismo sitio, donde los
+  //    permisos deciden qué puede ver quien entre.
+  return CONTEXTOS.MONITOREO;
 }
 
 /** Contexto activo de ESTA pestaña. Inmutable durante toda la vida del módulo. */

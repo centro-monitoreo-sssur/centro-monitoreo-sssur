@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.1.7';
+const CACHE_VERSION = 'v1.1.8';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
 // ── Caché de teselas del mapa ───────────────────────────────────────────────
@@ -39,12 +39,19 @@ const esTesela = (url) =>
 // Hay un manifiesto por contexto: sin ellos, un empleado que instale la PWA de
 // campo la abriría en el Centro de Monitoreo (ver el script en línea de
 // index.html).
+// Las tres rutas de aplicación se precachean porque son el punto de arranque
+// de cada PWA instalada. El servidor las reescribe al mismo index.html, así que
+// son tres entradas distintas en la caché con el mismo contenido: cuestan nada
+// y sin ellas la aplicación instalada no abre sin cobertura.
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './manifest-empleados.json',
-  './manifest-poblacion.json'
+  '/',
+  '/panel/',
+  '/campo/',
+  '/ciudadano/',
+  '/index.html',
+  '/manifest.json',
+  '/manifest-empleados.json',
+  '/manifest-poblacion.json'
 ];
 
 // En desarrollo (Live Server, http-server, etc.) el SW NO cachea nada. Con la
@@ -214,7 +221,11 @@ self.addEventListener('fetch', (event) => {
   // Navegaciones (recarga, entrada directa a la URL) → red primero, para que un
   // index.html nuevo no quede atrapado en caché.
   if (request.mode === 'navigate') {
-    event.respondWith(redPrimero(request).then((r) => r || caches.match('./index.html')));
+    // El respaldo sin conexión es el propio index.html: las tres rutas de
+    // aplicación sirven ese mismo documento, y como esto devuelve un CUERPO y
+    // no una redirección, la URL sigue siendo /campo/ o /ciudadano/. Importa,
+    // porque app-contexto.js resuelve la aplicación a partir de la ruta.
+    event.respondWith(redPrimero(request).then((r) => r || caches.match('/index.html')));
     return;
   }
 

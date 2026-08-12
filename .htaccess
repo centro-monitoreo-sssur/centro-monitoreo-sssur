@@ -25,8 +25,34 @@
 # Este archivo cierra lo que no es web y deja pasar lo que sí.
 #
 # ⚠ Se sirve desde la RAÍZ del sitio: un error aquí tumba la aplicación entera.
-#   Por eso solo hay reglas de denegación, ninguna reescritura.
 # ============================================================================
+
+# ── 0. Una RUTA por aplicación ─────────────────────────────────────────────
+# Las tres aplicaciones comparten un solo index.html, y antes se distinguían
+# solo por `?contexto=`. Eso bastaba para arrancar en la correcta, pero NO para
+# instalarlas: el `scope` de un manifiesto se compara únicamente por ruta y la
+# cadena de consulta se ignora por completo. Los tres manifiestos resolvían a
+# `scope: "/"`, así que la primera aplicación que se instalaba se apropiaba del
+# origen entero y en las otras dos el navegador ofrecía «Abrir en la
+# aplicación» en lugar de «Instalar».
+#
+# Con una ruta propia cada una tiene su ámbito, y las tres son instalables a la
+# vez en el mismo teléfono.
+#
+# Se reescribe, no se redirige: la URL debe QUEDARSE en /campo/ para que el
+# ámbito valga y para que app-contexto.js sepa qué aplicación es.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # La raíz desnuda lleva al Centro de Monitoreo, que es lo que significaba
+    # antes. Redirección de verdad (302) y no reescritura: así el navegador
+    # aterriza dentro del ámbito y no fuera de él.
+    RewriteRule ^$ /panel/ [R=302,L]
+
+    # Las tres rutas sirven el mismo documento sin cambiar la URL.
+    RewriteRule ^(panel|campo|ciudadano)/?$ /index.html [L]
+</IfModule>
+
 
 # ── 1. Carpetas que no son parte del sitio ─────────────────────────────────
 # `cpanel/` es el ORIGEN de los endpoints; las copias vivas están en

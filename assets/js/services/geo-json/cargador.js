@@ -20,8 +20,12 @@
 // obligar a cada vista a conocer el formato del proveedor.
 // ============================================================
 
-const RUTA_LIMITES  = 'assets/js/services/geo-json/limites-sssur.geojson';
-const RUTA_COLONIAS = 'assets/js/services/geo-json/colonias-san-marcos.geojson';
+// Rutas ABSOLUTAS: las tres aplicaciones cuelgan de rutas distintas
+// —/panel/, /campo/, /ciudadano/— reescritas al mismo index.html. Una ruta
+// relativa se resolvería contra el documento y desde /campo/ pediría
+// `/campo/assets/...`, dejando los mapas de la PWA sin límites ni colonias.
+const RUTA_LIMITES  = '/assets/js/services/geo-json/limites-sssur.geojson';
+const RUTA_COLONIAS = '/assets/js/services/geo-json/colonias-san-marcos.geojson';
 
 // Mayúsculas sin acento → grafía oficial. No se resuelve con un "title case"
 // automático: no restituiría la tilde de "Tomás" ni dejaría "de" en minúscula.
