@@ -80,3 +80,20 @@ export const PREFIJO_ALMACEN = `sssur:${CONTEXTO}:`;
  * dejan de notificarse `onAuthStateChange` el uno al otro.
  */
 export const CLAVE_SESION = `sb-sssur-${CONTEXTO}`;
+
+/**
+ * Marca el contexto en el `<html>` para que el CSS pueda distinguirlos.
+ *
+ * Lo necesita `assets/css/pwa-oscuro.css`: el tema oscuro de la aplicación de
+ * campo se resuelve con una capa de sustitución de colores, y esa capa NO debe
+ * alcanzar al Centro de Monitoreo, que tiene sus propias variantes `dark:` en
+ * cada plantilla. Sin este atributo, activar el modo oscuro en un contexto
+ * repintaría el otro.
+ *
+ * Se hace aquí y no en un componente porque este módulo se evalúa antes que
+ * nada —no importa a nadie— y el atributo tiene que existir antes del primer
+ * pintado, o se vería un parpadeo de tema claro.
+ */
+if (typeof document !== 'undefined') {
+  document.documentElement.dataset.contexto = CONTEXTO;
+}

@@ -2,7 +2,7 @@
 
 > **Para:** Alcalde, Directores, Gerentes y Jefaturas de Distrito de la Municipalidad de San Salvador Sur.
 > **Propósito:** explicar qué es el sistema, qué decisiones permite tomar, en qué estado real se encuentra y qué requiere de la administración.
-> **Última revisión:** 11 de agosto de 2026.
+> **Última revisión:** 12 de agosto de 2026.
 
 Este documento no requiere conocimientos técnicos. Donde se menciona un dato que aún no está confirmado, se dice explícitamente.
 
@@ -63,7 +63,12 @@ Nada de eso lo decide una persona. Es la misma regla siempre, lo que hace que la
 
 ### Paso 3 · La municipalidad gestiona el caso
 
-**Este paso todavía no está construido.** Ver la sección 6.
+Desde la consola se abre el caso y se decide quién responde: una **persona**, una **cuadrilla**, o ambas. Y se mueve por su ciclo de vida —pendiente, en revisión, en obra, resuelta o rechazada— según el flujo que tenga configurado su tipo de incidente.
+
+Dos reglas que el sistema hace cumplir y conviene conocer:
+
+- **No se puede cerrar un caso sin registrar cómo se resolvió.** Un caso cerrado sin explicación no se puede auditar: seis meses después nadie sabría qué se hizo.
+- **Cada movimiento queda en la bitácora del caso**, con quién lo hizo y cuándo. Se ve en la misma pantalla, y no se puede alterar desde la interfaz.
 
 ### Paso 4 · El caso se cierra y alimenta los indicadores
 
@@ -122,27 +127,35 @@ Con un rango de fechas puesto, cada indicador muestra su variación frente al pe
 
 Esta sección es deliberadamente franca. Un tablero que promete lo que no hace es peor que no tener tablero.
 
-### Funciona hoy
+### El circuito completo está operativo
+
+Desde agosto de 2026 el sistema hace el recorrido entero: el empleado levanta el caso con fotografía en territorio, llega al instante al Centro de Monitoreo, se le asigna cuadrilla, se le sigue el estado y se cierra con constancia de lo que se hizo.
 
 | Capacidad | Estado |
 |---|---|
 | Alta de usuarios y asignación de roles desde la consola | ✅ |
 | Aislamiento de datos por distrito y por departamento | ✅ |
 | El empleado levanta un caso desde territorio | ✅ |
+| **Fotografía adjunta al caso** | ✅ |
 | Registro del ciudadano que reporta (o anónimo) | ✅ |
 | El caso aparece en el mapa en vivo al instante | ✅ |
+| **Asignar responsable y cuadrilla desde la consola** | ✅ |
+| **Cambiar el estado del caso, con bitácora** | ✅ |
+| **Administrar cuadrillas y sus integrantes** | ✅ |
+| **Cada jefatura administra su catálogo de atenciones** | ✅ |
 | Consulta y exportación por parte de dirección | ✅ |
 | Cartograma con indicadores reales | ✅ |
 | Bitácora de auditoría de las acciones | ✅ |
 
-### No funciona todavía
+### Lo que conviene mejorar
 
-| Falta | Consecuencia para la operación |
+Nada de esto impide operar, pero conviene tenerlo presente:
+
+| Asunto | Por qué importa |
 |---|---|
-| **Gestionar el caso desde el Centro de Monitoreo** | **El flujo termina en un callejón.** El caso llega, se ve, y no se le puede asignar cuadrilla ni cambiar el estado. Es el hueco más grave |
-| **Administrar las cuadrillas** | No hay pantalla para dar de alta equipos ni asignarles integrantes, aunque el sistema ya está preparado por dentro |
-| **Que cada jefatura administre su catálogo** | Los permisos están concedidos, falta la pantalla |
-| **Que las fotografías lleguen al servidor** | El empleado puede tomar hasta dos fotos y las ve en su teléfono, **pero no se envían**. Una denuncia sin fotografía pierde valor probatorio |
+| **Las fotografías no viajan si no hay señal** | El caso sí se guarda y se envía después, pero sus fotos se pierden. En zonas sin cobertura conviene enviar el reporte al recuperarla |
+| **La consola trabaja sobre los 200 casos más recientes** | Por debajo de esa cifra todo es exacto. Al superarla, los indicadores empezarían a quedarse cortos. Con el volumen actual queda lejos, pero hay que resolverlo antes de llegar |
+| **La ficha del empleado sigue siendo de demostración** | Es la última pantalla con datos de ejemplo. No afecta a la operación |
 
 ### Requiere una acción administrativa
 
@@ -175,7 +188,7 @@ El plan de producción resuelve los tres, más respaldos diarios y capacidad par
 
 ---
 
-## 8. Las tres decisiones que corresponden a la administración
+## 8. Las cuatro decisiones que corresponden a la administración
 
 **1. Autorizar los $25 mensuales del plan de producción.**
 Sin esto el sistema no puede considerarse operativo: se apaga solo tras una semana de asueto y no tiene respaldo.
@@ -183,11 +196,16 @@ Sin esto el sistema no puede considerarse operativo: se apaga solo tras una sema
 **2. Instruir a Catastro** para que valide las cifras de población por distrito y resuelva la jurisdicción de las diez colonias pendientes.
 
 **3. Designar quién gestiona los casos.**
-Cuando se construya la pantalla de gestión, alguien tiene que asignar cuadrillas y cambiar estados. El sistema puede repartir esa responsabilidad como se decida —centralizada en el Centro de Monitoreo, delegada a cada Jefatura de Distrito, o mixta—, pero **es una decisión de organización, no de programación**, y conviene tomarla antes de construir la pantalla.
+La pantalla ya existe y funciona; lo que falta es la instrucción administrativa. Alguien tiene que asignar cuadrillas y cambiar estados a diario, y hoy cualquiera con permiso de edición puede hacerlo. El sistema admite repartir esa responsabilidad como se decida —centralizada en el Centro de Monitoreo, delegada a cada Jefatura de Distrito, o mixta— y los permisos se ajustan desde el propio panel, sin tocar programación.
+
+Mientras no se decida, el riesgo no es técnico sino de gestión: **un caso que nadie tiene asignado como responsabilidad suya no se atiende**, aunque el sistema lo muestre correctamente.
+
+**4. Dar de alta las cuadrillas reales.**
+La pantalla está lista y vacía. Hasta que se registren los equipos con sus integrantes, «asignar cuadrilla» no tiene a quién apuntar. Es trabajo de media mañana de una jefatura, no de programación.
 
 ---
 
-## 9. Lo que el sistema podrá responder cuando esté completo
+## 9. Lo que el sistema responde hoy
 
 - ¿Cuántos casos abiertos hay ahora, por distrito y por tipo?
 - ¿Qué distrito acumula más casos en proporción a su población?
@@ -197,7 +215,9 @@ Cuando se construya la pantalla de gestión, alguien tiene que asignar cuadrilla
 - ¿La gestión de este trimestre mejoró respecto al anterior, y en cuánto?
 - ¿Qué cuadrilla atendió un caso concreto, cuándo, y con qué evidencia?
 
-Las seis primeras ya son respondibles. La séptima depende de los bloques pendientes.
+Las siete. La última —qué cuadrilla atendió un caso, cuándo y con qué evidencia— es la que se cerró en agosto de 2026 con la gestión de casos y la subida de fotografías.
+
+Lo que todavía no responde bien es **cuánto trabajo tiene cada cuadrilla en este momento**: hace falta que estén dadas de alta y que la asignación se use a diario. Es cuestión de puesta en marcha, no de sistema.
 
 ---
 

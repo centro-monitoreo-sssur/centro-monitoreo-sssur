@@ -2,7 +2,7 @@
 
 > **Para:** desarrolladores, personal de la Gerencia de Tecnología y cualquier agente de IA que trabaje sobre este repositorio.
 > **Propósito:** entender la arquitectura, las decisiones que la sostienen y las trampas que ya nos costaron tiempo, antes de tocar código.
-> **Última revisión:** 11 de agosto de 2026.
+> **Última revisión:** 12 de agosto de 2026.
 
 Para el detalle exhaustivo de cada módulo existe `DOCUMENTACION_TECNICA.md` en la raíz del proyecto. Este documento es la orientación previa: lo que hay que saber **antes** de abrir un archivo.
 
@@ -59,7 +59,7 @@ assets/
     utils/
   templates/       plantillas HTML, misma estructura que components/
   css/
-database/          schema.sql + 29 migraciones numeradas
+database/          schema.sql + 30 migraciones numeradas
 docs/              este documento y los de arquitectura
 cpanel/            endpoints PHP auxiliares
 ```
@@ -261,28 +261,107 @@ Están detalladas en [`../arquitectura/CONTEXTO_CRITICO.md`](../arquitectura/CON
 
 ---
 
-## 12. Qué falta construir
+## 12. Estado del trabajo
 
-En orden de dependencia:
+Los bloques 0 a 5 se cerraron entre el 11 y el 12 de agosto de 2026, y con ellos los ocho requisitos que planteó la Alcaldía.
 
-**Bloque 0 · Ejecutar la v29.** Todo lo demás se construye encima del ciclo de vida del caso; con el estado inicial roto, cualquier gestión de estados hereda el problema.
+| Bloque | Qué aportó | Migración |
+|---|---|---|
+| 0 | El estado inicial sale del flujo de la categoría, no de un literal | **v29** |
+| 1 | Cuadrillas y su composición | — solo frontend |
+| 2 | Asignar responsable/cuadrilla y mover el caso por su flujo | **v30** |
+| 3 | Cada jefatura gestiona su catálogo de atenciones | — solo frontend |
+| 4 | Fotografías a cPanel y Realtime incremental | — |
+| 5 | Documentación al día | — |
 
-**Bloque 1 · Cuadrillas.** `stores/cuadrillas.js` + `admin/vista-cuadrillas.js` + entrada de menú. Las tablas, la RLS (v10) y los permisos ya existen; falta todo el frontend. Va primero porque sin cuadrillas dadas de alta, «asignar cuadrilla» no tiene a qué apuntar.
-
-**Bloque 2 · Gestión del caso.** Es el hueco más grave: `vista-denuncias.js` tiene 218 líneas y **cero operaciones de escritura**; `vista-intervenciones.js` tiene 49 y hace lo mismo. Hacen falta dos RPC:
+### Archivos que nacieron en esos bloques
 
 ```
-asignar_caso(p_caso, p_usuario, p_cuadrilla, p_observacion)
-cambiar_estado_caso(p_caso, p_estado, p_observacion)
+database/migration_v29_estado_inicial_del_flujo.sql
+database/migration_v30_gestion_de_caso.sql
+assets/js/stores/cuadrillas.js
+assets/js/stores/gestion-casos.js
+assets/js/stores/catalogo-categorias.js
+assets/js/services/evidencias.js
+assets/js/components/admin/vista-cuadrillas.js      (+ plantilla)
+assets/js/components/admin/vista-catalogo.js        (+ plantilla)
+cpanel/subir_evidencia.php
+cpanel/jwt-monitoreo.php
+cpanel/config-monitoreo.example.php
+cpanel/api-monitoreo.htaccess
+.cpanel.yml · .htaccess · .gitattributes
 ```
 
-**Tienen que ser RPC, no un `update` directo desde el navegador**, por dos razones: el estado destino debe validarse contra `categorias_caso.estados_flujo` —una policy de UPDATE no puede expresar esa condición—, y el cambio junto con su entrada en `historial_estados_caso` deben ocurrir en la misma transacción.
+### Deuda viva
 
-**Bloque 3 · Catálogo por jefatura.** La v26 ya concedió el módulo `catalogo` a `jefe_area`, con policies y un trigger que impide que una jefatura toque categorías ajenas. Falta únicamente la pantalla. Es el bloque más barato.
+| Asunto | Detalle |
+|---|---|
+| **Tope de 200 casos** | `cargarDenuncias()` sigue limitado. `hayMasCasos` ya lo expone, pero **ninguna vista lo muestra todavía**: los indicadores se quedarían cortos sin avisar. La solución de fondo es paginación por cursor o filtro por período |
+| **`vista-mi-perfil-empleado.js`** | Última pantalla con datos simulados |
+| **`markRaw`** | Pendiente en 4 archivos con objetos de Leaflet |
+| **Fotos huérfanas** | Una foto se sube antes de que exista el caso; un formulario abandonado deja el archivo sin fila en `casos_adjuntos`. Sin limpieza automática todavía |
+| **Fotos y buzón offline** | No viajan juntas: `localStorage` solo guarda texto y dos fotos en base64 son ~1,4 MB de los ~5 MB disponibles |
+| **13 dependencias de CDN** | Sin vendorizar |
+| **Tres esquemas divergentes** | En `database/` |
+| **Límite por hora** | Se consume también en subidas rechazadas por formato |
 
-**Bloque 4 · Fotografías y Realtime incremental.** Las dos RPC aceptan `p_adjuntos`, pero `vista-levantar-denuncia.js:711` envía `[]` fijo: **el empleado captura hasta dos fotos, las ve en su teléfono, y no salen de ahí.** Falta `cpanel/subir_evidencia.php` siguiendo el patrón JWT de `subir_foto_perfil.php`.
+---
 
-**Deuda adicional:** `.limit(200)` silencioso en `cargarDenuncias()`; `markRaw` pendiente en 4 archivos; `vista-mi-perfil-empleado.js` aún simulado; tres esquemas divergentes en `database/`; vendorizar las 13 dependencias de CDN.
+## 12 bis. Lo que enseñó el despliegue real
+
+Nada de esto estaba en la documentación de arquitectura, y todo costó tiempo. Va aquí porque quien mantenga el sistema se lo va a encontrar.
+
+### El hosting no es el que suponía la documentación
+
+| Suposición | Realidad |
+|---|---|
+| PHP 8.x | **PHP 7.4.33**. `match` y los tipos unión son un error de análisis: 500 en blanco |
+| Extensiones habituales | **Sin `fileinfo` ni `exif`** de fábrica |
+| `Authorization` llega a PHP | **Apache la descarta** con PHP en CGI/FastCGI |
+| Raíz del subdominio separada del repositorio | **La raíz ES el clon de git** |
+
+### Supabase migró a JWT Signing Keys
+
+El proyecto firma con **ES256**, no con HS256. El «JWT Secret» heredado ya no sirve para verificar los tokens nuevos.
+
+`cpanel/jwt-monitoreo.php` valida la firma asimétrica contra el JWKS del proyecto
+(`<SUPABASE_URL>/auth/v1/.well-known/jwks.json`), con caché en disco de 6 horas y
+refresco forzado —como mucho uno por minuto— cuando aparece un `kid` desconocido.
+
+**Es mejor que lo anterior:** el servidor guarda solo la clave pública. Puede comprobar
+tokens y no puede fabricarlos. Con HS256 tenía el mismo secreto con el que se firman.
+
+### La cabecera propia
+
+Como Apache descarta `Authorization`, el token viaja **además** en `X-Monitoreo-Token`,
+que sí pasa intacta. El servidor acepta la primera que llegue. Las reglas de reescritura
+del `.htaccess` no bastaron; `CGIPassAuth On` queda comentado porque exige Apache 2.4.13+
+y no se pudo confirmar la versión.
+
+### Despliegue
+
+La raíz del subdominio es el clon del repositorio, así que:
+
+- **Todo el repositorio se servía por HTTP.** `/database/schema.sql`, `/docs/` y una
+  segunda copia de los endpoints en `/cpanel/` eran públicos. Lo cierra el `.htaccess`
+  de la raíz.
+- **Editar archivos en el servidor deja la copia de trabajo sucia** y el siguiente
+  «Update from Remote» aborta. Ver el runbook: [`../despliegue-produccion.md`](../despliegue-produccion.md).
+- `.cpanel.yml` copia los endpoints de `cpanel/` a `api-monitoreo/` en el despliegue.
+  **`config-monitoreo.php` no está en el repositorio** y no se toca nunca.
+
+### Dos fallos propios que conviene recordar
+
+**Un `FormData` con un DataURL no envía un archivo.** `FormData.append(campo, valor, nombre)`
+ignora el tercer argumento cuando `valor` es una cadena: viaja como campo de texto y
+`$_FILES` llega vacío. Por eso `utils/image-compressor.js` tiene tres salidas separadas
+y documentadas.
+
+**Probar solo los caminos de rechazo no prueba nada.** Un fallo en `subir_evidencia.php`
+—una variable que se perdió al refactorizar— solo se manifestaba con un token *válido*.
+Los sondeos con token falso daban todo en verde. La prueba que lo cazó fue montar el
+sitio completo en local, firmar un token real y subir una imagen real, con un PHP
+configurado igual que el del servidor.
 
 ---
 
@@ -294,11 +373,18 @@ cambiar_estado_caso(p_caso, p_estado, p_observacion)
 4. Si se toca el `return` de un `setup()`, **revisar la plantilla**.
 5. Si se toca la base de datos, **escribir una migración**, no editar `schema.sql`.
 
-### Referencias rotas por corregir
+### Sobre los documentos de `docs/arquitectura/`
 
-`docs/arquitectura/RECOMENDACIONES_ARQUITECTURA_BACKEND.md` cita `ESQUEMA_BD_CONSOLIDADO.md` (línea 29) y `plan-implementacion-mejoras` (línea 86). **Ninguno de los dos existe en el repositorio.**
+Son **históricos**: explican por qué se eligió esta arquitectura, no cómo está construida
+hoy. Llevan aviso de vigencia desde agosto de 2026. Dos avisos que conviene no olvidar:
 
-`DOCUMENTACION_TECNICA.md` está en `.gitignore:50`, así que no llega a GitHub. Si el equipo debe tenerlo, hay que sacarlo de ahí.
+- `recomendacion_de_mejoras.md` proponía roles (`supervisor`, `cuadrilla`, `solo_lectura`)
+  que nunca existieron.
+- `ANALISIS_PROFUNDO_LIMITANTES_VIABILIDAD_REAL.md` §9 trae un SQL de propuesta que
+  difiere del implementado.
+
+**La fuente de verdad del modelo de datos es `database/schema.sql` y sus migraciones.**
+La del procedimiento de despliegue, [`../despliegue-produccion.md`](../despliegue-produccion.md).
 
 ---
 

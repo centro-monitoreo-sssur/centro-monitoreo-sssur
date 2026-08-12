@@ -17,6 +17,8 @@ import { useMisCasos } from '../../stores/mis-casos.js';
 import { L } from '../../core/libs.js';
 import { colorEstado, etiquetaEstado } from '../../utils/badge.js';
 import { colorPrioridad, formatearFechaHora } from '../../utils/presentacion-campo.js';
+import { crearTesela } from '../../services/mapa/teselas.js';
+import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
 
 export default {
   setup() {
@@ -30,6 +32,8 @@ export default {
     // `TypeError: ... '_latLngToNewLayerPoint'` en la consola del Mapa en Vivo.
     let mapa = null;
 
+    const { tesela: teselaPreferida } = usePreferenciasCampo();
+
     const intervencion = casoSeleccionado;
 
     // Solo se ofrece cerrar lo que sigue abierto. La plantilla comparaba
@@ -40,6 +44,50 @@ export default {
     const tieneUbicacion = computed(() =>
       Number.isFinite(intervencion.value?.lat) && Number.isFinite(intervencion.value?.lng)
     );
+
+    /**
+     * Abre la navegación hacia el caso en la aplicación de mapas del teléfono.
+     *
+     * El botón «Obtener ruta» existía en la plantilla SIN ningún manejador: es
+     * la función que más usa una cuadrilla y no hacía nada.
+     *
+     * Se abre una URL en vez de trazar la ruta dentro de la aplicación, y es
+     * deliberado: el empleado va conduciendo. Google Maps o Waze le dan voz,
+     * tráfico y recálculo si se desvía; una polilínea en un mapa Leaflet, no.
+     * Además evita depender de un servicio de ruteo externo y de que haya
+     * cobertura para consultarlo.
+     *
+     * `google.com/maps/dir/?api=1` es el enlace universal: Android lo captura
+     * la app de Maps, iPhone lo abre en Maps si está instalada y en el
+     * navegador si no. El esquema `geo:` sería más nativo pero en iPhone no
+     * está soportado, y ahí no abriría nada.
+     */
+    const abrirRuta = () => {
+      if (!tieneUbicacion.value) return;
+      const { lat, lng } = intervencion.value;
+      const destino = `${lat},${lng}`;
+      // `noopener` es obligatorio al abrir con `_blank`: sin él, la página
+      // destino recibe una referencia a esta y puede manipularla.
+      window.open(
+        `https://www.google.com/maps/dir/?api=1&destination=${destino}&travelmode=driving`,
+        '_blank',
+        'noopener'
+      );
+    };
+
+    /** Copia las coordenadas, por si hay que dictarlas por radio. */
+    const copiarCoordenadas = async () => {
+      if (!tieneUbicacion.value) return false;
+      const texto = `${intervencion.value.lat}, ${intervencion.value.lng}`;
+      try {
+        await navigator.clipboard.writeText(texto);
+        return true;
+      } catch {
+        // El portapapeles exige contexto seguro y permiso. Si falla, no se
+        // rompe nada: el empleado ve las coordenadas en pantalla igualmente.
+        return false;
+      }
+    };
 
     const iniciarMapa = () => {
       if (!tieneUbicacion.value) return;
@@ -54,9 +102,10 @@ export default {
         scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false,
       }).setView(punto, 17);
 
-      L.tileLayer('https://mt{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
-        maxZoom: 20, subdomains: '0123', attribution: '&copy; Google',
-      }).addTo(mapa);
+      // La capa que el empleado eligió en Ajustes. Antes estaba fija en
+      // satélite híbrido: quien prefiriera el callejero veía una vista distinta
+      // aquí que en el resto de la aplicación.
+      crearTesela(teselaPreferida.value).addTo(mapa);
 
       const color = intervencion.value.color || '#ef4444';
       L.marker(punto, {
@@ -101,6 +150,8 @@ export default {
       getEstadoColor: colorEstado,
       getEstadoLabel: etiquetaEstado,
       formatDate: formatearFechaHora,
+      abrirRuta,
+      copiarCoordenadas,
       volver: () => irA('mis-intervenciones'),
       irACierre: () => irA('cierre-incidente'),
     };

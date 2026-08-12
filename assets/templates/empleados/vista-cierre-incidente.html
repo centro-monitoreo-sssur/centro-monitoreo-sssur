@@ -2,7 +2,7 @@
      VISTA: Cierre de Incidente (Empleado)
      Portal de Denuncias Ciudadanas · San Salvador Sur
      ============================================================ -->
-<div class="min-h-screen bg-gray-50 flex flex-col relative pb-20">
+<div class="min-h-screen overflow-x-hidden bg-gray-50 flex flex-col relative pb-20">
   
   <!-- Header / Topbar -->
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
@@ -38,7 +38,7 @@
         <i class="fa-solid fa-clipboard-check text-xl"></i>
       </div>
       <div>
-        <h3 class="font-bold text-emerald-900 text-sm leading-tight">Intervención #{{ incidenteActivo?.id }}</h3>
+        <h3 class="font-bold text-emerald-900 text-sm leading-tight break-words">Intervención #{{ incidenteActivo?.id }}</h3>
         <p class="text-xs text-emerald-700 font-medium leading-tight mt-1 line-clamp-1">{{ incidenteActivo?.titulo }}</p>
       </div>
     </div>
@@ -56,23 +56,62 @@
       <!-- Evidencia Fotográfica -->
       <div class="space-y-2">
         <label class="block text-sm font-bold text-gray-700">Evidencia Fotográfica (Opcional)</label>
-        <p class="text-[11px] text-gray-500 mb-2">Adjunta fotos del trabajo finalizado.</p>
-        
+        <p class="text-[11px] text-gray-500 mb-2">
+          Fotos del trabajo terminado. El teléfono las reduce solo antes de enviarlas.
+        </p>
+
         <div class="grid grid-cols-3 gap-3">
-          <!-- Botón de subir -->
-          <label class="bg-white border-2 border-dashed border-gray-300 rounded-2xl h-24 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-colors active:scale-95 shadow-sm">
+          <!-- Miniaturas de lo ya capturado.
+               `foto.vistaPrevia` es el DataURL; el Blob que se sube va en
+               `foto.archivo`. Ver utils/image-compressor.js -->
+          <div v-for="(foto, indice) in fotos" :key="indice"
+            class="relative rounded-2xl overflow-hidden h-24 border border-gray-100 shadow-sm">
+            <img :src="foto.vistaPrevia" class="w-full h-full object-cover" alt="Evidencia del cierre">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+            <button type="button" @click="removerFotografia(indice)"
+              class="toque-comodo absolute top-1.5 right-1.5 w-7 h-7 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white active:scale-95 transition-transform"
+              aria-label="Quitar fotografía">
+              <i aria-hidden="true" class="fa-solid fa-xmark text-[10px]"></i>
+            </button>
+          </div>
+
+          <!-- Procesando -->
+          <div v-if="fotoProcesando"
+            class="bg-white border-2 border-dashed border-emerald-300 rounded-2xl h-24 flex flex-col items-center justify-center shadow-sm">
+            <i class="fa-solid fa-circle-notch fa-spin text-emerald-500 text-xl mb-1"></i>
+            <span class="text-[10px] font-bold text-emerald-600">Optimizando…</span>
+          </div>
+
+          <!-- Botón de captura. Desaparece al llegar al máximo en vez de
+               quedarse inerte: un botón que no responde se pulsa tres veces. -->
+          <label v-if="fotos.length < MAX_FOTOS && !fotoProcesando"
+            class="bg-white border-2 border-dashed border-gray-300 rounded-2xl h-24 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-colors active:scale-95 shadow-sm">
             <i class="fa-solid fa-camera text-gray-400 text-xl mb-1"></i>
             <span class="text-[10px] font-bold text-gray-500">Añadir foto</span>
-            <input type="file" class="hidden" accept="image/*" multiple>
+            <span class="text-[9px] text-gray-400">{{ fotos.length }}/{{ MAX_FOTOS }}</span>
+            <!-- `capture="environment"` abre directamente la cámara trasera en
+                 el teléfono, sin pasar por el selector de archivos. -->
+            <input type="file" class="hidden" accept="image/*" capture="environment" multiple
+              @change="procesarFotografia">
           </label>
         </div>
+
+        <p v-if="!estaOnline && fotos.length" class="text-[11px] text-amber-600 font-semibold">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          Sin señal las fotografías no se guardan. El cierre sí quedará en el buzón.
+        </p>
       </div>
 
       <!-- Materiales y Recursos -->
       <div class="space-y-2">
         <label class="block text-sm font-bold text-gray-700">Materiales y Recursos Utilizados</label>
         <p class="text-[11px] text-gray-500 mb-2">Si aplica, enlista brevemente los recursos.</p>
-        <textarea rows="2" placeholder="Ej: 2 sacos de cemento, 1 lámpara LED..." class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-shadow resize-none shadow-sm"></textarea>
+        <!-- Va a `observaciones`, que es lo que el RPC guarda en el caso. Este
+             campo no tenía `v-model`: lo que el empleado escribía se descartaba
+             al enviar, sin aviso ninguno. -->
+        <textarea v-model="observaciones" rows="2" maxlength="500"
+          placeholder="Ej: 2 sacos de cemento, 1 lámpara LED..."
+          class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-shadow resize-none shadow-sm"></textarea>
       </div>
 
     </form>
@@ -88,14 +127,15 @@
     <div v-if="resultado" class="mb-3 rounded-2xl px-4 py-3 flex items-start gap-3 text-sm font-medium" :class="{
         'bg-emerald-600 text-white': resultado.tipo === 'ok',
         'bg-amber-500 text-white':   resultado.tipo === 'encolado',
+        'bg-amber-600 text-white':   resultado.tipo === 'advertencia',
         'bg-red-600 text-white':     resultado.tipo === 'error'
       }">
       <i class="mt-0.5 fa-solid" :class="{
           'fa-circle-check':         resultado.tipo === 'ok',
           'fa-cloud-arrow-up':       resultado.tipo === 'encolado',
-          'fa-triangle-exclamation': resultado.tipo === 'error'
+          'fa-triangle-exclamation': resultado.tipo === 'error' || resultado.tipo === 'advertencia'
         }"></i>
-      <span class="flex-1">{{ resultado.texto }}</span>
+      <span class="flex-1 min-w-0 break-words">{{ resultado.texto }}</span>
     </div>
 
     <!-- `puedeGuardar` exige los 10 caracteres que también exige el RPC. Antes
@@ -103,7 +143,9 @@
     <button @click="guardarCierre" :disabled="!puedeGuardar" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-2xl shadow-xl shadow-emerald-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 text-base">
       <i v-if="guardando" class="fa-solid fa-circle-notch fa-spin text-lg"></i>
       <i v-else class="fa-solid fa-check-double text-lg"></i>
-      {{ guardando ? 'Registrando...' : (estaOnline ? 'Confirmar Cierre de Incidente' : 'Guardar en Buzón Offline') }}
+      {{ subiendoFotos ? 'Subiendo fotografías…'
+         : (guardando ? 'Registrando…'
+         : (estaOnline ? 'Confirmar Cierre de Incidente' : 'Guardar en Buzón Offline')) }}
     </button>
   </div>
 

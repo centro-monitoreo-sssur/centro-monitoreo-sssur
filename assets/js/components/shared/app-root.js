@@ -11,6 +11,7 @@ import { useDashboard } from '../../stores/dashboard.js';
 import { usePwa } from '../../stores/pwa.js';
 import { usePermisos } from '../../stores/permisos.js';
 import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
+import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
@@ -35,8 +36,16 @@ export default {
       mostrarModalLogout.value = false;
     };
 
+    // El tema de la PWA de campo se resuelve en el arranque: puede estar en
+    // 'auto', y entonces depende de lo que pida el sistema operativo en ese
+    // momento. Solo aplica al contexto de empleados; el Centro de Monitoreo
+    // tiene su propio interruptor en la barra superior.
+    const { iniciarTema } = usePreferenciasCampo();
+
     // Escuchar evento para abrir modal de logout desde sidebar
     onMounted(() => {
+      if (CONTEXTO === CONTEXTOS.EMPLEADOS) iniciarTema();
+
       window.addEventListener('abrir-modal-logout', () => {
         mostrarModalLogout.value = true;
       });

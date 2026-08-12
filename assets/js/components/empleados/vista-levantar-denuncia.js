@@ -15,6 +15,12 @@ import { cargarLimitesSSSur, cargarColoniasSanMarcos } from '../../services/geo-
 import { useCatalogos } from '../../stores/catalogos.js';
 import { comprimirImagenDual } from '../../utils/image-compressor.js';
 import { subirEvidencias, evidenciasConfiguradas } from '../../services/evidencias.js';
+// Mismo catálogo y mismos estilos que el resto de mapas. Esta vista tenía su
+// propia copia: sus colonias salían violeta y sus teselas no entendían la
+// preferencia guardada en Ajustes.
+import { crearTesela, normalizarTesela } from '../../services/mapa/teselas.js';
+import { CAPAS } from '../../services/mapa/capas-territoriales.js';
+import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
 import { almacen } from '../../core/almacen.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
@@ -134,7 +140,8 @@ export default {
     // Arranca en satélite: sobre la foto aérea se ven caminos, veredas y
     // construcciones que el callejero de OSM no tiene mapeadas, que es
     // justo lo que hace falta para ubicar una incidencia en zona rural.
-    const estiloTile = ref('satellite');
+    const { tesela: teselaPreferida, capas: capasPreferidas, fijarTesela } = usePreferenciasCampo();
+    const estiloTile = ref(normalizarTesela(teselaPreferida.value));
     const capaBase = ref(null);
     const ubicacionActiva = ref(false);
     const marcadorUbicacion = ref(null);
@@ -172,34 +179,31 @@ export default {
     const mostrarConfirmacionCancelar = ref(false);
 
     // Función para construir capa base
-    const construirTile = (estilo) => {
-      if (estilo === 'cartomap') {
-        return L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd', maxZoom: 21, attribution: '&copy; CARTO'
-        });
-      }
-      if (estilo === 'google') {
-        return L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-          subdomains: '0123', maxZoom: 20, attribution: '&copy; Google',
-        });
-      }
-      if (estilo === 'satellite') {
-        return L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-          subdomains: '0123', maxZoom: 20, attribution: '&copy; Google',
-        });
-      }
-      return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      });
-    };
+    const construirTile = (estilo) => crearTesela(estilo);
 
-    const cambiarTile = (estilo) => {
-      if (!mapa.value || estiloTile.value === estilo) return;
-      estiloTile.value = estilo;
+    /** Repinta la capa base. No decide cuál: solo refleja `estiloTile`. */
+    const aplicarTile = () => {
+      if (!mapa.value) return;
       if (capaBase.value) mapa.value.removeLayer(capaBase.value);
-      capaBase.value = construirTile(estilo).addTo(mapa.value);
+      capaBase.value = construirTile(estiloTile.value).addTo(mapa.value);
       cargarLimitesMunicipio();
     };
+
+    // Elegir capa aquí guarda la preferencia, igual que en el Mapa en Vivo:
+    // una sola fuente de verdad para los dos sitios donde se puede cambiar.
+    const cambiarTile = (estilo) => {
+      if (estiloTile.value === estilo) return;
+      fijarTesela(estilo);
+    };
+
+    watch(teselaPreferida, (valor) => {
+      const nuevo = normalizarTesela(valor);
+      if (nuevo === estiloTile.value) return;
+      estiloTile.value = nuevo;
+      aplicarTile();
+    });
+
+    watch(capasPreferidas, () => { cargarLimitesMunicipio(); }, { deep: true });
 
     // Capas de límites
     let capaLimitesRef = null;
@@ -214,31 +218,40 @@ export default {
     let limitesCache = null;
 
 
-    const obtenerColorLimites = () => estiloTile.value === 'satellite' ? '#ffffff' : '#1d4ed8';
+    const estiloDistritos = () => CAPAS.distritos.estilo(estiloTile.value);
+    const estiloColonias  = () => CAPAS.colonias.estilo(estiloTile.value);
 
         // Cartografía oficial (`limites-sssur.geojson`), la misma que el Centro de
     // Monitoreo. Antes se leían los globales de limites-municipio.js y
     // limites-poligonos.js, con el trazado anterior: campo y central dibujaban
     // fronteras distintas. Los 5 distritos SON el municipio, así que una sola
     // capa sustituye a las dos que había.
+    /* Umbral por debajo del cual las colonias no se dibujan, y un solo lienzo
+       compartido en vez de un nodo del DOM por polígono.
+
+       Entre colonias y distritos hay ~26 000 vértices. Como SVG son otros
+       tantos elementos que el navegador crea, mide y repinta en cada
+       desplazamiento; en un teléfono se nota. Y por debajo del zoom 13 las 153
+       colonias son una mancha ilegible que no aporta nada.
+
+       Es lo que ya hacía el servicio compartido y aquí faltaba. */
+    const ZOOM_MINIMO_COLONIAS = 13;
+    const lienzo = L.canvas({ padding: 0.3 });
+
     const cargarLimitesMunicipio = async () => {
       if (!mapa.value) return;
-      const color = obtenerColorLimites();
       try {
         const distritos = await cargarLimitesSSSur();
         limitesCache = distritos;
         // El usuario pudo salir de la vista mientras se descargaba.
         if (!mapa.value) return;
 
-        if (distritos && distritos.features) {
-          if (capaDistritosRef) mapa.value.removeLayer(capaDistritosRef);
+        if (capaDistritosRef) { mapa.value.removeLayer(capaDistritosRef); capaDistritosRef = null; }
+
+        if (distritos && distritos.features && capasPreferidas.value.distritos) {
           capaDistritosRef = L.geoJSON(distritos, {
-            style: {
-              color,
-              weight: 2.5,
-              opacity: 0.9,
-              fillOpacity: 0
-            },
+            renderer: lienzo,
+            style: estiloDistritos(),
             onEachFeature: (feature, layer) => {
               const nombre = feature.properties?.nombre;
               // bindPopup y no tooltip sticky: el tooltip lanzaba error al
@@ -250,13 +263,18 @@ export default {
 
         // Colonias de San Marcos: capa exclusiva de la app de campo. Es el
         // detalle que necesita quien está en la calle para nombrar dónde está.
-        const colonias = await cargarColoniasSanMarcos();
+        // Ni se descargan ni se dibujan si no toca: la descarga son 709 KB.
+        const tocaColonias = capasPreferidas.value.colonias
+          && mapa.value.getZoom() >= ZOOM_MINIMO_COLONIAS;
+        const colonias = tocaColonias ? await cargarColoniasSanMarcos() : null;
         if (!mapa.value) return;
 
+        if (capaColoniasRef) { mapa.value.removeLayer(capaColoniasRef); capaColoniasRef = null; }
+
         if (colonias && colonias.features) {
-          if (capaColoniasRef) mapa.value.removeLayer(capaColoniasRef);
           capaColoniasRef = L.geoJSON(colonias, {
-            style: { color: '#7c3aed', weight: 1, opacity: 0.65, fillColor: '#7c3aed', fillOpacity: 0.06 },
+            renderer: lienzo,
+            style: estiloColonias(),
             onEachFeature: (feature, layer) => {
               const p = feature.properties || {};
               const viviendas = p.viviendas ? `<div style="font-size:11px;opacity:.7;">${p.viviendas} viviendas</div>` : '';
@@ -318,6 +336,19 @@ export default {
 
       capaBase.value = construirTile(estiloTile.value).addTo(mapa.value);
       cargarLimitesMunicipio();
+
+      /* Las colonias aparecen y desaparecen al cruzar el umbral de zoom.
+         Se compara contra el estado anterior para no rehacer la capa en cada
+         gesto: solo cuando el umbral se cruza de verdad. Aquí importa más que
+         en el Mapa en Vivo, porque el empleado hace zoom para afinar el punto
+         y cruzaría el umbral varias veces seguidas. */
+      let coloniasVisiblesAntes = mapa.value.getZoom() >= ZOOM_MINIMO_COLONIAS;
+      mapa.value.on('zoomend', () => {
+        const ahora = mapa.value.getZoom() >= ZOOM_MINIMO_COLONIAS;
+        if (ahora === coloniasVisiblesAntes) return;
+        coloniasVisiblesAntes = ahora;
+        cargarLimitesMunicipio();
+      });
 
       if (coordenadasSeleccionadas.value) {
         const coords = coordenadasSeleccionadas.value.split(',').map(c => parseFloat(c.trim()));

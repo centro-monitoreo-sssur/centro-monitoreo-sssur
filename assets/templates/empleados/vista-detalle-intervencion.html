@@ -2,7 +2,7 @@
      VISTA: Detalle de Intervención (Empleado)
      Portal de Denuncias Ciudadanas · San Salvador Sur
      ============================================================ -->
-<div class="min-h-screen bg-gray-50 flex flex-col relative pb-20">
+<div class="min-h-screen overflow-x-hidden bg-gray-50 flex flex-col relative pb-20">
   
   <!-- Header / Topbar -->
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
@@ -11,7 +11,7 @@
         <button @click="volver" class="toque-comodo w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors active:scale-95" aria-label="Volver">
           <i aria-hidden="true" class="fa-solid fa-arrow-left text-gray-600"></i>
         </button>
-        <div v-if="intervencion">
+        <div v-if="intervencion" class="min-w-0">
           <h1 class="text-lg font-bold text-gray-900">Intervención #{{ intervencion.id }}</h1>
           <p class="text-xs text-gray-500 font-medium">{{ formatDate(intervencion.fecha) }}</p>
         </div>
@@ -40,8 +40,8 @@
       <!-- Card Principal -->
       <div class="bg-white rounded-3xl p-5 shadow-xl shadow-gray-200/50 border border-gray-100 flex flex-col gap-4">
         <div>
-          <h2 class="text-xl font-bold text-gray-900 mb-2 leading-tight">{{ intervencion.titulo }}</h2>
-          <p class="text-sm text-gray-600 leading-relaxed">{{ intervencion.descripcion }}</p>
+          <h2 class="text-xl font-bold text-gray-900 mb-2 leading-tight break-words">{{ intervencion.titulo }}</h2>
+          <p class="text-sm text-gray-600 leading-relaxed break-words">{{ intervencion.descripcion }}</p>
         </div>
         
         <div class="grid grid-cols-2 gap-3 pt-2">
@@ -68,11 +68,30 @@
           <div class="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
             <i class="fa-solid fa-map-location-dot text-red-500 text-lg"></i>
           </div>
-          <div>
-            <p class="text-sm text-gray-900 font-semibold mb-1">{{ intervencion.ubicacion }}</p>
-            <button class="text-xs font-bold text-emerald-600 flex items-center gap-1.5 active:scale-95 transition-transform">
-              <i class="fa-solid fa-diamond-turn-right"></i> Obtener ruta
-            </button>
+          <!-- `min-w-0` es obligatorio dentro de un flex: sin él, una dirección
+               larga sin espacios empuja la tarjeta y desplaza toda la página. -->
+          <div class="min-w-0 flex-1">
+            <p class="text-sm text-gray-900 font-semibold mb-1 break-words">{{ intervencion.ubicacion }}</p>
+
+            <!-- Sin coordenadas no hay ruta que trazar. Se dice, en vez de
+                 dejar un botón que no lleva a ninguna parte. -->
+            <p v-if="!tieneUbicacion" class="text-xs text-gray-400 italic">
+              Este caso no tiene coordenadas registradas.
+            </p>
+
+            <div v-else class="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <!-- Abre Google Maps / Waze con navegación por voz. Ver el
+                   comentario de `abrirRuta` en el componente. -->
+              <button type="button" @click="abrirRuta"
+                class="toque-comodo text-xs font-bold text-emerald-600 flex items-center gap-1.5 active:scale-95 transition-transform">
+                <i class="fa-solid fa-diamond-turn-right"></i> Obtener ruta
+              </button>
+              <!-- Para dictarlas por radio cuando no hay datos móviles. -->
+              <button type="button" @click="copiarCoordenadas"
+                class="toque-comodo text-xs font-semibold text-gray-500 flex items-center gap-1.5 active:scale-95 transition-transform">
+                <i class="fa-regular fa-copy"></i> Copiar coordenadas
+              </button>
+            </div>
           </div>
         </div>
       </div>

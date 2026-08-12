@@ -2,7 +2,7 @@
      VISTA: Mis Intervenciones (Estilo iOS Mobile)
      Centro de Monitoreo SSSur · App de Campo
      ============================================================ -->
-<div class="min-h-screen bg-gray-100 pb-20">
+<div class="min-h-screen overflow-x-hidden bg-gray-100 pb-20">
   <!-- iOS Status Bar Simulation -->
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
     <div class="px-4 py-3 flex items-center justify-between">
@@ -48,7 +48,7 @@
               <i class="fa-solid fa-clipboard-check text-white"></i>
             </div>
             <div>
-              <h4 class="font-semibold text-gray-900 text-sm">{{ intervencion.titulo }}</h4>
+              <h4 class="font-semibold text-gray-900 text-sm break-words">{{ intervencion.titulo }}</h4>
               <p class="text-xs text-gray-500">{{ formatDate(intervencion.fecha) }}</p>
             </div>
           </div>
@@ -56,9 +56,9 @@
             {{ getEstadoLabel(intervencion.estado) }}
           </span>
         </div>
-        <p class="text-sm text-gray-600 mb-3">{{ intervencion.descripcion }}</p>
+        <p class="text-sm text-gray-600 mb-3 break-words line-clamp-3">{{ intervencion.descripcion }}</p>
         <div class="flex items-center justify-between text-xs text-gray-500">
-          <span><i class="fa-solid fa-map-marker-alt mr-1"></i>{{ intervencion.ubicacion }}</span>
+          <span class="min-w-0 break-words"><i class="fa-solid fa-map-marker-alt mr-1"></i>{{ intervencion.ubicacion }}</span>
           <span class="text-emerald-600 font-medium">Ver detalles <i class="fa-solid fa-chevron-right text-[10px] ml-1"></i></span>
         </div>
       </div>

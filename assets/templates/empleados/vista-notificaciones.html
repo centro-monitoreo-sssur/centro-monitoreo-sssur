@@ -2,7 +2,7 @@
      VISTA: Notificaciones (Empleados)
      Centro de Monitoreo SSSur · App de Campo
      ============================================================ -->
-<div class="min-h-screen bg-gray-100 pb-20">
+<div class="min-h-screen overflow-x-hidden bg-gray-100 pb-20">
   <!-- iOS Status Bar Simulation -->
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
     <div class="px-4 py-3 flex items-center justify-between">
@@ -98,7 +98,7 @@
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-start justify-between mb-1">
-                  <div class="flex-1">
+                  <div class="flex-1 min-w-0">
                     <h4 class="text-sm font-medium text-gray-900" :class="{ 'font-semibold': !notif.leida }">
                       {{ notif.titulo }}
                     </h4>

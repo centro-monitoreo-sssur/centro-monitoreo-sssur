@@ -62,6 +62,10 @@
   <vista-mi-perfil-empleado></vista-mi-perfil-empleado>
 </div>
 
+<div v-else-if="vistaActual === 'ajustes-campo'" class="min-h-screen">
+  <vista-ajustes-campo></vista-ajustes-campo>
+</div>
+
 <div v-else-if="vistaActual === 'mapa-vivo'" class="min-h-screen">
   <vista-mapa-vivo></vista-mapa-vivo>
 </div>

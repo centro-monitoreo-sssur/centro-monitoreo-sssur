@@ -52,6 +52,7 @@ import vistaDetalleIntervencion  from './empleados/vista-detalle-intervencion.js
 import vistaCierreIncidente      from './empleados/vista-cierre-incidente.js';
 import vistaLevantarDenuncia     from './empleados/vista-levantar-denuncia.js';
 import vistaBuzonOffline         from './empleados/vista-buzon-offline.js';
+import vistaAjustesCampo        from './empleados/vista-ajustes-campo.js';
 import vistaMiPerfilEmpleado     from './empleados/vista-mi-perfil-empleado.js';
 import vistaBitacoraEmpleado     from './empleados/vista-bitacora-empleado.js';
 import vistaNotificacionesEmpleado from './empleados/vista-notificaciones.js';
@@ -115,6 +116,7 @@ export const componentes = {
   'vista-levantar-denuncia':    { comp: vistaLevantarDenuncia,    tpl: 'empleados/vista-levantar-denuncia' },
   'vista-buzon-offline':        { comp: vistaBuzonOffline,        tpl: 'empleados/vista-buzon-offline' },
   'vista-mi-perfil-empleado':   { comp: vistaMiPerfilEmpleado,    tpl: 'empleados/vista-mi-perfil-empleado' },
+  'vista-ajustes-campo':        { comp: vistaAjustesCampo,        tpl: 'empleados/vista-ajustes-campo' },
   'vista-bitacora-empleado':    { comp: vistaBitacoraEmpleado,    tpl: 'empleados/vista-bitacora-empleado' },
   'vista-notificaciones-empleado': { comp: vistaNotificacionesEmpleado, tpl: 'empleados/vista-notificaciones' },
 

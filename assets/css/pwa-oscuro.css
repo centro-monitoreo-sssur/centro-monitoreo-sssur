@@ -1,0 +1,247 @@
+/* ============================================================================
+   TEMA OSCURO DE LA PWA DE CAMPO
+   ----------------------------------------------------------------------------
+   POR QUÉ ES UNA CAPA DE SUSTITUCIÓN Y NO VARIANTES `dark:` EN LAS PLANTILLAS
+
+   Las diez plantillas de `templates/empleados/` no tienen ni una sola clase
+   `dark:` — se comprobó: cero. La consola administrativa sí las tiene (141 solo
+   en la vista de Cuadrillas). Añadirlas a mano a las diez significaría tocar
+   cientos de atributos `class`, y cada uno es una ocasión de que un color se
+   quede sin su pareja oscura y aparezca texto gris sobre fondo gris.
+
+   La alternativa es esta: la PWA usa una paleta neutra muy pequeña —21
+   utilidades distintas en total— así que se sustituyen esas 21 y el tema oscuro
+   sale entero, sin tocar el marcado. Si mañana alguien añade una pantalla con
+   los mismos colores, hereda el tema sin hacer nada.
+
+   ── ALCANCE ────────────────────────────────────────────────────────────────
+   Todo cuelga de `html.dark[data-contexto="empleados"]`. El atributo lo pone
+   `core/app-contexto.js` antes del primer pintado. Sin ese acotamiento, la capa
+   repintaría también el Centro de Monitoreo y se pelearía con sus variantes
+   `dark:`, que ya resuelven bien lo suyo.
+
+   Especificidad: `html.dark[data-contexto] .bg-white` puntúa 0-3-1 frente al
+   0-1-0 de la utilidad de Tailwind, así que gana sin necesidad de `!important`.
+
+   ── LO QUE NO SE TOCA ──────────────────────────────────────────────────────
+   · Los acentos de color —verde, ámbar, rojo, azul— se mantienen. Son el código
+     visual de estado de la aplicación y en oscuro siguen leyéndose bien.
+   · `text-white` sobre botones de color: sigue siendo blanco.
+   · `bg-white/20`, `/30`, `/40`: son veladuras SOBRE fondos de color, no
+     superficies. Oscurecerlas rompería las tarjetas verdes.
+   · `bg-black/*` y los degradados sobre fotografías: son sombras, no fondos.
+   ============================================================================ */
+
+html.dark[data-contexto="empleados"] {
+  /* Fondo del documento: sin esto se ve una franja clara al hacer scroll
+     elástico por encima o por debajo del contenido. */
+  background-color: #0b1220;
+  color-scheme: dark;
+}
+
+/* ── Superficies ─────────────────────────────────────────────────────────── */
+
+html.dark[data-contexto="empleados"] .bg-white     { background-color: #16202e; }
+html.dark[data-contexto="empleados"] .bg-gray-50   { background-color: #0b1220; }
+html.dark[data-contexto="empleados"] .bg-gray-100  { background-color: #1e293b; }
+html.dark[data-contexto="empleados"] .bg-gray-200  { background-color: #273449; }
+html.dark[data-contexto="empleados"] .bg-gray-300  { background-color: #334155; }
+
+/* Cabeceras y barra inferior. Llevan `backdrop-blur`, así que conservan la
+   translucidez: si se pusieran opacas, el contenido dejaría de deslizarse por
+   debajo y se perdería la sensación de profundidad que da el desenfoque. */
+html.dark[data-contexto="empleados"] .bg-white\/95 { background-color: rgb(22 32 46 / 0.95); }
+html.dark[data-contexto="empleados"] .bg-white\/90 { background-color: rgb(22 32 46 / 0.90); }
+html.dark[data-contexto="empleados"] .bg-white\/80 { background-color: rgb(22 32 46 / 0.82); }
+
+/* ── Texto ───────────────────────────────────────────────────────────────── */
+/* No es la escala invertida sin más: en oscuro los grises intermedios pierden
+   contraste antes que en claro, así que el gris medio sube un par de escalones
+   para que un `text-gray-500` —el más usado de la aplicación, 58 apariciones—
+   siga siendo legible a pleno sol. */
+
+html.dark[data-contexto="empleados"] .text-gray-900 { color: #f1f5f9; }
+html.dark[data-contexto="empleados"] .text-gray-800 { color: #e2e8f0; }
+html.dark[data-contexto="empleados"] .text-gray-700 { color: #cbd5e1; }
+html.dark[data-contexto="empleados"] .text-gray-600 { color: #aebacb; }
+html.dark[data-contexto="empleados"] .text-gray-500 { color: #94a3b8; }
+html.dark[data-contexto="empleados"] .text-gray-400 { color: #7d8ca3; }
+html.dark[data-contexto="empleados"] .text-gray-300 { color: #64748b; }
+
+html.dark[data-contexto="empleados"] .placeholder-gray-400::placeholder { color: #64748b; }
+
+/* ── Bordes y separadores ────────────────────────────────────────────────── */
+
+html.dark[data-contexto="empleados"] .border-gray-100    { border-color: #22314a; }
+html.dark[data-contexto="empleados"] .border-gray-200    { border-color: #2b3b55; }
+html.dark[data-contexto="empleados"] .border-gray-300    { border-color: #3a4c69; }
+html.dark[data-contexto="empleados"] .border-gray-100\/50 { border-color: rgb(34 49 74 / 0.5); }
+html.dark[data-contexto="empleados"] .border-gray-200\/50 { border-color: rgb(43 59 85 / 0.5); }
+html.dark[data-contexto="empleados"] .border-gray-200\/60 { border-color: rgb(43 59 85 / 0.6); }
+html.dark[data-contexto="empleados"] .divide-gray-50 > * + * { border-color: #22314a; }
+
+/* ── Fondos tenues de acento ─────────────────────────────────────────────── */
+/* Los `bg-verde-50` y compañía se pensaron para fondo blanco: en oscuro quedan
+   como manchas claras. Se sustituyen por el mismo color con poca opacidad, que
+   conserva la intención —«esto es verde», «esto es un aviso»— sin deslumbrar. */
+
+html.dark[data-contexto="empleados"] .bg-emerald-50 { background-color: rgb(16 185 129 / 0.14); }
+html.dark[data-contexto="empleados"] .bg-green-50   { background-color: rgb(34 197 94 / 0.14); }
+html.dark[data-contexto="empleados"] .bg-amber-50   { background-color: rgb(245 158 11 / 0.14); }
+html.dark[data-contexto="empleados"] .bg-red-50     { background-color: rgb(239 68 68 / 0.14); }
+html.dark[data-contexto="empleados"] .bg-blue-50    { background-color: rgb(59 130 246 / 0.14); }
+
+html.dark[data-contexto="empleados"] .border-emerald-100 { border-color: rgb(16 185 129 / 0.3); }
+html.dark[data-contexto="empleados"] .border-green-100   { border-color: rgb(34 197 94 / 0.3); }
+html.dark[data-contexto="empleados"] .border-amber-200   { border-color: rgb(245 158 11 / 0.35); }
+html.dark[data-contexto="empleados"] .border-red-100     { border-color: rgb(239 68 68 / 0.3); }
+
+/* Los tonos oscuros de texto sobre esos fondos tenues se aclaran, o quedarían
+   ilegibles sobre el nuevo fondo. */
+html.dark[data-contexto="empleados"] .text-emerald-900 { color: #6ee7b7; }
+html.dark[data-contexto="empleados"] .text-emerald-700 { color: #34d399; }
+html.dark[data-contexto="empleados"] .text-amber-700   { color: #fbbf24; }
+html.dark[data-contexto="empleados"] .text-red-700     { color: #fca5a5; }
+
+/* ── Colores escritos a mano ─────────────────────────────────────────────── */
+/*
+   Estas reglas no existían y por eso el formulario de «Levantar Denuncia» se
+   quedaba en claro mientras el resto de la aplicación pasaba a oscuro. La capa
+   sustituye utilidades de Tailwind con nombre —`bg-white`, `text-gray-500`— y
+   esa vista usa valores literales entre corchetes, que son clases distintas y
+   quedaban fuera del alcance.
+
+   La barra inferior hace lo mismo con el azul institucional. Sobre fondo claro
+   #001ba0 contrasta de sobra; sobre fondo oscuro es prácticamente negro y el
+   ítem activo dejaba de distinguirse del resto.
+*/
+
+/*
+   ⚠ SELECTORES DE ATRIBUTO Y NO CLASES ESCAPADAS
+
+   Una clase como `bg-[#f8f9fb]` se escribe en CSS como `.bg-\[\#f8f9fb\]`, y
+   las que llevan comas o paréntesis —`shadow-[0_-10px_35px_rgba(0,0,0,.18)]`—
+   exigen escapes hexadecimales cuya forma exacta depende de cómo los genere
+   Tailwind. Un escape mal puesto no da error: la regla simplemente no aplica y
+   el fallo es invisible hasta que alguien mira la pantalla.
+
+   `[class*="…"]` compara la subcadena literal y no necesita escapar nada.
+*/
+
+/* Fondo de página del formulario de alta. */
+html.dark[data-contexto="empleados"] [class*="bg-[#f8f9fb]"] { background-color: #0b1220; }
+
+/* Degradado que difumina el contenido bajo los botones fijos del formulario.
+   Se reescribe entero en vez de tocar las variables `--tw-gradient-*`, cuya
+   cascada depende del orden en que el CDN emita las clases. */
+html.dark[data-contexto="empleados"] [class*="from-[#f8f9fb]"] {
+  background-image: linear-gradient(to top, #0b1220 0%, rgb(11 18 32 / 0.9) 55%, transparent 100%);
+}
+
+/* Azul institucional de la barra inferior: se aclara lo justo para que el ítem
+   activo se lea, conservando la identidad de la marca.
+   El orden importa: la regla del fondo al 10 % va después porque el selector
+   del azul sólido también la alcanza por subcadena. */
+html.dark[data-contexto="empleados"] [class*="text-[#001ba0]"] { color: #7da2ff; }
+html.dark[data-contexto="empleados"] [class*="bg-[#001ba0]"]   { background-color: #2b4ed6; }
+html.dark[data-contexto="empleados"] [class*="bg-[#00147a]"]   { background-color: #24409f; }
+html.dark[data-contexto="empleados"] [class*="bg-[#001ba0]/10"] { background-color: rgb(125 162 255 / 0.14); }
+
+/* ── Sombras ─────────────────────────────────────────────────────────────── */
+/*
+   El problema que se ve en las capturas: una sombra pensada para fondo blanco
+   es GRIS CLARA, y sobre fondo oscuro no cae hacia atrás — sobresale. Cada
+   tarjeta queda rodeada de un halo luminoso, como recortada y pegada encima.
+
+   En oscuro la profundidad no se consigue con una sombra más clara que el
+   fondo, sino con una más oscura. Se sustituye el COLOR de la sombra, no la
+   sombra: las distancias y difuminados del diseño se conservan.
+*/
+html.dark[data-contexto="empleados"] [class*="shadow-gray-200/50"],
+html.dark[data-contexto="empleados"] [class*="shadow-gray-900/20"] {
+  --tw-shadow-color: rgb(0 0 0 / 0.5);
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
+/* Los resplandores de color bajo los botones de acción sí funcionan en oscuro
+   —dan la sensación de que el botón emite luz— pero al 30 % deslumbran sobre
+   fondo casi negro. Se bajan sin quitarlos. */
+html.dark[data-contexto="empleados"] [class*="shadow-emerald-"],
+html.dark[data-contexto="empleados"] [class*="shadow-green-"],
+html.dark[data-contexto="empleados"] [class*="shadow-indigo-"] {
+  --tw-shadow-color: rgb(16 185 129 / 0.16);
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
+/* Las sombras literales de la barra inferior y del pie de los formularios son
+   negras: en claro apenas se notan y en oscuro desaparecen del todo, dejando la
+   barra flotando sin separación del contenido. Se refuerzan. */
+html.dark[data-contexto="empleados"] [class*="shadow-[0_-10px_35px"] {
+  box-shadow: 0 -10px 35px rgb(0 0 0 / 0.55);
+}
+html.dark[data-contexto="empleados"] [class*="shadow-[0_-4px_20px"] {
+  box-shadow: 0 -4px 20px rgb(0 0 0 / 0.45);
+}
+html.dark[data-contexto="empleados"] [class*="shadow-[0_8px_30px"] {
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.6);
+}
+
+/* ── Campos de formulario ────────────────────────────────────────────────── */
+/* El teclado del sistema y el autorrelleno del navegador pintan sus propios
+   fondos claros. `color-scheme` de arriba resuelve el teclado; el autorrelleno
+   necesita esto. */
+
+html.dark[data-contexto="empleados"] input:-webkit-autofill,
+html.dark[data-contexto="empleados"] textarea:-webkit-autofill {
+  -webkit-text-fill-color: #f1f5f9;
+  -webkit-box-shadow: 0 0 0 1000px #1e293b inset;
+}
+
+/* ── Mapa ────────────────────────────────────────────────────────────────── */
+/* Los controles de Leaflet son blancos por defecto y sobre un mapa oscuro
+   quedan como parches brillantes. */
+
+html.dark[data-contexto="empleados"] .leaflet-control-zoom a,
+html.dark[data-contexto="empleados"] .leaflet-bar a {
+  background-color: #16202e;
+  color: #e2e8f0;
+  border-color: #2b3b55;
+}
+html.dark[data-contexto="empleados"] .leaflet-popup-content-wrapper,
+html.dark[data-contexto="empleados"] .leaflet-popup-tip {
+  background-color: #16202e;
+  color: #e2e8f0;
+}
+
+/* ============================================================================
+   COMODIDAD TÁCTIL · se aplica en los dos temas
+   ----------------------------------------------------------------------------
+   Detalles que separan una página web de una aplicación. Van aquí y no en un
+   archivo aparte porque son de la PWA, igual que el tema.
+   ============================================================================ */
+
+[data-contexto="empleados"] body {
+  /* El destello azul al tocar un botón delata que es una página web. */
+  -webkit-tap-highlight-color: transparent;
+  /* Sin esto, arrastrar en los bordes rebota la página entera como si fuera un
+     documento, en vez de comportarse como una pantalla de aplicación. */
+  overscroll-behavior-y: none;
+}
+
+/* Los rótulos y botones no se seleccionan: una pulsación mantenida sobre un
+   botón mostraba el menú de copiar en vez de activarlo. Los campos de texto sí,
+   evidentemente. */
+[data-contexto="empleados"] button,
+[data-contexto="empleados"] label,
+[data-contexto="empleados"] .toque-comodo {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Última red contra el desplazamiento horizontal. Nueve de las diez plantillas
+   no llevaban contención propia: una dirección larga sin espacios, un correo
+   institucional o un nombre de colonia bastan para empujar la página, y cuando
+   eso pasa la barra de navegación inferior se corta por la derecha. */
+[data-contexto="empleados"] body {
+  overflow-x: hidden;
+}

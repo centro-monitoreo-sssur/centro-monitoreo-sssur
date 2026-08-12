@@ -818,7 +818,15 @@
   text-align: center;
 }
 
-.footer-text {
+/* ACOTADO A .registro-footer, y no suelto como estaba.
+   `.footer-text` se declaraba aquí por segunda vez —la primera está en la
+   línea 336, en gris— con blanco al 70 %, pensado para el fondo oscuro de la
+   pantalla de registro. Al tener la misma especificidad, ganaba esta por venir
+   después, y el pie del login quedaba BLANCO SOBRE LA TARJETA BLANCA: un hueco
+   vacío entre el botón «Ingresar» y el separador de abajo.
+   Ninguna plantilla usa `.registro-footer` hoy, así que la regla solo hacía
+   daño. Se conserva acotada por si esa pantalla vuelve. */
+.registro-footer .footer-text {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
   margin: 0;

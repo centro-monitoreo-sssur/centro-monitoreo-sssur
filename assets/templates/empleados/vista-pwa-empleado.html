@@ -7,7 +7,7 @@
   <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-50">
     <div class="px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <img src="https://sansalvadorsur.gob.sv/images/logo-azul-horizontal.png" alt="Logo Municipalidad"
+        <img :src="logoHorizontal" alt="Logo Municipalidad"
           class="h-8 w-auto">
         <div>
           <h1 class="text-lg font-semibold text-gray-900">Sistema Municipal</h1>
@@ -15,7 +15,7 @@
           <!-- <p class="text-xs text-gray-500">{{ rolDisplay }}</p> -->
         </div>
       </div>
-      <button @click="cerrarSesion" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Cerrar sesión">
+      <button @click="mostrarModalLogout = true" class="toque-comodo w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center" aria-label="Cerrar sesión">
         <i aria-hidden="true" class="fa-solid fa-sign-out-alt text-gray-600 text-sm"></i>
       </button>
     </div>
@@ -110,12 +110,18 @@
         </div>
         <div>
           <h4 class="font-semibold text-gray-900 text-sm">Información</h4>
-          <p class="text-xs text-gray-600 mt-1">Tu zona asignada es {{ zonaAsignada }}. Todas tus intervenciones serán
+          <p class="text-xs text-gray-600 mt-1 break-words">Tu zona asignada es {{ zonaAsignada }}. Todas tus intervenciones serán
             georreferenciadas en esta área.</p>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Confirmación antes de cerrar sesión -->
+  <modal-confirmacion v-if="mostrarModalLogout" :mostrar="mostrarModalLogout" titulo="Cerrar Sesión"
+    mensaje="¿Seguro que quieres salir? Tendrás que volver a escribir tu usuario y contraseña."
+    textoConfirmar="Cerrar Sesión" @cerrar="mostrarModalLogout = false" @confirmar="confirmarLogout">
+  </modal-confirmacion>
 
   <!-- Bottom Tab Bar Reutilizable -->
   <bottom-tab-bar tipo="empleado"></bottom-tab-bar>

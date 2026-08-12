@@ -132,11 +132,17 @@ Tres opciones:
 
 **Fotografías**
 
-Podés tomar hasta dos.
+Podés tomar hasta dos, y **sí llegan al Centro de Monitoreo**. Quedan guardadas junto al caso y cualquiera que lo revise las ve.
 
-> ⚠️ **Importante — leelo antes de confiar en esto.**
-> **Las fotografías todavía no se envían al servidor.** Las vas a ver en tu teléfono mientras llenás el formulario, pero **no llegan al Centro de Monitoreo**. La función está en construcción.
-> Mientras tanto: **describí bien por escrito lo que se vería en la foto.** Si el caso necesita respaldo gráfico, guardá la foto en la galería de tu teléfono y entregala por el canal que te indique tu jefatura.
+Ya no hace falta que guardes copia en la galería ni que las mandes por otro canal.
+
+Tres cosas que conviene saber:
+
+- **El teléfono las reduce antes de enviarlas.** Lo hace solo, para que la subida sea rápida con datos móviles. La calidad sigue siendo suficiente para documentar el incidente.
+- **Al enviar, el botón dirá «Subiendo fotografías…» antes de «Enviando…».** Es normal que tarde unos segundos más con mala cobertura.
+- **Si alguna foto no sube, el reporte se registra igual** y el mensaje te dice cuántas se enviaron —por ejemplo «Se enviaron 1 de 2 fotografías»—. Se prefiere un caso con una foto a perder el caso entero por la segunda. Si el aviso sale en color ámbar, leelo antes de que desaparezca.
+
+> **Sin señal las fotografías NO se guardan.** Si enviás el reporte sin cobertura, el caso queda en el buzón pero las fotos se pierden, y el aviso te lo dirá. Volvé a tomarlas cuando tengas señal, o esperá a tenerla antes de enviar si la fotografía es importante para ese caso.
 
 Tocá **Enviar**.
 
@@ -156,10 +162,11 @@ En varias zonas del municipio no hay cobertura. La aplicación está preparada.
 
 **Si enviás un caso sin señal, no se pierde:** queda guardado en el **Buzón Offline** de tu teléfono. Cuando recuperés cobertura, entrá al buzón y sincronizalo.
 
-**Tres cosas que conviene tener claras:**
+**Cuatro cosas que conviene tener claras:**
 
 - **Revisá el buzón al terminar tu jornada.** Un caso que se quedó ahí es un caso que la municipalidad no sabe que existe.
 - El sistema distingue entre «no hubo señal» —lo guarda para después— y «el servidor rechazó el envío» —eso es un error y te lo dice—. Si te aparece un error, no lo reintentes a ciegas: avisá.
+- **Las fotografías no viajan al buzón.** El teléfono no tiene espacio para guardarlas ahí sin arriesgarse a perder los reportes que ya estaban esperando. Si un caso necesita fotografía, conviene enviarlo con señal.
 - **No cierres sesión con casos pendientes en el buzón.**
 
 ---
@@ -180,7 +187,7 @@ Para que no pierdas tiempo buscándolo:
 
 | No disponible | Qué hacer mientras tanto |
 |---|---|
-| **Enviar fotografías** | Describir bien por escrito. Guardar la foto en la galería |
+| **Enviar fotografías sin señal** | Esperar a tener cobertura si la foto importa para ese caso |
 | **Ver quién atendió tu reporte** | Consultarlo con tu jefatura |
 | **Calcular la ruta** entre varias intervenciones | Ordenar el recorrido a criterio propio |
 | **Editar un caso ya enviado** | Levantar uno nuevo y avisar al Centro de Monitoreo |

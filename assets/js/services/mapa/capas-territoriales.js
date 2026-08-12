@@ -18,6 +18,7 @@
 // ============================================================================
 import { L } from '../../core/libs.js';
 import { cargarLimitesSSSur, cargarColoniasSanMarcos } from '../geo-json/cargador.js';
+import { esTeselaOscura } from './teselas.js';
 
 // ── Contorno del municipio ──────────────────────────────────────────────────
 //
@@ -59,7 +60,15 @@ function cargarLimiteMunicipal() {
 // `estilo` recibe el modo de tesela para decidir el color: sobre la imagen
 // satélite un azul oscuro es invisible, y sobre el callejero un blanco lo es
 // igualmente.
-const sobreSatelite = (tile) => tile === 'satellite' || tile === 'darkmap';
+// Antes comparaba contra dos identificadores escritos a mano —'satellite' y
+// 'darkmap'— que solo existían en la consola administrativa. La PWA de campo
+// usaba otros nombres, así que aquí nunca daba verdadero y sus polígonos se
+// pintaban con colores de fondo claro sobre imagen de satélite: invisibles.
+//
+// Ahora lo decide el catálogo único (`services/mapa/teselas.js`), que además
+// traduce los identificadores heredados. Añadir una capa base nueva ya no
+// obliga a acordarse de tocar esta línea.
+const sobreSatelite = (tile) => esTeselaOscura(tile);
 
 export const CAPAS = {
   municipio: {
@@ -102,10 +111,16 @@ export const CAPAS = {
     cargar: cargarColoniasSanMarcos,
     // Trazo fino y sí con relleno muy tenue: son 153 polígonos pequeños y sin
     // una superficie mínima no se distingue dónde acaba uno y empieza el otro.
-    estilo: (tile) => ({
-      color: sobreSatelite(tile) ? '#fbbf24' : '#b45309',
-      weight: 1, opacity: 0.75, fill: true, fillOpacity: 0.06,
-    }),
+    // El ámbar sobre satélite y el ocre sobre mapa claro son los dos tonos que
+    // sobreviven a un fondo de vegetación y tejado. El violeta que usaba la PWA
+    // se confundía con la sombra de los árboles en la imagen aérea.
+    //
+    // Sobre fondo oscuro el trazo va algo más grueso y el relleno algo más
+    // presente: una línea de 1 px sobre imagen de satélite se pierde entre el
+    // ruido de la propia fotografía, cosa que no pasa sobre un mapa plano.
+    estilo: (tile) => (sobreSatelite(tile)
+      ? { color: '#fbbf24', weight: 1.6, opacity: 0.95, fill: true, fillOpacity: 0.12 }
+      : { color: '#b45309', weight: 1.0, opacity: 0.75, fill: true, fillOpacity: 0.06 }),
     etiqueta: (p) => p.nombre || '',
     // Solo tiene sentido de cerca. Con el municipio entero en pantalla, 153
     // polígonos son una mancha ilegible que además cuesta dibujar.

@@ -2,6 +2,21 @@
      COMPONENTE: Bottom Tab Bar · Estilo "Pill" flotante
      Acento único: #001ba0 (aplica a ambos modos: poblacion/empleado)
      Se oculta automáticamente en vistas de formulario
+     ------------------------------------------------------------
+     ESCALA DE APILAMIENTO DE LA PWA · leer antes de tocar un z-index
+
+       z-0            lienzo del mapa
+       z-10 … z-30    capas superpuestas dentro de una vista
+       z-40           paneles flotantes sobre el mapa
+       z-50           cabeceras fijas
+       z-[60]         ESTA BARRA y su menú «Más»
+       z-[100]        modales y hojas inferiores
+
+     La barra y su desplegable comparten contexto de apilamiento: el menú NO
+     lleva z-index propio, hereda el de aquí. Cualquier elemento de una vista
+     con un valor por encima de 60 lo tapará — es lo que ocurría con el panel
+     inferior del mapa, que estaba en z-[1000] por copiar la convención de
+     Leaflet sin necesitarla.
      ============================================================ -->
 
 <transition name="tab-bar">
@@ -186,6 +201,12 @@
                 :class="vistaActual === 'mi-perfil-empleado' ? 'bg-[#001ba0]/10 text-[#001ba0]' : 'text-gray-600 hover:bg-gray-50'">
                 <i class="fa-solid fa-circle-user text-sm"></i>
                 <span class="text-[13px] font-semibold">Mi Perfil</span>
+              </button>
+              <button @click="irA('ajustes-campo'); toggleMenuMas()"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-95"
+                :class="vistaActual === 'ajustes-campo' ? 'bg-[#001ba0]/10 text-[#001ba0]' : 'text-gray-600 hover:bg-gray-50'">
+                <i class="fa-solid fa-sliders text-sm"></i>
+                <span class="text-[13px] font-semibold">Ajustes</span>
               </button>
               <button @click="irA('bitacora-empleado'); toggleMenuMas()"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all active:scale-95"

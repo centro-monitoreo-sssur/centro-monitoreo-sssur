@@ -1,5 +1,5 @@
 // Vista: Mapa en Vivo (Mobile PWA - Empleados)
-import { ref, onMounted, onUnmounted, nextTick } from '../../core/vue.js';
+import { ref, watch, onMounted, onUnmounted, nextTick } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { useDenuncias } from '../../stores/denuncias.js';
@@ -7,6 +7,12 @@ import { marcadorDenuncia } from '../../services/marcadores.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { cargarLimitesSSSur, cargarColoniasSanMarcos } from '../../services/geo-json/cargador.js';
 import { leerVistaMapa, restaurarVistaMapa, vigilarVistaMapa } from '../../utils/vista-mapa-persistida.js';
+// Catálogo único de capas base y estilos territoriales compartidos con la
+// consola. Antes esta vista tenía su propia lista de teselas y sus propios
+// colores: por eso las colonias salían violeta sobre satélite y se perdían.
+import { crearTesela, normalizarTesela } from '../../services/mapa/teselas.js';
+import { CAPAS } from '../../services/mapa/capas-territoriales.js';
+import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
 
 export default {
   setup() {
@@ -20,7 +26,19 @@ export default {
     // justo lo que hace falta para ubicar una incidencia en zona rural.
     const CLAVE_VISTA_MAPA = 'empleado-mapa-vivo';
     let _dejarDeVigilarVista = null;
-    const estiloTile = ref(leerVistaMapa(CLAVE_VISTA_MAPA)?.estilo || 'satellite');
+    // Prioridad: lo último que se usó en ESTE mapa → la preferencia elegida en
+    // Ajustes → el valor por defecto del catálogo. Se normaliza porque puede
+    // haber guardado un identificador de los antiguos ('satellite', 'google').
+    /* UNA SOLA FUENTE DE VERDAD PARA LA CAPA BASE: la preferencia de Ajustes.
+       Antes la vista guardaba su propia tesela con `vigilarVistaMapa` en cada
+       movimiento del mapa, y al montar esa copia ganaba sobre la preferencia:
+           leerVistaMapa(...)?.estilo || teselaPreferida.value
+       Bastaba con haber abierto el mapa una vez para que Ajustes dejara de
+       tener efecto, porque la copia ya existía y nunca era nula.
+       El recuerdo por vista sigue existiendo, pero solo para el CENTRO y el
+       ZOOM —dónde estaba trabajando la cuadrilla—, que sí son de esa vista. */
+    const { tesela: teselaPreferida, capas: capasPreferidas, fijarTesela } = usePreferenciasCampo();
+    const estiloTile = ref(normalizarTesela(teselaPreferida.value));
     const capaBase = ref(null);
     let marcadorGPS = null;
     let radioGPS = null;
@@ -65,10 +83,21 @@ export default {
       if (!restaurarVistaMapa(CLAVE_VISTA_MAPA, mapa.value)) {
         mapa.value.setView([13.61229, -89.17036], 13);
       }
-      _dejarDeVigilarVista = vigilarVistaMapa(CLAVE_VISTA_MAPA, mapa.value, () => estiloTile.value);
+      _dejarDeVigilarVista = vigilarVistaMapa(CLAVE_VISTA_MAPA, mapa.value);
 
       // Tile base
       capaBase.value = construirTile(estiloTile.value).addTo(mapa.value);
+
+      /* Las colonias aparecen y desaparecen al cruzar el umbral de zoom.
+         Se compara contra el estado anterior para no rehacer la capa en cada
+         gesto: solo cuando el umbral se cruza de verdad. */
+      let coloniasVisiblesAntes = mapa.value.getZoom() >= ZOOM_MINIMO_COLONIAS;
+      mapa.value.on('zoomend', () => {
+        const ahora = mapa.value.getZoom() >= ZOOM_MINIMO_COLONIAS;
+        if (ahora === coloniasVisiblesAntes) return;
+        coloniasVisiblesAntes = ahora;
+        cargarLimitesMunicipio();
+      });
       
       // Dibujar distritos/limites
       dibujarLimites();
@@ -89,7 +118,11 @@ export default {
       // de por sí.
     }
     
-    const obtenerColorLimites = () => estiloTile.value === 'satellite' ? '#ffffff' : '#1d4ed8';
+    // El color lo decide el servicio compartido según si la capa base es
+    // oscura. Antes se comparaba contra la cadena 'satellite', que dejó de ser
+    // el identificador al unificar el catálogo.
+    const estiloDistritos = () => CAPAS.distritos.estilo(estiloTile.value);
+    const estiloColonias  = () => CAPAS.colonias.estilo(estiloTile.value);
 
     function dibujarLimites() {
       cargarLimitesMunicipio();
@@ -102,25 +135,34 @@ export default {
     //
     // Ya no hacen falta dos capas. Los 5 distritos SON el municipio: su unión
     // es la frontera exterior, así que una sola capa da ambas cosas.
+    /* Zoom por debajo del cual las colonias no se dibujan.
+       Es el mismo umbral que aplica el servicio compartido, y aquí faltaba: la
+       PWA las pintaba SIEMPRE, incluido el encuadre inicial del municipio
+       entero, donde 153 polígonos son una mancha ilegible que además cuesta
+       dibujar. Son 14 952 vértices. */
+    const ZOOM_MINIMO_COLONIAS = 13;
+
+    /* Un solo lienzo compartido en vez de un nodo del DOM por polígono.
+       Entre colonias y distritos hay ~26 000 vértices; como SVG son otros
+       tantos elementos que el navegador tiene que crear, medir y repintar en
+       cada desplazamiento del mapa. En un teléfono se nota y era la causa de
+       que el mapa fuera lento. El servicio compartido ya lo hacía así. */
+    const lienzo = L.canvas({ padding: 0.3 });
+
     async function cargarLimitesMunicipio() {
       if (!mapa.value) return;
-
-      const color = obtenerColorLimites();
 
       try {
         const distritos = await cargarLimitesSSSur();
         // El usuario pudo salir de la vista mientras descargaba.
         if (!mapa.value) return;
 
-        if (distritos && distritos.features) {
-          if (capaDistritosRef) mapa.value.removeLayer(capaDistritosRef);
+        if (capaDistritosRef) { mapa.value.removeLayer(capaDistritosRef); capaDistritosRef = null; }
+
+        if (distritos && distritos.features && capasPreferidas.value.distritos) {
           capaDistritosRef = L.geoJSON(distritos, {
-            style: {
-              color,
-              weight: 2.5,
-              opacity: 0.9,
-              fillOpacity: 0
-            },
+            renderer: lienzo,
+            style: estiloDistritos(),
             onEachFeature: (feature, layer) => {
               const nombre = feature.properties?.nombre;
               if (nombre) layer.bindPopup(`<b style="font-family:'Inter',sans-serif;font-size:12px;">${nombre}</b>`);
@@ -131,19 +173,19 @@ export default {
         // Colonias de San Marcos: solo en la app de campo. Es el detalle que
         // necesita quien está en la calle para nombrar dónde está; en la
         // consola de dirección serían 153 polígonos de ruido sobre los pines.
-        const colonias = await cargarColoniasSanMarcos();
+        // Ni se descargan ni se dibujan si no toca: la descarga son 709 KB.
+        const tocaColonias = capasPreferidas.value.colonias
+          && mapa.value.getZoom() >= ZOOM_MINIMO_COLONIAS;
+        const colonias = tocaColonias ? await cargarColoniasSanMarcos() : null;
         if (!mapa.value) return;
 
+        if (capaColoniasRef) { mapa.value.removeLayer(capaColoniasRef); capaColoniasRef = null; }
+
         if (colonias && colonias.features) {
-          if (capaColoniasRef) mapa.value.removeLayer(capaColoniasRef);
+          const base = estiloColonias();
           capaColoniasRef = L.geoJSON(colonias, {
-            style: {
-              color: '#7c3aed',
-              weight: 1,
-              opacity: 0.65,
-              fillColor: '#7c3aed',
-              fillOpacity: 0.06
-            },
+            renderer: lienzo,
+            style: base,
             onEachFeature: (feature, layer) => {
               const p = feature.properties || {};
               const viviendas = p.viviendas
@@ -154,8 +196,12 @@ export default {
               );
               // Realce al tocar: con 153 polígonos pequeños, sin esto no se
               // distingue cuál se ha seleccionado en una pantalla de móvil.
-              layer.on('click', () => layer.setStyle({ fillOpacity: 0.22, weight: 2 }));
-              layer.on('popupclose', () => layer.setStyle({ fillOpacity: 0.06, weight: 1 }));
+              // El realce parte del estilo vigente en vez de números fijos: si
+              // la capa base cambia, el resaltado sigue siendo del mismo color.
+              layer.on('click', () => layer.setStyle({
+                fillOpacity: base.fillOpacity + 0.16, weight: base.weight + 1,
+              }));
+              layer.on('popupclose', () => layer.setStyle(base));
             }
           }).addTo(mapa.value);
         }
@@ -286,34 +332,38 @@ export default {
 
     function limpiarErrorUbicacion() { errorUbicacion.value = ''; }
 
-    const construirTile = (estilo) => {
-      if (estilo === 'cartomap') {
-        return L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd', maxZoom: 21, attribution: '&copy; CARTO'
-        });
-      }
-      if (estilo === 'google') {
-        return L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-          subdomains: '0123', maxZoom: 20, attribution: '&copy; Google'
-        });
-      }
-      if (estilo === 'satellite') {
-        return L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-          subdomains: '0123', maxZoom: 20, attribution: '&copy; Google'
-        });
-      }
-      return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      });
-    };
+    // Una sola línea donde antes había cuatro ramas duplicadas del catálogo.
+    const construirTile = (estilo) => crearTesela(estilo);
 
-    const cambiarTile = (estilo) => {
-      if (!mapa.value || estiloTile.value === estilo) return;
-      estiloTile.value = estilo;
+    /** Repinta la capa base. No decide cuál: solo refleja `estiloTile`. */
+    const aplicarTile = () => {
+      if (!mapa.value) return;
       if (capaBase.value) mapa.value.removeLayer(capaBase.value);
-      capaBase.value = construirTile(estilo).addTo(mapa.value);
+      capaBase.value = construirTile(estiloTile.value).addTo(mapa.value);
+      // Los límites cambian de color según si la base es oscura.
       cargarLimitesMunicipio();
     };
+
+    /* Elegir capa desde el botón del mapa GUARDA LA PREFERENCIA.
+       Es la otra mitad de tener una sola fuente de verdad: si el cambio hecho
+       aquí no se guardara, la pantalla de Ajustes seguiría mostrando otra cosa
+       y las dos se contradirían. Cambiarla en cualquiera de los dos sitios
+       cambia la de los dos. */
+    const cambiarTile = (estilo) => {
+      if (estiloTile.value === estilo) return;
+      fijarTesela(estilo);
+    };
+
+    // El repintado lo dispara la preferencia, venga del mapa o de Ajustes.
+    watch(teselaPreferida, (valor) => {
+      const nuevo = normalizarTesela(valor);
+      if (nuevo === estiloTile.value) return;
+      estiloTile.value = nuevo;
+      aplicarTile();
+    });
+
+    // Apagar o encender una capa territorial desde Ajustes también se ve aquí.
+    watch(capasPreferidas, () => { cargarLimitesMunicipio(); }, { deep: true });
 
     onMounted(() => {
       nextTick(() => {

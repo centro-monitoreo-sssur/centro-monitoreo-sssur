@@ -12,6 +12,18 @@
 //
 // Es preferencia de interfaz, así que va a `localStorage` y no a la base — es
 // exactamente el criterio que ya sigue `stores/configuracion.js`.
+//
+// ⚠ QUÉ NO GUARDA: la capa base.
+//
+// La guardaba, y ese fue el fallo. La capa base es una preferencia GLOBAL del
+// empleado —la elige en Ajustes— mientras que el centro y el zoom son de cada
+// mapa por separado. Al recordar también la capa, esta copia por vista ganaba
+// al montar y la preferencia dejaba de aplicarse: bastaba con haber abierto el
+// mapa una vez para que Ajustes no volviera a surtir efecto.
+//
+// La capa vive ahora solo en `stores/preferencias-campo.js`. Aquí se conserva
+// la lectura del campo `estilo` de los registros antiguos por compatibilidad,
+// pero ya no se escribe ni se usa para decidir nada.
 // ============================================================
 
 const PREFIJO = 'mapa_vista_';

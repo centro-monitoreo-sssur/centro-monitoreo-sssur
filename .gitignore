@@ -45,9 +45,16 @@ out/
 graphify-out/
 
 # Archivos skills o de contexto (markdown)
+#
+# DOCUMENTACION_TECNICA.md SALE de esta lista desde agosto de 2026. Es la
+# referencia técnica principal del proyecto y estaba llegando solo por la
+# sincronización de MEGA: quien clonara desde GitHub no la encontraba, que es
+# justo el caso de cualquier persona que se incorpore al equipo.
+#
+# No contiene secretos —se verificó— y el .htaccess de la raíz deniega los .md,
+# así que queda versionada sin quedar publicada en el sitio.
 ANALISIS_PROFUNDO_LIMITANTES_VIABILIDAD_REAL.md
 caveman.md
-DOCUMENTACION_TECNICA.md
 ESQUEMA_BD_CONSOLIDADO.md
 ESTADO_ACTUAL.md
 estructura_proyecto.md

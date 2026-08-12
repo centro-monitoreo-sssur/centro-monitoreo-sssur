@@ -2,7 +2,7 @@
      VISTA: Levantar Denuncia (Diseño UX/UI Senior · Material 3 Inspired)
      Portal de Denuncias Ciudadanas · San Salvador Sur
      ============================================================ -->
-<div class="min-h-screen bg-[#f8f9fb]">
+<div class="min-h-screen overflow-x-hidden bg-[#f8f9fb]">
 
   <!-- ── HEADER STICKY ── -->
   <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-gray-100">
@@ -654,7 +654,7 @@
           'fa-cloud-arrow-up':       resultadoEnvio.tipo === 'encolado',
           'fa-triangle-exclamation': resultadoEnvio.tipo === 'advertencia' || resultadoEnvio.tipo === 'error'
         }"></i>
-      <span class="flex-1">{{ resultadoEnvio.texto }}</span>
+      <span class="flex-1 min-w-0 break-words">{{ resultadoEnvio.texto }}</span>
       <!-- Una advertencia también se puede descartar: informa de algo que el
            empleado debe leer, no de un éxito que se va solo. -->
       <button v-if="resultadoEnvio.tipo === 'error' || resultadoEnvio.tipo === 'advertencia'"

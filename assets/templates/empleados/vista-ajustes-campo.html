@@ -1,0 +1,186 @@
+<!-- ============================================================
+     VISTA: Ajustes (Empleado)
+     Preferencias de visualización, guardadas en el teléfono.
+     ============================================================ -->
+<div class="min-h-screen bg-gray-50 overflow-x-hidden pb-[calc(env(safe-area-inset-bottom)+7.5rem)]">
+
+  <!-- Header -->
+  <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-40">
+    <div class="px-4 py-3 flex items-center gap-3 pt-safe">
+      <button @click="irA('pwa-empleado')"
+        class="toque-comodo w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center transition-colors active:scale-95"
+        aria-label="Volver">
+        <i aria-hidden="true" class="fa-solid fa-arrow-left text-gray-600"></i>
+      </button>
+      <div class="min-w-0">
+        <h1 class="text-lg font-bold text-gray-900">Ajustes</h1>
+        <p class="text-xs text-gray-500 font-medium">Cómo quieres ver la aplicación</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-5 py-6 space-y-6">
+
+    <!-- ── Nota sobre dónde se guardan ────────────────────────────────── -->
+    <!-- Se dice desde el principio: son ajustes de ESTE teléfono. Si alguien
+         entra desde otro dispositivo y no los encuentra, ya sabe por qué. -->
+    <div class="rounded-2xl bg-gray-100 px-4 py-3 flex items-start gap-2.5">
+      <i class="fa-solid fa-mobile-screen text-gray-400 text-xs mt-0.5"></i>
+      <p class="text-[11px] text-gray-600 leading-snug">
+        Estas preferencias se guardan en <strong class="font-semibold">este teléfono</strong>
+        y funcionan sin señal. No se comparten con otros dispositivos ni las ve el
+        Centro de Monitoreo.
+      </p>
+    </div>
+
+    <!-- ── Tema ───────────────────────────────────────────────────────── -->
+    <section>
+      <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">Apariencia</h2>
+
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-2">
+        <button v-for="opcion in OPCIONES_TEMA" :key="opcion.id"
+          @click="elegirTema(opcion.id)"
+          class="toque-comodo w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors active:scale-[0.98]"
+          :class="tema === opcion.id ? 'bg-emerald-50' : ''">
+          <div class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+            :class="tema === opcion.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-400'">
+            <i :class="['fa-solid', opcion.icono]"></i>
+          </div>
+          <div class="flex-1 min-w-0 text-left">
+            <p class="text-sm font-bold text-gray-900">{{ opcion.nombre }}</p>
+            <p class="text-[11px] text-gray-500 break-words">{{ opcion.detalle }}</p>
+          </div>
+          <i v-if="tema === opcion.id" class="fa-solid fa-circle-check text-emerald-600 shrink-0"></i>
+        </button>
+      </div>
+
+      <!-- En 'automático' conviene decir qué está aplicando ahora mismo, o
+           parece que la opción no hizo nada. -->
+      <p v-if="tema === 'auto'" class="text-[11px] text-gray-500 mt-2 px-1">
+        Ahora mismo el teléfono pide el tema
+        <strong class="font-semibold">{{ temaEfectivo === 'oscuro' ? 'oscuro' : 'claro' }}</strong>.
+      </p>
+    </section>
+
+    <!-- ── Capa base del mapa ─────────────────────────────────────────── -->
+    <section>
+      <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">Mapa</h2>
+
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- Vista previa EN VIVO, no una imagen: cada capa se ve distinta según
+             la zona, y el empleado necesita saber cómo se verá su territorio. -->
+        <div class="relative">
+          <div id="mapa-previo-ajustes" class="w-full h-40 bg-gray-100"></div>
+          <div class="absolute bottom-2 left-3 pointer-events-none">
+            <span class="text-[10px] font-bold text-white px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm">
+              Vista previa
+            </span>
+          </div>
+        </div>
+
+        <div class="p-2 grid grid-cols-2 gap-2">
+          <button v-for="capa in catalogoTeselas" :key="capa.id"
+            @click="elegirTesela(capa.id)"
+            class="toque-comodo flex items-start gap-2.5 p-3 rounded-2xl text-left transition-colors active:scale-[0.98] border"
+            :class="tesela === capa.id
+              ? 'bg-emerald-50 border-emerald-200'
+              : 'bg-white border-gray-100'">
+            <i :class="['fa-solid', capa.icono]"
+              class="text-sm mt-0.5 shrink-0"
+              :style="{ color: tesela === capa.id ? '#059669' : '#9ca3af' }"></i>
+            <div class="min-w-0">
+              <p class="text-xs font-bold text-gray-900 leading-tight">{{ capa.nombre }}</p>
+              <p class="text-[10px] text-gray-500 leading-snug mt-0.5 break-words">{{ capa.descripcion }}</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Límites territoriales ──────────────────────────────────────── -->
+    <section>
+      <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">Qué dibujar sobre el mapa</h2>
+
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+        <label v-for="opcion in OPCIONES_CAPAS" :key="opcion.id"
+          class="flex items-center gap-3 px-5 py-4 cursor-pointer">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-gray-900">{{ opcion.nombre }}</p>
+            <p class="text-[11px] text-gray-500 break-words">{{ opcion.detalle }}</p>
+          </div>
+          <!-- Interruptor. `peer` + `sr-only` en vez de un checkbox visible:
+               el nativo no se puede estilar y en Android se ve distinto que en
+               iPhone, que es justo lo que rompe la sensación de app propia. -->
+          <div class="relative shrink-0">
+            <input type="checkbox" class="sr-only peer"
+              :checked="capas[opcion.id]" @change="alternar(opcion.id)">
+            <div class="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-emerald-600 transition-colors"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 peer-checked:translate-x-5"></div>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <!-- ── Pantalla activa ────────────────────────────────────────────── -->
+    <section>
+      <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 px-1">Durante el trabajo</h2>
+
+      <div class="bg-white rounded-3xl shadow-sm border border-gray-100">
+        <label class="flex items-center gap-3 px-5 py-4 cursor-pointer">
+          <div class="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
+            <i class="fa-solid fa-lightbulb text-amber-600"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-gray-900">Mantener la pantalla encendida</p>
+            <p class="text-[11px] text-gray-500 break-words">
+              Mientras levantas un reporte. Consume más batería.
+            </p>
+          </div>
+          <div class="relative shrink-0">
+            <input type="checkbox" class="sr-only peer"
+              :checked="pantallaActiva" @change="fijarPantallaActiva(!pantallaActiva)">
+            <div class="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-emerald-600 transition-colors"></div>
+            <div class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 peer-checked:translate-x-5"></div>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <!-- ── Restablecer ────────────────────────────────────────────────── -->
+    <section>
+      <button v-if="!confirmarRestablecer" @click="confirmarRestablecer = true"
+        class="toque-comodo w-full py-3.5 rounded-2xl bg-white border border-gray-200 text-gray-600 text-sm font-bold active:scale-95 transition-transform">
+        <i class="fa-solid fa-rotate-left mr-1.5"></i> Restablecer preferencias
+      </button>
+
+      <!-- Confirmación en línea, sin modal: es una acción reversible en dos
+           toques y un diálogo a pantalla completa sería desproporcionado. -->
+      <div v-else class="bg-white rounded-2xl border border-gray-200 p-4">
+        <p class="text-xs text-gray-600 mb-3">
+          Se volverá al tema automático, al mapa de calles y a mostrar todos los límites.
+        </p>
+        <div class="flex gap-2">
+          <button @click="confirmarRestablecer = false"
+            class="toque-comodo flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold active:scale-95 transition-transform">
+            Cancelar
+          </button>
+          <button @click="restablecerTodo"
+            class="toque-comodo flex-1 py-2.5 rounded-xl bg-gray-900 text-white text-xs font-bold active:scale-95 transition-transform">
+            Restablecer
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Aviso flotante -->
+  <div v-if="aviso" class="fixed bottom-28 left-0 right-0 z-50 px-5 pointer-events-none">
+    <div class="rounded-2xl bg-gray-900/90 backdrop-blur text-white px-4 py-3 text-sm font-medium shadow-xl flex items-center gap-2">
+      <i class="fa-solid fa-circle-check shrink-0"></i>
+      <span class="break-words">{{ aviso }}</span>
+    </div>
+  </div>
+
+  <bottom-tab-bar tipo="empleado"></bottom-tab-bar>
+</div>

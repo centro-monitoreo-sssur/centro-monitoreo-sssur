@@ -14,10 +14,11 @@
 // Ahora el contador sale de los casos reales del empleado y la adscripción del
 // perfil de `public.usuarios`.
 // ============================================================================
-import { computed, onMounted } from '../../core/vue.js';
+import { ref, computed, onMounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useMisCasos } from '../../stores/mis-casos.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
 
 export default {
   setup() {
@@ -76,7 +77,24 @@ export default {
 
     onMounted(cargarMisCasos);
 
+    /* Confirmación antes de cerrar sesión.
+       El botón está en la esquina superior de la cabecera, a un dedo de
+       distancia del resto de la interfaz, y cerrarlo sin querer en territorio
+       obliga a volver a escribir usuario y contraseña con guantes y a pleno
+       sol. El portal de población ya confirmaba; esta pantalla no. */
+    const mostrarModalLogout = ref(false);
+    const confirmarLogout = () => {
+      mostrarModalLogout.value = false;
+      cerrarSesion();
+    };
+
+    // El logo cambia con el tema; el azul no se ve sobre fondo oscuro.
+    const { logoHorizontal } = usePreferenciasCampo();
+
     return {
+      logoHorizontal,
+      mostrarModalLogout,
+      confirmarLogout,
       usuarioNombre,
       usuarioActual,
       rolUsuario,
