@@ -120,10 +120,23 @@ async function cargarDistritos() {
         distritos.value = data;
         catalogosEnFallback.value.distritos = false;
       } else {
+        // Cero filas tiene DOS causas y el mensaje anterior solo nombraba una,
+        // mandando a ejecutar una migración que ya estaba aplicada.
+        //
+        // Una consulta bloqueada por RLS no da error: devuelve una lista
+        // vacía, exactamente igual que una tabla sin datos. Y pasa de verdad
+        // —el formulario de registro consulta como `anon`, porque quien se
+        // registra todavía no tiene cuenta—, que es lo que arregla la v33.
+        const { data: { session } } = await db.auth.getSession();
         console.error(
-          '[catalogos] La tabla `distritos` está VACÍA en Supabase. El filtro ' +
-          'territorial del Mapa en Vivo quedará deshabilitado. Ejecuta ' +
-          'migration_v11_seed_seguridad_y_catalogos.sql.'
+          session
+            ? '[catalogos] `distritos` devolvió cero filas con sesión abierta. ' +
+              'O la tabla está vacía —ejecuta migration_v11_seed_seguridad_y_catalogos.sql— ' +
+              'o la RLS se lo oculta a este usuario.'
+            : '[catalogos] `distritos` devolvió cero filas SIN sesión. Lo más ' +
+              'probable es la RLS: la policy base solo alcanza a `authenticated`. ' +
+              'Ejecuta migration_v33_catalogo_publico_registro.sql, que concede ' +
+              'la lectura de los distritos activos al rol `anon`.'
         );
       }
     }

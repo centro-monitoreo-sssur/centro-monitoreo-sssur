@@ -10,9 +10,14 @@
 >   nombre del denunciante.
 > - Hecho antes de empezar: el panel «Incidentes Prioritarios» ya no se calcula
 >   sobre los 200 casos más recientes, y la lista avisa cuando está recortada.
-> - **Bloque 1 · v32 identidad ciudadana** — escrita en
->   `database/migration_v32_identidad_ciudadana.sql`, pendiente de aplicar.
-> - Bloques 2-9 — pendientes.
+> - **Bloque 1 · v32 identidad ciudadana** — aplicada y verificada.
+> - **Bloque 2 · registro y sesión reales** — hecho. El correo sale por el SMTP
+>   institucional de cPanel, no por el de Supabase.
+> - **v33 catálogo público** — la pantalla de registro consulta como `anon` y la
+>   RLS le ocultaba los distritos. Pendiente de aplicar.
+> - Bloques 3-9 — pendientes. **Ojo con la numeración**: la v33 se consumió con
+>   el arreglo del catálogo, así que el alta de denuncias pasa a ser la **v34** y
+>   los comunicados la **v35**.
 
 ---
 

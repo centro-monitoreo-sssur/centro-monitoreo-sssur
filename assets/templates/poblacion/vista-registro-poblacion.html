@@ -95,6 +95,14 @@
             <option value="">Seleccione un distrito</option>
             <option v-for="d in distritosOpciones" :key="d.id" :value="d.id">{{ d.nombre }}</option>
           </select>
+          <!-- Sin este aviso, un fallo al cargar el catálogo deja un desplegable
+               con una sola opción vacía y ninguna pista de por qué. Es lo que
+               pasaba cuando la RLS ocultaba los distritos a quien no tiene
+               cuenta: el registro era imposible y no lo decía. -->
+          <p v-if="!distritosOpciones.length" class="mt-1 text-sm text-amber-600">
+            No se pudo cargar la lista de distritos. Revisa tu conexión y vuelve
+            a intentarlo; si sigue igual, avisa a la Alcaldía.
+          </p>
           <p v-if="errores.distrito" class="mt-1 text-sm text-red-600">{{ errores.distrito }}</p>
         </div>
         
