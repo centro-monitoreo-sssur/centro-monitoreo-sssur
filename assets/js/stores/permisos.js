@@ -97,10 +97,23 @@ async function cargarPermisosModulo() {
     const uid = session?.user?.id;
     if (!uid) throw new Error('sin sesión activa');
 
+    // `maybeSingle` y no `single`: desde la v32 hay cuentas legítimas SIN fila
+    // en `usuarios` —las de los ciudadanos del portal— y `single` responde 406
+    // sobre cero filas. Eso saltaba al `catch`, que además concluía «el menú se
+    // mostrará completo», exactamente lo contrario de lo que toca con un vecino.
     const { data: perfil, error: errPerfil } = await db
-      .from('usuarios').select('rol_id').eq('id', uid).single();
+      .from('usuarios').select('rol_id').eq('id', uid).maybeSingle();
     if (errPerfil) throw errPerfil;
-    if (!perfil?.rol_id) throw new Error('el usuario no tiene rol_id asignado');
+
+    // Sin ficha de personal no hay permisos de módulo que resolver, y tampoco
+    // es un error: el portal ciudadano no tiene menú administrativo. Se deja el
+    // mapa vacío y se sale en silencio, sin ensuciar la consola.
+    if (!perfil) {
+      permisosModulo.value = {};
+      return;
+    }
+
+    if (!perfil.rol_id) throw new Error('el usuario no tiene rol_id asignado');
 
     const { data, error } = await db
       .from('roles_permisos')

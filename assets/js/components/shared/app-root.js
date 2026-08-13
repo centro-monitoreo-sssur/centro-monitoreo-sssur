@@ -164,18 +164,40 @@ export default {
         // traducen `casos.prioridad_id` a algo legible. No se cargaban, así que
         // cada vista lo traducía a mano — y ninguna acertaba.
         await cargarPrioridades();
-        // El alcance decide qué controles territoriales ofrece la consola.
-        // Va antes de los casos para que la vista no arranque mostrando un
-        // comparativo de 5 distritos a quien solo puede ver el suyo.
-        await cargarAlcance();
-        // Los permisos de módulo van en paralelo al alcance: son consultas
-        // independientes y el menú no debe esperar a los casos para dibujarse.
-        cargarPermisosModulo();
-        await cargarPoblacion();
-        await cargarDenuncias();
-        await cargarIntervenciones();
-        await cargarKpis();
-        suscribirRealtime();
+
+        /* ── A partir de aquí, nada de esto es del portal ciudadano ─────────
+           Todo lo que sigue se apoya en tener ficha en `usuarios`, o trae
+           datos de gestión que un vecino no debe ni pedir.
+
+           Al recargar se ejecutaba para CUALQUIER contexto, y con un ciudadano
+           dentro eso significaba:
+
+             · `usuarios?select=rol_id` respondiendo 406 —no tiene fila ahí—,
+               y el aviso de permisos concluyendo «el menú se mostrará
+               completo», que es justo lo contrario de lo que toca;
+             · 200 casos del municipio pedidos para nada;
+             · y una suscripción de Realtime a la tabla `casos` ENTERA por cada
+               vecino con la aplicación abierta. Con volumen ciudadano eso no
+               se sostiene, y estaba anotado como riesgo en el plan.
+
+           `vista-login.js` ya filtraba esto al iniciar sesión; la recarga no,
+           así que el comportamiento dependía de cómo hubieras llegado a la
+           pantalla. La PWA de campo se mantiene igual: `vista-mapa-vivo` lee
+           el store de denuncias y quitárselo la dejaría sin marcadores. */
+        if (CONTEXTO !== CONTEXTOS.POBLACION) {
+          // El alcance decide qué controles territoriales ofrece la consola.
+          // Va antes de los casos para que la vista no arranque mostrando un
+          // comparativo de 5 distritos a quien solo puede ver el suyo.
+          await cargarAlcance();
+          // Los permisos de módulo van en paralelo al alcance: son consultas
+          // independientes y el menú no debe esperar a los casos para dibujarse.
+          cargarPermisosModulo();
+          await cargarPoblacion();
+          await cargarDenuncias();
+          await cargarIntervenciones();
+          await cargarKpis();
+          suscribirRealtime();
+        }
       } else if (!contexto) {
         // Si no está autenticado y no hay contexto, ir a login
         vistaActual.value = 'login';
