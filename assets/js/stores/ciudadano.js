@@ -29,6 +29,27 @@
 // ============================================================
 import { ref, computed } from '../core/vue.js';
 import { db } from '../core/supabase.js';
+import { CONTEXTOS, urlDeContexto } from '../core/app-contexto.js';
+
+/**
+ * A dónde debe volver el vecino desde un enlace de correo.
+ *
+ * Importa más de lo que parece. Sin decirlo, Supabase usa el «Site URL» del
+ * proyecto, que es la raíz del dominio —y esa redirige a /panel/, el Centro de
+ * Monitoreo—. El vecino que confirma su cuenta acabaría en el login de
+ * administración, sin entender nada.
+ *
+ * Se construye con `urlDeContexto` para que en desarrollo salga el
+ * `?contexto=poblacion`: sin el .htaccess de Apache, /ciudadano/ no existe.
+ *
+ * OJO: cada dirección que se use aquí tiene que estar dada de alta en
+ * Authentication → URL Configuration → Redirect URLs. Supabase descarta en
+ * silencio las que no estén en esa lista y cae al Site URL.
+ */
+function urlRetornoPortal() {
+  if (typeof window === 'undefined') return undefined;
+  return new URL(urlDeContexto(CONTEXTOS.POBLACION), window.location.origin).href;
+}
 
 // ── Estado ──────────────────────────────────────────────────────────────────
 
@@ -125,7 +146,12 @@ async function registrar(datos) {
     const { data, error } = await db.auth.signUp({
       email: correo,
       password: clave,
-      options: { data: metadatos },
+      options: {
+        data: metadatos,
+        // Sin esto el enlace de confirmación lleva al Site URL del proyecto
+        // —la raíz, que redirige al Centro de Monitoreo— en vez de al portal.
+        emailRedirectTo: urlRetornoPortal(),
+      },
     });
     if (error) throw error;
 
@@ -267,8 +293,9 @@ async function recuperarContrasena(correo) {
   try {
     const { error } = await db.auth.resetPasswordForEmail(destino, {
       // Vuelve al portal ciudadano y no a la raíz, que es el Centro de
-      // Monitoreo: aterrizar ahí confundiría a cualquiera.
-      redirectTo: `${window.location.origin}/ciudadano/`,
+      // Monitoreo: aterrizar ahí confundiría a cualquiera. La dirección se
+      // calcula porque en desarrollo /ciudadano/ no existe.
+      redirectTo: urlRetornoPortal(),
     });
     if (error) throw error;
     // Se responde igual exista o no la cuenta: decir «ese correo no está
