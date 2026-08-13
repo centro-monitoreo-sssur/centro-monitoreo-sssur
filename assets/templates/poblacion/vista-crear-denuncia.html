@@ -60,29 +60,59 @@
         </div>
       </div>
 
-      <!-- Tabs Style SOSAFE -->
-      <div class="flex p-1.5 bg-gray-200/70 rounded-2xl mb-5">
-        <button v-for="tab in Object.keys(categoriasTabs)" :key="tab" @click="tabActivo = tab"
-          class="flex-1 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300"
-          :class="tabActivo === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
-          {{ tab }}
-        </button>
+      <!-- Cargando el catálogo -->
+      <div v-if="cargandoCatalogo" class="py-16 text-center text-gray-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3" aria-hidden="true"></i>
+        <p class="text-sm">Cargando categorías...</p>
       </div>
 
-      <!-- Grid de categorías SOSAFE Style (3 columnas circulares) -->
-      <div class="pb-24">
-        <div class="grid grid-cols-3 gap-x-2 gap-y-6">
-          <button v-for="categoria in categoriasTabs[tabActivo]" :key="categoria.id"
-            @click="formulario.categoriaId = categoria.id"
-            class="flex flex-col items-center gap-2 relative group transition-all duration-200 active:scale-[0.92]">
+      <!-- No se pudo consultar -->
+      <div v-else-if="errorCatalogo" class="py-12 px-4 text-center">
+        <i class="fa-solid fa-triangle-exclamation text-3xl text-amber-500 mb-3" aria-hidden="true"></i>
+        <p class="text-sm text-gray-700 font-medium mb-1">{{ errorCatalogo }}</p>
+        <p class="text-xs text-gray-500">Revisa tu conexión e inténtalo de nuevo.</p>
+      </div>
 
-            <!-- Icono circular -->
-            <div
-              class="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 shadow-sm border-[3px]"
-              :class="[
-                formulario.categoriaId === categoria.id ? getColorClass(categoria.color).icon + ' border-gray-900 shadow-lg scale-105' : getColorClass(categoria.color).icon + ' border-white/50 opacity-90'
-              ]">
-              <i :class="'fa-solid ' + categoria.icono + ' text-[26px] text-white'"></i>
+      <!--
+        Consulta correcta, pero ninguna categoría abierta. Es un estado real y
+        esperable: `visible_ciudadano` nace en FALSE y la Alcaldía decide qué
+        abre. Sin este aviso se vería una cuadrícula vacía sin explicación.
+      -->
+      <div v-else-if="sinCategoriasAbiertas" class="py-12 px-4 text-center">
+        <i class="fa-regular fa-folder-open text-3xl text-gray-300 mb-3" aria-hidden="true"></i>
+        <p class="text-sm text-gray-700 font-medium mb-1">Todavía no hay tipos de reporte disponibles</p>
+        <p class="text-xs text-gray-500">La Alcaldía los habilitará próximamente.</p>
+      </div>
+
+      <template v-else>
+        <!-- Pestañas por departamento responsable. Desplazables en horizontal:
+             son tantas como unidades tengan categorías abiertas, y repartirlas
+             a partes iguales las dejaría ilegibles en un teléfono. -->
+        <div class="flex gap-1.5 p-1.5 bg-gray-200/70 rounded-2xl mb-5 overflow-x-auto no-scrollbar">
+          <button v-for="tab in Object.keys(categoriasTabs)" :key="tab" @click="tabActivo = tab"
+            class="shrink-0 px-4 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 whitespace-nowrap"
+            :class="tabActivo === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+            {{ tab }}
+          </button>
+        </div>
+
+        <!-- Grid de categorías SOSAFE Style (3 columnas circulares) -->
+        <div class="pb-24">
+          <div class="grid grid-cols-3 gap-x-2 gap-y-6">
+            <button v-for="categoria in (categoriasTabs[tabActivo] || [])" :key="categoria.id"
+              @click="formulario.categoriaId = categoria.id"
+              :title="categoria.descripcion"
+              class="flex flex-col items-center gap-2 relative group transition-all duration-200 active:scale-[0.92]">
+
+              <!-- Icono circular. El color va en línea porque `color_hex` es un
+                   hexadecimal de la base, no un nombre de color de Tailwind:
+                   traducirlo obligaría a mantener una tabla de equivalencias
+                   que la base desconoce, y una categoría nueva saldría gris. -->
+              <div
+                class="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 shadow-sm border-[3px]"
+                :style="{ backgroundColor: categoria.color }"
+                :class="formulario.categoriaId === categoria.id ? 'border-gray-900 shadow-lg scale-105' : 'border-white/50 opacity-90'">
+                <i :class="'fa-solid ' + categoria.icono + ' text-[26px] text-white'"></i>
 
               <!-- Check de seleccionado -->
               <div v-if="formulario.categoriaId === categoria.id"
@@ -96,9 +126,10 @@
               :class="formulario.categoriaId === categoria.id ? 'text-gray-900 font-bold' : 'text-gray-600'">
               {{ categoria.nombre }}
             </p>
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
 
     <!-- ═══════════════════════════════════════
@@ -264,7 +295,7 @@
       <div v-if="categoriaSeleccionada"
         class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          :class="getColorClass(categoriaSeleccionada.color).icon">
+          :style="{ backgroundColor: categoriaSeleccionada.color }">
           <i :class="'fa-solid ' + categoriaSeleccionada.icono + ' text-white text-base'"></i>
         </div>
         <div class="flex-1 min-w-0">

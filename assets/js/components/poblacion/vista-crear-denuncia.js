@@ -3,7 +3,13 @@ import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
-import { categoriasDenuncias, getCategoriasPorTab, getColorClass } from '../../utils/categorias-denuncias.js';
+// El catálogo sale de la base y ya no de `utils/categorias-denuncias.js`, que
+// tenía 27 categorías escritas a mano con ids sin ninguna relación con
+// `categorias_caso`. Daba igual mientras nada se guardaba; desde la v34 el id
+// que se envíe tiene que ser el de verdad.
+import { useCatalogoPublico } from '../../services/catalogo-publico.js';
+import { useCatalogos } from '../../stores/catalogos.js';
+import { useCiudadano } from '../../stores/ciudadano.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
 import { validarDenunciaDuplicada, generarResumenSimilares } from '../../utils/validacion-duplicados.js';
 
@@ -23,9 +29,26 @@ export default {
     const pasoActual = ref(1);
     const totalPasos = 3;
 
-    // Categorías de denuncias divididas en pestañas
-    const categoriasTabs = ref(getCategoriasPorTab());
-    const tabActivo = ref('Seguridad y Emergencias');
+    // Categorías reales, agrupadas por el departamento que las resuelve.
+    //
+    // Antes eran dos pestañas fijas —«Seguridad y Emergencias» y «Ciudad y
+    // Servicios»— y cada categoría caía en una según palabras del nombre de su
+    // departamento. Una unidad nueva iba al cajón de sastre sin que nadie lo
+    // notara.
+    const {
+      porDepartamento, departamentos: departamentosCatalogo,
+      cargando: cargandoCatalogo, errorCatalogo, sinCategoriasAbiertas,
+      cargarCategoriasPublicas, categoriaPorId,
+    } = useCatalogoPublico();
+
+    // Para centrar el mapa en el distrito de quien reporta.
+    const { distritos: distritosCatalogo, cargarDistritos } = useCatalogos();
+    const { perfil: perfilCiudadano, cargarPerfil } = useCiudadano();
+
+    const tabActivo = ref('');
+
+    // Objeto plano porque la plantilla recorre `categoriasTabs[tabActivo]`.
+    const categoriasTabs = computed(() => Object.fromEntries(porDepartamento.value));
 
     // Estado del mapa
     const mapa = ref(null);
@@ -101,6 +124,10 @@ export default {
       }
 
       // Coordenadas del centro de San Salvador Sur o del distrito del usuario
+      // El mapa abre sobre el distrito del vecino para ahorrarle el
+      // desplazamiento. Antes salía de `localStorage.ciudadano_datos`, la clave
+      // del registro simulado, que desde el bloque 2 no escribe nadie: siempre
+      // caía al centro del municipio.
       const getCentroMapa = () => {
         const centros = {
           'Panchimalco': [13.611422, -89.178900],
@@ -109,13 +136,16 @@ export default {
           'Santiago Texacuangos': [13.642589, -89.117934],
           'Santo Tomás': [13.643984, -89.140564]
         };
-        try {
-          const datosStr = localStorage.getItem('ciudadano_datos');
-          const distrito = datosStr ? JSON.parse(datosStr).distrito : null;
-          return centros[distrito] || [13.61229, -89.17036];
-        } catch (e) {
-          return [13.61229, -89.17036];
-        }
+        const CENTRO_MUNICIPIO = [13.61229, -89.17036];
+
+        const id = perfilCiudadano.value?.distrito_id;
+        if (id == null) return CENTRO_MUNICIPIO;
+
+        // Se resuelve el NOMBRE contra el catálogo en vez de indexar por id:
+        // los ids dependen del orden en que se sembraron los distritos y una
+        // resiembra los cambiaría sin avisar. El nombre es estable.
+        const nombre = (distritosCatalogo.value || []).find((d) => d.id === id)?.nombre;
+        return centros[nombre] || CENTRO_MUNICIPIO;
       };
       const centro = getCentroMapa();
 
@@ -292,7 +322,7 @@ export default {
     // Obtener categoría seleccionada
     const categoriaSeleccionada = computed(() => {
       if (!formulario.value.categoriaId) return null;
-      return categoriasDenuncias.find(cat => cat.id === parseInt(formulario.value.categoriaId));
+      return categoriaPorId(formulario.value.categoriaId);
     });
     const obtenerUbicacion = () => {
       if (!mapa.value) return;
@@ -441,7 +471,7 @@ export default {
       }
 
       // Obtener categoría seleccionada
-      const categoria = categoriasDenuncias.find(cat => cat.id === parseInt(formulario.value.categoriaId));
+      const categoria = categoriaPorId(formulario.value.categoriaId);
 
       // Parsear coordenadas
       const coords = coordenadasSeleccionadas.value.split(',').map(c => parseFloat(c.trim()));
@@ -497,8 +527,8 @@ export default {
       const denuncia = denunciaPendiente.value || {
         id: Date.now(),
         categoriaId: formulario.value.categoriaId,
-        categoriaNombre: categoriasDenuncias.find(cat => cat.id === parseInt(formulario.value.categoriaId))?.nombre || 'Otro',
-        departamento: categoriasDenuncias.find(cat => cat.id === parseInt(formulario.value.categoriaId))?.departamento || 'No especificado',
+        categoriaNombre: categoriaPorId(formulario.value.categoriaId)?.nombre || "Otro",
+        departamento: categoriaPorId(formulario.value.categoriaId)?.departamento || "No especificado",
         descripcion: formulario.value.descripcion,
         coordenadas: coordenadasSeleccionadas.value,
         anonima: formulario.value.anonima,
@@ -645,7 +675,32 @@ export default {
       formulario.value.fotos.splice(index, 1);
     };
 
-    onMounted(() => {
+    onMounted(async () => {
+      // El catálogo primero: sin él no hay nada que elegir en el paso 1, y la
+      // categoría preseleccionada tampoco se podría validar.
+      await cargarCategoriasPublicas();
+
+      // Ficha y distritos alimentan el centrado del mapa. Van sin `await`: si
+      // llegan tarde, el mapa abre en el centro del municipio, que es una
+      // degradación aceptable y no merece retrasar la pantalla.
+      if (!perfilCiudadano.value) cargarPerfil();
+      if (!distritosCatalogo.value.length) cargarDistritos();
+
+      // Primera pestaña por defecto. No se puede fijar al declararla porque
+      // depende de qué departamentos tengan categorías abiertas, y eso solo se
+      // sabe tras consultar.
+      if (!tabActivo.value && departamentosCatalogo.value.length) {
+        tabActivo.value = departamentosCatalogo.value[0];
+      }
+
+      // Una categoría guardada de una sesión anterior puede haber dejado de
+      // ofrecerse al público. Se descarta en vez de arrastrar un id que el
+      // servidor va a rechazar.
+      if (formulario.value.categoriaId && !categoriaPorId(formulario.value.categoriaId)) {
+        formulario.value.categoriaId = '';
+        localStorage.removeItem('tipo_denuncia_seleccionado');
+      }
+
       // Si viene con una categoría pre-seleccionada, saltar al paso 2
       if (formulario.value.categoriaId) {
         pasoActual.value = 2;
@@ -677,6 +732,12 @@ export default {
       formulario,
       categoriasTabs,
       tabActivo,
+      // Estado del catálogo. La pantalla tiene que poder distinguir «cargando»
+      // de «no hay ninguna abierta» de «falló la consulta»: las tres se veían
+      // igual —una cuadrícula vacía— y ninguna se explicaba.
+      cargandoCatalogo,
+      errorCatalogo,
+      sinCategoriasAbiertas,
       coordenadasSeleccionadas,
       mostrarMenuCapas,
       estiloTile,
@@ -705,7 +766,9 @@ export default {
       cerrarModalFueraJurisdiccion,
       validacionJurisdiccion,
       mostrarAdvertenciaJurisdiccion,
-      getColorClass,
+      // `getColorClass` ya no se expone: traducía nombres de color ('yellow') a
+      // clases de Tailwind, y el catálogo real guarda hexadecimales en
+      // `color_hex`. La plantilla los aplica con estilo en línea.
       procesarFotografia,
       removerFotografia
     };
