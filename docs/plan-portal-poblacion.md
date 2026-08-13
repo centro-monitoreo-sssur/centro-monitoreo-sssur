@@ -1,9 +1,18 @@
 # Plan — Portal de Población y módulo de Comunicados
 
-> Estado: **propuesta**. Ninguna línea de código escrita todavía.
 > Base: commit `70e7a30` (versión 1.1.7).
 > Todo lo que se afirma aquí sobre el estado actual está verificado contra el
 > código y contra `database/`, no supuesto.
+>
+> **Avance**
+> - Decidido: registro con **correo y contraseña**; **cuenta siempre
+>   obligatoria**, y «anónima» pasa a significar que el operador no ve el
+>   nombre del denunciante.
+> - Hecho antes de empezar: el panel «Incidentes Prioritarios» ya no se calcula
+>   sobre los 200 casos más recientes, y la lista avisa cuando está recortada.
+> - **Bloque 1 · v32 identidad ciudadana** — escrita en
+>   `database/migration_v32_identidad_ciudadana.sql`, pendiente de aplicar.
+> - Bloques 2-9 — pendientes.
 
 ---
 
