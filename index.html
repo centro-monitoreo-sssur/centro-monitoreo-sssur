@@ -126,9 +126,9 @@
        el UMD, que es el que define `window.supabase`. -->
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-  <script src="assets/js/services/geo-json/limites-municipio.js"></script>
-  <script src="assets/js/services/geo-json/limites-poligonos.js"></script>
-  <script src="assets/js/utils/validacion-limites.js"></script>
+  <script src="/assets/js/services/geo-json/limites-municipio.js"></script>
+  <script src="/assets/js/services/geo-json/limites-poligonos.js"></script>
+  <script src="/assets/js/utils/validacion-limites.js"></script>
 
   <!-- PLUGINS LEAFLET -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
@@ -142,15 +142,15 @@
   <!-- ============================================================
      ESTILOS MODULARES (orden de cascada: tokens → base → componentes)
      ============================================================ -->
-  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
   <!-- Tema oscuro y comodidad táctil de la PWA de campo. Acotado por
        [data-contexto="empleados"], que pone core/app-contexto.js. -->
-  <link rel="stylesheet" href="assets/css/pwa-oscuro.css">
-  <link rel="stylesheet" href="assets/css/base.css">
-  <link rel="stylesheet" href="assets/css/skeleton.css">
-  <link rel="stylesheet" href="assets/css/layout.css">
-  <link rel="stylesheet" href="assets/css/components.css">
-  <link rel="stylesheet" href="assets/css/mapa.css">
+  <link rel="stylesheet" href="/assets/css/pwa-oscuro.css">
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/skeleton.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/mapa.css">
 </head>
 
 <body>
@@ -163,7 +163,7 @@
        repetidos: ~290 KB descargados dos veces en cada arranque, que en un
        teléfono con datos móviles en territorio no es un detalle. -->
   <!-- Bootstrap de la aplicación (módulos ES). Debe servirse por HTTP. -->
-  <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="/assets/js/app.js"></script>
 </body>
 
 </html>
