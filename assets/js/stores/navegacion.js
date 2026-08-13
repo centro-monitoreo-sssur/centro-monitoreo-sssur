@@ -141,9 +141,12 @@ const resolverIdentificador = async (identificador) => {
     if (!data) {
       // Sin coincidencia. Si escribió un correo puede ser de auth.users sin
       // perfil en public.usuarios, así que se deja pasar y decide Supabase.
+      // El mensaje cubre las dos formas de entrar sin correo: el `username` del
+      // personal y, desde la v34, el DUI de un ciudadano. Hablar solo de
+      // «nombre de usuario» dejaba al vecino sin entender qué había fallado.
       return texto.includes('@')
         ? { email: texto }
-        : { email: null, motivo: 'No existe ningún usuario con ese nombre de usuario.' };
+        : { email: null, motivo: 'No encontramos ninguna cuenta con ese usuario o DUI.' };
     }
     if (data.activo === false) {
       return { email: null, motivo: 'Esta cuenta está desactivada. Contacta al administrador.' };
