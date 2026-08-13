@@ -31,8 +31,15 @@ export default {
             descripcionLogin: 'Reporta incidentes y participa',
             tituloCard: 'Bienvenido',
             subtituloCard: 'Portal de Denuncias Ciudadanas',
-            labelUsuario: 'DUI O EMAIL',
-            placeholderUsuario: 'Ingrese su DUI o email',
+            // Decía «DUI O EMAIL» y el DUI no autentica: Supabase Auth solo
+            // acepta correo, y `resolver_identificador_login` (v17) traduce
+            // `usuarios.username`, que es del personal. Un ciudadano no tiene
+            // fila ahí, así que su DUI no resuelve a ningún correo y el intento
+            // fallaba con «credenciales incorrectas» —el mismo mensaje que una
+            // contraseña mal escrita, así que nadie entendería por qué—.
+            // Entrar con DUI necesita una función en la base; queda para la v33.
+            labelUsuario: 'CORREO ELECTRÓNICO',
+            placeholderUsuario: 'correo@ejemplo.com',
             iconoUsuario: 'fa-solid fa-user',
             autocompleteUsuario: 'username',
             labelPassword: 'CONTRASEÑA',

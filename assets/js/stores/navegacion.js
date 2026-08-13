@@ -70,6 +70,37 @@ const DEMO_CREDENCIALES = [
   { usuario: 'ciudadano',   clave: 'ciudadano123',rol: 'ciudadano',vista: 'pwa-poblacion' },
 ];
 
+/* Rol de quien entra por el portal ciudadano.
+   No sale de la tabla `roles` —esa es la matriz de permisos del PERSONAL— sino
+   de tener ficha en `ciudadanos`. El valor coincide con el que ya esperaba
+   `app-root.js` para enrutar a la PWA de población. */
+const ROL_CIUDADANO = 'poblacion';
+
+/**
+ * Ficha del ciudadano, si la cuenta es de una persona del portal.
+ *
+ * Devuelve null cuando no la hay, incluido el caso de que la consulta falle:
+ * quien llama solo necesita saber si puede tratarla como ciudadana.
+ *
+ * Va aquí y no en `stores/ciudadano.js` para no crear una dependencia circular
+ * —ese store no importa a este, pero sí lo hacen las vistas del portal— y
+ * porque en este punto solo hace falta el mínimo para decidir el rol.
+ */
+async function cargarPerfilCiudadano(idUsuario) {
+  try {
+    const { data, error } = await db
+      .from('ciudadanos')
+      .select('nombres, apellidos, distrito_id, activo')
+      .eq('id', idUsuario)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  } catch (e) {
+    console.error('[navegacion] Falló la lectura de la ficha ciudadana:', e.message);
+    return null;
+  }
+}
+
 const setAutenticado = async (valor, usuario = '', rol = '') => {
   // Modo demo: sin db
   if (!db) {
@@ -236,12 +267,40 @@ if (db) {
         // la PWA de campo. Sin ellos, la pantalla de inicio del empleado decía
         // "Municipalidad" y "No asignada" para todo el mundo, porque los leía de
         // una clave de localStorage que no escribía nadie.
+        // `maybeSingle` y no `single`: desde la v32 hay cuentas que NO tienen
+        // fila en `usuarios` —las de los ciudadanos del portal—, y `single`
+        // responde HTTP 406 sobre cero filas. Eso mandaba el flujo al `catch`,
+        // dejaba el rol vacío y aterrizaba al vecino en el shell de
+        // administración con todo bloqueado por RLS.
         const { data: perfil, error } = await db
           .from('usuarios')
           .select('rol_id, nombres, apellidos, departamento_id, distrito_id, roles(codigo)')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
         if (error) throw error;
+
+        // Sin ficha de personal, puede ser un ciudadano. Se comprueba solo en
+        // ese caso: para un empleado sería una consulta de más en cada arranque.
+        if (!perfil) {
+          const ciudadano = await cargarPerfilCiudadano(session.user.id);
+          if (ciudadano) {
+            rolUsuario.value = ROL_CIUDADANO;
+            almacen.escribirTexto(CLAVES.ROL, ROL_CIUDADANO);
+            nombreUsuario.value = [ciudadano.nombres, ciudadano.apellidos]
+              .filter(Boolean).join(' ').trim();
+            if (nombreUsuario.value) almacen.escribirTexto(CLAVES.NOMBRE, nombreUsuario.value);
+            departamentoUsuario.value = null;
+            distritoUsuario.value = ciudadano.distrito_id ?? null;
+            return;   // el `finally` marca `perfilCargado`
+          }
+
+          // Ni personal ni ciudadano: cuenta de Auth sin ficha en ninguna
+          // tabla. Pasa si alguien la crea a mano desde el panel de Supabase.
+          console.error(
+            '[navegacion] La cuenta ' + session.user.email + ' no tiene ficha ' +
+            'en `usuarios` ni en `ciudadanos`. Sin rol, y RLS le negará todo.'
+          );
+        }
 
         const codigoRol = perfil?.roles?.codigo || '';
         if (!codigoRol) {

@@ -1,12 +1,30 @@
-﻿// Vista Registro Población: Onboarding de ciudadanos
-// DEMO: Validaciones y registro simulado - reemplazar con API real
-import { ref, reactive } from '../../core/vue.js';
+﻿// Vista Registro Población: alta de ciudadanos contra Supabase Auth.
+//
+// Hasta la v32 esto era una simulación: esperaba latencia fingida y escribía
+// un objeto en `localStorage`. La cuenta la crea ahora `stores/ciudadano.js`, y
+// la ficha en `ciudadanos` la crea el trigger de la base en la misma
+// transacción, para que no queden cuentas sin perfil.
+import { ref, reactive, computed, onMounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { useCatalogos } from '../../stores/catalogos.js';
+import { useCiudadano } from '../../stores/ciudadano.js';
 import { CONTEXTOS, urlDeContexto } from '../../core/app-contexto.js';
 
 export default {
   setup() {
-    const { setAutenticado, irA } = useNavegacion();
+    const { irA } = useNavegacion();
+    const { distritos, cargarDistritos } = useCatalogos();
+    const { registrar: registrarCiudadano } = useCiudadano();
+
+    // Los cinco distritos venían escritos a mano en la plantilla, con el
+    // NOMBRE como valor, mientras la tabla espera `distrito_id`. Se leen del
+    // catálogo real, que es además la regla del proyecto: ninguna vista con
+    // datos inventados.
+    onMounted(() => {
+      if (!distritos.value.length) cargarDistritos();
+    });
+
+    const distritosOpciones = computed(() => distritos.value || []);
 
     // Estado del formulario
     const formulario = reactive({
@@ -17,10 +35,16 @@ export default {
       mes: '',
       anio: '',
       genero: '',
+      // Guarda el ID del distrito, no su nombre: la tabla `ciudadanos` tiene
+      // `distrito_id smallint` con clave foránea. Antes eran cinco opciones
+      // escritas a mano con el nombre como valor.
       distrito: '',
       direccion: '',
       telefono: '',
-      correo: ''
+      correo: '',
+      // El formulario no pedía contraseña porque no creaba cuenta de verdad.
+      clave: '',
+      claveRepetida: '',
     });
 
     // Estado UI
@@ -28,6 +52,11 @@ export default {
     const errorGeneral = ref('');
     const logoError = ref(false);
     const edadCalculada = ref('');
+    const mostrarClave = ref(false);
+    // Cuando Supabase exige confirmar el correo, la cuenta queda creada pero
+    // sin sesión. El formulario cede el sitio a un aviso en lugar de intentar
+    // entrar y fallar.
+    const registroCompletado = ref(false);
     
     // Estado del wizard
     const pasoActual = ref(1);
@@ -96,13 +125,23 @@ export default {
         }
         return true;
       } else if (pasoActual.value === 3) {
-        // Paso 3: Contacto
+        // Paso 3: Contacto y acceso
         if (!formulario.telefono.trim() || !validarFormatoTelefono(formulario.telefono)) {
           errores.telefono = 'Teléfono inválido (formato: 0000-0000)';
           return false;
         }
         if (!formulario.correo.trim() || !validarCorreo(formulario.correo)) {
           errores.correo = 'Correo inválido o dominio no permitido';
+          return false;
+        }
+        // Ocho es el mínimo que se exige también al personal, en
+        // `stores/usuarios.js`. Supabase admite seis por defecto.
+        if (formulario.clave.length < 8) {
+          errores.clave = 'La contraseña debe tener al menos 8 caracteres';
+          return false;
+        }
+        if (formulario.clave !== formulario.claveRepetida) {
+          errores.claveRepetida = 'Las contraseñas no coinciden';
           return false;
         }
         return true;
@@ -124,7 +163,9 @@ export default {
       distrito: '',
       direccion: '',
       telefono: '',
-      correo: ''
+      correo: '',
+      clave: '',
+      claveRepetida: '',
     });
 
     // Dominios de correo permitidos
@@ -197,6 +238,16 @@ export default {
       // Validar correo
       if (!formulario.correo.trim() || !validarCorreo(formulario.correo)) {
         errores.correo = 'Correo inválido o dominio no permitido';
+        valido = false;
+      }
+
+      // Validar contraseña. Ocho es el mínimo que se pide también al personal.
+      if (formulario.clave.length < 8) {
+        errores.clave = 'La contraseña debe tener al menos 8 caracteres';
+        valido = false;
+      }
+      if (formulario.clave !== formulario.claveRepetida) {
+        errores.claveRepetida = 'Las contraseñas no coinciden';
         valido = false;
       }
 
@@ -324,50 +375,71 @@ export default {
       errorGeneral.value = '';
     };
 
-    // Registrar usuario
+    /**
+     * Alta real contra Supabase Auth.
+     *
+     * Antes esto esperaba 1,5 s de latencia fingida y escribía un objeto en
+     * `localStorage`. La denuncia de ese vecino nunca llegaba al Centro de
+     * Monitoreo y desaparecía al borrar los datos del navegador.
+     *
+     * La ficha en `ciudadanos` NO se inserta desde aquí: la crea el trigger de
+     * la v32 dentro de la misma transacción que la cuenta. Ver el encabezado de
+     * `stores/ciudadano.js`.
+     */
     const registrar = async () => {
-      // Limpiar errores previos
       errorGeneral.value = '';
       Object.keys(errores).forEach(key => errores[key] = '');
 
-      // Validar formulario
-      if (!validarFormulario()) {
-        return;
-      }
+      if (!validarFormulario()) return;
 
       cargando.value = true;
-
-      // Simular latencia de red (demo)
-      // DEMO: Reemplazar con llamada a API real
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       try {
-        // Registro exitoso (demo)
-        // DEMO: Guardar en localStorage y asignar rol poblacion
-        const nombreCompleto = `${formulario.nombres} ${formulario.apellidos}`;
-        
-        setAutenticado(true, nombreCompleto, 'poblacion');
-        
-        // Guardar datos adicionales del ciudadano
-        localStorage.setItem('ciudadano_datos', JSON.stringify({
-          nombres: formulario.nombres,
+        const resultado = await registrarCiudadano({
+          correo:    formulario.correo,
+          clave:     formulario.clave,
+          nombres:   formulario.nombres,
           apellidos: formulario.apellidos,
-          dui: formulario.dui,
-          fechaNacimiento: formulario.fechaNacimiento,
-          genero: formulario.genero,
-          distrito: formulario.distrito,
+          dui:       formulario.dui,
+          telefono:  formulario.telefono,
           direccion: formulario.direccion,
-          telefono: formulario.telefono,
-          correo: formulario.correo
-        }));
+          genero:    formulario.genero,
+          // El selector guardaba el NOMBRE del distrito y la base espera su id.
+          distritoId: formulario.distrito || null,
+          // La base quiere una fecha ISO; el formulario la pide en tres
+          // selectores. `padStart` porque '2026-8-5' no es una fecha válida.
+          fechaNacimiento: fechaNacimientoISO(),
+        });
 
-        // Redirigir al mapa del distrito (vista predeterminada para población)
-        irA('mapa-distrito');
+        if (!resultado.ok) {
+          errorGeneral.value = resultado.error;
+          return;
+        }
+
+        // Con la confirmación por correo activada, `signUp` crea la cuenta pero
+        // no devuelve sesión. Intentar entrar aquí fallaría; hay que decirlo.
+        if (resultado.requiereConfirmacion) {
+          registroCompletado.value = true;
+          return;
+        }
+
+        // Con sesión ya abierta, `onAuthStateChange` de navegacion.js resuelve
+        // el rol leyendo la ficha recién creada y enruta al portal. No se
+        // llama a `setAutenticado` a mano: sería decidir dos veces lo mismo.
+        irA('pwa-poblacion');
       } catch (error) {
-        errorGeneral.value = 'Error al registrar. Intente nuevamente.';
+        errorGeneral.value = 'No se pudo completar el registro. Intenta de nuevo.';
+        console.error('[registro] Error inesperado:', error);
       } finally {
         cargando.value = false;
       }
+    };
+
+    /** Une los tres selectores en la fecha ISO que espera PostgreSQL. */
+    const fechaNacimientoISO = () => {
+      if (!formulario.anio || !formulario.mes || !formulario.dia) return '';
+      const mes = String(formulario.mes).padStart(2, '0');
+      const dia = String(formulario.dia).padStart(2, '0');
+      return `${formulario.anio}-${mes}-${dia}`;
     };
 
     return {
@@ -391,7 +463,12 @@ export default {
       formatearTelefono,
       validarCorreo,
       limpiarError,
-      registrar
+      registrar,
+      // Alta real
+      distritosOpciones,
+      mostrarClave,
+      registroCompletado,
+      irAlLogin: () => { window.location.href = urlDeContexto(CONTEXTOS.POBLACION); },
     };
   }
 };

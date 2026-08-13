@@ -10,13 +10,16 @@
         <img src="https://sansalvadorsur.gob.sv/images/logo-azul-horizontal.png" alt="Logo Municipalidad" class="h-8 w-auto">
         <div>
           <h1 class="text-lg font-semibold text-gray-900">Registro Ciudadano</h1>
-          <p class="text-xs text-gray-500">Paso {{ pasoActual }} de {{ totalPasos }}</p>
+          <!-- El contador desaparece al completar: seguir diciendo «Paso 3 de 3»
+               junto a un aviso de cuenta creada se contradice. -->
+          <p v-if="!registroCompletado" class="text-xs text-gray-500">Paso {{ pasoActual }} de {{ totalPasos }}</p>
+          <p v-else class="text-xs text-emerald-600 font-medium">Cuenta creada</p>
         </div>
       </div>
     </div>
-    
+
     <!-- Progress Bar -->
-    <div class="px-4 pb-3">
+    <div v-if="!registroCompletado" class="px-4 pb-3">
       <div class="flex space-x-2">
         <div v-for="i in totalPasos" :key="i" 
           class="h-1.5 flex-1 rounded-full transition-all duration-300"
@@ -25,8 +28,37 @@
     </div>
   </div>
 
+  <!--
+    Cuenta creada pero pendiente de confirmar el correo.
+
+    Con la confirmación activada en Supabase, `signUp` crea la cuenta y NO
+    devuelve sesión. Antes de la v32 esto no existía porque el registro no
+    creaba cuenta ninguna; sin este aviso, el vecino se quedaría mirando un
+    formulario que ya se envió, sin saber que le espera un correo.
+  -->
+  <div v-if="registroCompletado" class="px-4 py-10">
+    <div class="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 text-center">
+      <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-emerald-50 flex items-center justify-center">
+        <i class="fa-solid fa-envelope-circle-check text-emerald-500 text-2xl" aria-hidden="true"></i>
+      </div>
+      <h2 class="text-xl font-bold text-gray-900 mb-2">Revisa tu correo</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-1">
+        Enviamos un enlace de confirmación a
+        <strong class="break-all">{{ formulario.correo }}</strong>.
+      </p>
+      <p class="text-sm text-gray-600 leading-relaxed mb-6">
+        Ábrelo para activar tu cuenta y poder reportar incidencias. Si no lo ves,
+        revisa la carpeta de correo no deseado.
+      </p>
+      <button type="button" @click="irAlLogin"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-2xl transition-colors active:scale-95">
+        Ir al inicio de sesión
+      </button>
+    </div>
+  </div>
+
   <!-- Content -->
-  <div class="px-4 py-6 space-y-6">
+  <div v-else class="px-4 py-6 space-y-6">
     <!-- Welcome Card (solo en paso 1) -->
     <div v-if="pasoActual === 1" class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 shadow-lg shadow-blue-500/30">
       <div class="flex items-start justify-between mb-4">
@@ -57,12 +89,11 @@
             class="bg-white border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-3"
             :class="{ 'border-red-500 bg-red-50': errores.distrito }"
             @change="limpiarError('distrito')">
+            <!-- Del catálogo real y con el ID como valor: `ciudadanos.distrito_id`
+                 es una clave foránea. Antes eran cinco opciones escritas a mano
+                 cuyo valor era el nombre, que la base no habría aceptado. -->
             <option value="">Seleccione un distrito</option>
-            <option value="Panchimalco">Panchimalco</option>
-            <option value="Rosario de Mora">Rosario de Mora</option>
-            <option value="San Marcos">San Marcos</option>
-            <option value="Santiago Texacuangos">Santiago Texacuangos</option>
-            <option value="Santo Tomás">Santo Tomás</option>
+            <option v-for="d in distritosOpciones" :key="d.id" :value="d.id">{{ d.nombre }}</option>
           </select>
           <p v-if="errores.distrito" class="mt-1 text-sm text-red-600">{{ errores.distrito }}</p>
         </div>
@@ -162,19 +193,19 @@
             <div class="grid grid-cols-2 gap-3">
               <button 
                 type="button"
-                @click="formulario.genero = 'M'; limpiarError('genero')"
+                @click="formulario.genero = 'masculino'; limpiarError('genero')"
                 class="p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center space-x-2"
-                :class="formulario.genero === 'M' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'">
-                <i class="fa-solid fa-person text-xl" :class="formulario.genero === 'M' ? 'text-blue-600' : 'text-gray-400'"></i>
-                <span class="font-medium" :class="formulario.genero === 'M' ? 'text-blue-700' : 'text-gray-600'">Hombre</span>
+                :class="formulario.genero === 'masculino' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'">
+                <i class="fa-solid fa-person text-xl" :class="formulario.genero === 'masculino' ? 'text-blue-600' : 'text-gray-400'"></i>
+                <span class="font-medium" :class="formulario.genero === 'masculino' ? 'text-blue-700' : 'text-gray-600'">Hombre</span>
               </button>
               <button 
                 type="button"
-                @click="formulario.genero = 'F'; limpiarError('genero')"
+                @click="formulario.genero = 'femenino'; limpiarError('genero')"
                 class="p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center space-x-2"
-                :class="formulario.genero === 'F' ? 'border-pink-400 bg-pink-50' : 'border-gray-200 bg-white hover:border-gray-300'">
-                <i class="fa-solid fa-person-dress text-xl" :class="formulario.genero === 'F' ? 'text-pink-500' : 'text-gray-400'"></i>
-                <span class="font-medium" :class="formulario.genero === 'F' ? 'text-pink-700' : 'text-gray-600'">Mujer</span>
+                :class="formulario.genero === 'femenino' ? 'border-pink-400 bg-pink-50' : 'border-gray-200 bg-white hover:border-gray-300'">
+                <i class="fa-solid fa-person-dress text-xl" :class="formulario.genero === 'femenino' ? 'text-pink-500' : 'text-gray-400'"></i>
+                <span class="font-medium" :class="formulario.genero === 'femenino' ? 'text-pink-700' : 'text-gray-600'">Mujer</span>
               </button>
             </div>
             <p v-if="errores.genero" class="mt-1 text-sm text-red-600">{{ errores.genero }}</p>
@@ -211,6 +242,50 @@
             autocomplete="email">
           <p v-if="errores.correo" class="mt-1 text-sm text-red-600">{{ errores.correo }}</p>
           <p class="mt-1 text-xs text-gray-500">Dominios permitidos: @gmail.com, @outlook.com, @hotmail.com, @live.com, @yahoo.com</p>
+        </div>
+
+        <!-- Contraseña. No existía porque el registro no creaba cuenta: hasta la
+             v32 esto terminaba en un `localStorage.setItem`. -->
+        <div>
+          <label for="reg-clave" class="block mb-2 text-sm font-medium text-gray-900">
+            Contraseña <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input
+              :type="mostrarClave ? 'text' : 'password'"
+              id="reg-clave"
+              v-model="formulario.clave"
+              placeholder="Mínimo 8 caracteres"
+              class="bg-white border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-3 pr-11"
+              :class="{ 'border-red-500 bg-red-50': errores.clave }"
+              @input="limpiarError('clave')"
+              autocomplete="new-password">
+            <button type="button"
+              @click="mostrarClave = !mostrarClave"
+              class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+              :aria-label="mostrarClave ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              <i :class="mostrarClave ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye'" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p v-if="errores.clave" class="mt-1 text-sm text-red-600">{{ errores.clave }}</p>
+        </div>
+
+        <div>
+          <label for="reg-clave-2" class="block mb-2 text-sm font-medium text-gray-900">
+            Repite la contraseña <span class="text-red-500">*</span>
+          </label>
+          <!-- Sin ojo de «mostrar»: la repetición existe para detectar una
+               errata al teclear a ciegas, y verla anularía la comprobación. -->
+          <input
+            type="password"
+            id="reg-clave-2"
+            v-model="formulario.claveRepetida"
+            placeholder="Escríbela de nuevo"
+            class="bg-white border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block w-full p-3"
+            :class="{ 'border-red-500 bg-red-50': errores.claveRepetida }"
+            @input="limpiarError('claveRepetida')"
+            autocomplete="new-password">
+          <p v-if="errores.claveRepetida" class="mt-1 text-sm text-red-600">{{ errores.claveRepetida }}</p>
         </div>
       </div>
 
