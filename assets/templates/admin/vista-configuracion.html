@@ -807,42 +807,57 @@
         </div>
       </div>
 
-      <div class="p-5 space-y-6">
-        <!-- Contexto Población -->
-        <div class="flex items-center justify-between p-4 rounded-xl border-2 transition-all"
-          :class="config.accesoContextos.poblacion ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20'">
-          <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center"
-              :class="config.accesoContextos.poblacion ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'">
-              <i :class="config.accesoContextos.poblacion ? 'fa-solid fa-users' : 'fa-solid fa-ban'" class="text-sm"></i>
-            </div>
-            <div>
-              <div class="text-sm font-semibold text-gray-800 dark:text-white">Módulo Ciudadanos</div>
-              <div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono">?contexto=poblacion</div>
-            </div>
-          </div>
-          <div class="relative inline-block w-11 h-6 cursor-pointer" @click="config.accesoContextos.poblacion = !config.accesoContextos.poblacion">
-            <div class="w-11 h-6 rounded-full transition-colors" :class="config.accesoContextos.poblacion ? 'bg-emerald-500' : 'bg-red-500'"></div>
-            <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.accesoContextos.poblacion ? 'translate-x-5' : ''"></div>
-          </div>
-        </div>
+      <!--
+        Un solo bloque recorrido, en vez de los dos casi idénticos que había:
+        cualquier arreglo se hacía por duplicado y era cuestión de tiempo que
+        uno de los dos se quedara atrás.
 
-        <!-- Contexto Empleados -->
-        <div class="flex items-center justify-between p-4 rounded-xl border-2 transition-all"
-          :class="config.accesoContextos.empleados ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20'">
-          <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center"
-              :class="config.accesoContextos.empleados ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'">
-              <i :class="config.accesoContextos.empleados ? 'fa-solid fa-hard-hat' : 'fa-solid fa-ban'" class="text-sm"></i>
+        La dirección sale de `accesos`, que la calcula con `urlDeContexto`. Así
+        lo que se lee en pantalla es exactamente lo que abre el botón, tanto en
+        producción —/campo/, /ciudadano/— como en desarrollo, donde sin Apache
+        no hay reescritura y se sigue usando `?contexto=`.
+      -->
+      <div class="p-5 space-y-6">
+        <div v-for="acceso in accesos" :key="acceso.clave"
+          class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border-2 transition-all"
+          :class="config.accesoContextos[acceso.clave] ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/20'">
+
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              :class="config.accesoContextos[acceso.clave] ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'">
+              <i :class="config.accesoContextos[acceso.clave] ? acceso.icono : 'fa-solid fa-ban'" class="text-sm"></i>
             </div>
-            <div>
-              <div class="text-sm font-semibold text-gray-800 dark:text-white">Módulo Empleados de Campo</div>
-              <div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono">?contexto=empleados</div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold text-gray-800 dark:text-white">{{ acceso.titulo }}</div>
+              <div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono break-all">{{ acceso.url }}</div>
             </div>
           </div>
-          <div class="relative inline-block w-11 h-6 cursor-pointer" @click="config.accesoContextos.empleados = !config.accesoContextos.empleados">
-            <div class="w-11 h-6 rounded-full transition-colors" :class="config.accesoContextos.empleados ? 'bg-emerald-500' : 'bg-red-500'"></div>
-            <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.accesoContextos.empleados ? 'translate-x-5' : ''"></div>
+
+          <div class="flex items-center gap-3 shrink-0">
+            <!-- Deshabilitado cuando el módulo está apagado: abrirlo llevaría a
+                 una pantalla bloqueada, y parecería que el botón está roto. -->
+            <button type="button"
+              :disabled="!config.accesoContextos[acceso.clave]"
+              @click="abrirAcceso(acceso.url)"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors
+                     bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600
+                     text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600
+                     disabled:opacity-40 disabled:cursor-not-allowed"
+              :title="config.accesoContextos[acceso.clave] ? 'Abrir en una pestaña nueva' : 'El módulo está desactivado'">
+              <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+              Abrir
+            </button>
+
+            <div class="relative inline-block w-11 h-6 cursor-pointer"
+                 role="switch" tabindex="0"
+                 :aria-checked="config.accesoContextos[acceso.clave] ? 'true' : 'false'"
+                 :aria-label="'Acceso por URL a ' + acceso.titulo"
+                 @click="config.accesoContextos[acceso.clave] = !config.accesoContextos[acceso.clave]"
+                 @keydown.enter.prevent="config.accesoContextos[acceso.clave] = !config.accesoContextos[acceso.clave]"
+                 @keydown.space.prevent="config.accesoContextos[acceso.clave] = !config.accesoContextos[acceso.clave]">
+              <div class="w-11 h-6 rounded-full transition-colors" :class="config.accesoContextos[acceso.clave] ? 'bg-emerald-500' : 'bg-red-500'"></div>
+              <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.accesoContextos[acceso.clave] ? 'translate-x-5' : ''"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -852,7 +867,7 @@
     <div class="rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 px-4 py-3 flex gap-3 text-sm">
       <i class="fa-solid fa-triangle-exclamation text-orange-500 mt-0.5 shrink-0"></i>
       <div class="text-orange-700 dark:text-orange-300">
-        <strong>Importante:</strong> Desactivar un kill switch impedirá que los usuarios accedan al módulo correspondiente mediante el parámetro URL. El Centro de Monitoreo (panel de administración) siempre estará disponible en la URL base sin parámetros.
+        <strong>Importante:</strong> Desactivar un módulo impide que se entre a él por su dirección. El Centro de Monitoreo siempre está disponible en <span class="font-mono">/panel/</span>. Los cambios se aplican al <strong>Guardar Cambios</strong>, y en las pestañas ya abiertas hasta que se recarguen.
       </div>
     </div>
   </div>

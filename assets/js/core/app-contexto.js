@@ -50,6 +50,34 @@ const CONTEXTO_POR_TRAMO = Object.freeze({
   ciudadano: CONTEXTOS.POBLACION,
 });
 
+/* Las rutas de arriba las inventa el .htaccess, que en desarrollo no existe:
+   Live Server, `python -m http.server` y compañía sirven archivos y nada más,
+   así que /campo/ devuelve 404. Ahí se sigue usando `?contexto=`, que no
+   necesita reescritura.
+
+   La misma lista que usa sw.js para no cachear en desarrollo. */
+const HOSTS_DESARROLLO = new Set(['localhost', '127.0.0.1', '[::1]', '0.0.0.0']);
+
+export const enDesarrollo =
+  typeof window !== 'undefined' && HOSTS_DESARROLLO.has(window.location.hostname);
+
+/**
+ * URL para entrar a un contexto, en el entorno donde se esté ejecutando.
+ *
+ * En producción es la ruta —que es lo que permite instalar las tres PWA por
+ * separado—. En desarrollo, el parámetro sobre el documento actual.
+ *
+ * Existe para que ningún componente vuelva a escribir la URL a mano: cada sitio
+ * que lo hiciera sería un sitio más que romper la próxima vez que esto cambie.
+ */
+export function urlDeContexto(contexto) {
+  const destino = CONTEXTOS_VALIDOS.has(contexto) ? contexto : CONTEXTOS.MONITOREO;
+  if (!enDesarrollo) return RUTAS_CONTEXTO[destino];
+
+  const base = window.location.pathname || '/';
+  return destino === CONTEXTOS.MONITOREO ? base : `${base}?contexto=${destino}`;
+}
+
 // La URL es la ÚNICA fuente de verdad. No hay respaldo en `sessionStorage`, y
 // es deliberado: la aplicación no tiene enrutador, así que la URL nunca cambia
 // sin recarga y no existe navegación interna que pueda perder el parámetro.
@@ -76,15 +104,20 @@ function resolverContexto() {
   const porRuta = CONTEXTO_POR_TRAMO[tramo];
   if (porRuta) return porRuta;
 
-  // 2. `?contexto=` sigue reconociéndose para no romper los enlaces y accesos
-  //    directos anteriores al cambio de rutas. No se limita a resolver el
-  //    contexto: redirige a la ruta nueva, porque quedarse en `/` significaría
-  //    seguir fuera del ámbito del manifiesto y la aplicación no se podría
-  //    instalar. Es una navegación completa, que es justo lo que este módulo
-  //    exige para cambiar de contexto.
+  // 2. `?contexto=` sigue reconociéndose, por dos motivos distintos.
+  //
+  //    En PRODUCCIÓN, para no romper enlaces y accesos directos anteriores al
+  //    cambio de rutas. Ahí no basta con resolver el contexto: se redirige a la
+  //    ruta nueva, porque quedarse en `/` deja la aplicación fuera del ámbito
+  //    de su manifiesto y entonces no se puede instalar. Es una navegación
+  //    completa, que es justo lo que este módulo exige para cambiar de contexto.
+  //
+  //    En DESARROLLO es la única vía: sin el .htaccess no hay quien sirva
+  //    /campo/. Redirigir allí daría un 404 y dejaría el entorno local sin
+  //    forma de abrir las dos PWA.
   const enUrl = new URLSearchParams(window.location.search).get(PARAMETRO_URL);
   if (enUrl && CONTEXTOS_VALIDOS.has(enUrl)) {
-    window.location.replace(RUTAS_CONTEXTO[enUrl]);
+    if (!enDesarrollo) window.location.replace(RUTAS_CONTEXTO[enUrl]);
     return enUrl;
   }
 

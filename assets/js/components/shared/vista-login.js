@@ -5,7 +5,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { usePermisos } from '../../stores/permisos.js';
-import { CONTEXTO, CONTEXTOS, RUTAS_CONTEXTO } from '../../core/app-contexto.js';
+import { CONTEXTO, CONTEXTOS, urlDeContexto } from '../../core/app-contexto.js';
 
 export default {
   setup() {
@@ -199,16 +199,17 @@ export default {
       irA('registro-poblacion');
     };
 
-    // Cada aplicación tiene su propia RUTA, no un parámetro: es lo que permite
-    // instalar las tres a la vez. Ver RUTAS_CONTEXTO en core/app-contexto.js.
+    // `urlDeContexto` y no la ruta a pelo: en producción devuelve /campo/ —lo
+    // que permite instalar las tres PWA por separado— y en desarrollo el
+    // `?contexto=`, porque sin el .htaccess nadie sirve esa ruta.
     // Sigue siendo una navegación completa, que es lo que exige el cambio de
     // contexto para no dejar la sesión escrita en la partición equivocada.
     const irAEmpleados = () => {
-      window.location.href = RUTAS_CONTEXTO[CONTEXTOS.EMPLEADOS];
+      window.location.href = urlDeContexto(CONTEXTOS.EMPLEADOS);
     };
 
     const irACiudadanos = () => {
-      window.location.href = RUTAS_CONTEXTO[CONTEXTOS.POBLACION];
+      window.location.href = urlDeContexto(CONTEXTOS.POBLACION);
     };
 
     return {

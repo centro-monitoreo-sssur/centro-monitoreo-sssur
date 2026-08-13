@@ -9,6 +9,7 @@ import { useCatalogos } from '../../stores/catalogos.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useDiagnostico } from '../../stores/diagnostico.js';
 import { db } from '../../core/supabase.js';
+import { CONTEXTOS, urlDeContexto } from '../../core/app-contexto.js';
 // Catálogos declarativos del Mapa en Vivo. La pestaña "Mapa" configura el
 // estado inicial de la consola, así que lee del mismo sitio que la consola
 // para que las dos no puedan divergir.
@@ -262,6 +263,37 @@ export default {
       cargarSesiones();
     });
 
+    /* ── Acceso URL ────────────────────────────────────────────────────────
+       Los dos módulos que se abren por URL, con la dirección que corresponde al
+       entorno: en producción la ruta —/campo/, /ciudadano/—, y en desarrollo el
+       `?contexto=`, porque sin el .htaccess de Apache nadie sirve esas rutas.
+
+       La dirección se calcula aquí y no se escribe en la plantilla para que
+       siga siendo correcta si mañana cambia el esquema de URL, y para que lo
+       que se muestra en pantalla sea exactamente lo que abre el botón. */
+    const accesos = computed(() => [
+      {
+        clave:  'poblacion',
+        titulo: 'Módulo Ciudadanos',
+        icono:  'fa-solid fa-users',
+        url:    urlDeContexto(CONTEXTOS.POBLACION),
+      },
+      {
+        clave:  'empleados',
+        titulo: 'Módulo Empleados de Campo',
+        icono:  'fa-solid fa-hard-hat',
+        url:    urlDeContexto(CONTEXTOS.EMPLEADOS),
+      },
+    ]);
+
+    /* En pestaña nueva y no en la misma: cambiar de contexto exige recargar
+       —cada uno guarda su sesión bajo una clave distinta—, así que navegar aquí
+       cerraría la sesión de administración que se está usando para configurar.
+
+       `noopener` porque sin él la pestaña abierta recibe `window.opener` y
+       podría redirigir esta. */
+    const abrirAcceso = (url) => window.open(url, '_blank', 'noopener');
+
     return {
       config, guardado, tabActiva, tabs,
       catLocal, actualizarColor, ICONOS_DISPONIBLES,
@@ -287,6 +319,8 @@ export default {
       COLUMNAS_COMPARATIVO_CFG: COLUMNAS_COMPARATIVO,
       guardarYNotificar,
       isDarkMode, toggleDarkMode,
+      // Acceso URL
+      accesos, abrirAcceso,
     };
   },
 };
