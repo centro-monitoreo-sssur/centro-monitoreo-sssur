@@ -49,8 +49,18 @@
     # aterriza dentro del ámbito y no fuera de él.
     RewriteRule ^$ /panel/ [R=302,L]
 
-    # Las tres rutas sirven el mismo documento sin cambiar la URL.
-    RewriteRule ^(panel|campo|ciudadano)/?$ /index.html [L]
+    # La barra final NO es opcional, y es la diferencia entre poder instalar y
+    # no poder. El ámbito se compara como prefijo de cadena: `/campo` no empieza
+    # por `/campo/`, así que servir ahí el documento lo deja FUERA del ámbito de
+    # su propio manifiesto y el navegador no ofrece «Instalar». La aplicación
+    # carga con normalidad, así que el fallo sería mudo.
+    #
+    # Estas rutas no son carpetas reales, de modo que mod_dir no añade la barra
+    # por su cuenta: hay que redirigir a mano.
+    RewriteRule ^(panel|campo|ciudadano)$ /$1/ [R=302,L]
+
+    # Ya con barra, sirven el mismo documento sin cambiar la URL.
+    RewriteRule ^(panel|campo|ciudadano)/$ /index.html [L]
 </IfModule>
 
 
