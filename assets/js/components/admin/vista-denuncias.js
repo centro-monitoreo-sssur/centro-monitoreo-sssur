@@ -30,7 +30,12 @@ const COLUMNAS = [
 export default {
   name: 'vista-denuncias',
   setup() {
-    const { denuncias, cargandoDenuncias, cargarDenuncias } = useDenuncias();
+    const {
+      denuncias, cargandoDenuncias, cargarDenuncias,
+      // La tabla pagina en el cliente sobre lo ya descargado, así que hace
+      // falta poder decir cuánto falta y poder traerlo.
+      hayMasCasos, totalCasos, cargarMasCasos, cargandoMas,
+    } = useDenuncias();
     const { tiposDenuncia, flujoDeCategoria } = useCatalogos();
     const {
       guardando, historial, cargandoHistorial,
@@ -344,6 +349,7 @@ export default {
 
     return {
       COLUMNAS, cargandoDenuncias,
+      denuncias, hayMasCasos, totalCasos, cargarMasCasos, cargandoMas,
       busqueda, filtroEstado, filtroCategoria,
       tiposDenuncia, denunciasFiltradas,
       paginaActual, paginasTotales, paginaDenuncias, cambiarPagina,

@@ -42,6 +42,29 @@
     </div>
   </ui-card>
 
+  <!--
+    Aviso de lista incompleta.
+
+    La tabla pagina en el CLIENTE, sobre las fichas ya descargadas. Sin este
+    aviso, alguien que llegue a la última página cree que ha visto todos los
+    casos, cuando puede haber cientos por detrás. Los filtros y la exportación
+    a CSV trabajan sobre lo mismo, así que también se quedarían cortos.
+  -->
+  <div v-if="hayMasCasos"
+       class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3
+              dark:border-amber-500/30 dark:bg-amber-500/10">
+    <i class="fa-solid fa-circle-info text-amber-500" aria-hidden="true"></i>
+    <p class="flex-1 min-w-0 text-sm text-amber-800 dark:text-amber-200">
+      Se muestran <strong>{{ denuncias.length }}</strong> de
+      <strong>{{ totalCasos }}</strong> casos.
+      Los filtros y la exportación solo alcanzan a los ya cargados.
+    </p>
+    <ui-boton tamano="sm" variante="secundario" :cargando="cargandoMas"
+              icono="fa-solid fa-arrow-down" @click="cargarMasCasos">
+      Cargar más
+    </ui-boton>
+  </div>
+
   <!-- TABLA -->
   <ui-tabla
     :columnas="COLUMNAS"

@@ -76,7 +76,7 @@ function puntosSparkline(valores) {
 
 export default {
   setup() {
-    const { denuncias, colorDeTipo } = useDenuncias();
+    const { colorDeTipo, versionCasos } = useDenuncias();
     const {
       iconoDeTipo, departamentos, nombreDepartamento, cargarDepartamentos,
     } = useCatalogos();
@@ -88,6 +88,7 @@ export default {
     const {
       kpis, cargarKpis,
       rangoDias, filasAnalitica, cargandoAnalitica, analiticaTruncada, cargarAnalitica,
+      casosPrioritarios, cargarCasosPrioritarios,
     } = useDashboard();
     const { config } = useConfiguracion();
 
@@ -230,13 +231,21 @@ export default {
     const colorSemaforo = (nivel) =>
       nivel === 'neutro' ? 'var(--kpi-neutro)' : `var(--semaforo-${nivel})`;
 
-    const incidentesPrioritarios = computed(() => {
-      const lista = denuncias.value || [];
-      return lista
-        .filter(d => d.estado === 'pendiente')
-        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-        .slice(0, 10);
-    });
+    /* Sale de su propia consulta —`cargarCasosPrioritarios`— y ya no de
+       `denuncias`, que trae los 200 casos MÁS RECIENTES. Pedirle a esa lista
+       los pendientes más ANTIGUOS es una contradicción: con más de 200 casos
+       abiertos, este panel mostraba los diez menos urgentes de los recientes
+       en vez de los diez más urgentes del histórico. Ver el comentario de
+       `cargarCasosPrioritarios` en stores/dashboard.js. */
+    const incidentesPrioritarios = casosPrioritarios;
+
+    /* Antes el panel se refrescaba solo, por derivarse de `denuncias`. Ahora es
+       una consulta propia, así que hay que volver a pedirla cuando algo cambia
+       o se queda con la foto del arranque —un caso ya cerrado seguiría
+       figurando como abierto—. `versionCasos` es el contador que el store
+       incrementa en cada alta, baja o parcheo de Realtime. Son diez filas: se
+       puede repetir sin miramientos. */
+    watch(versionCasos, () => { cargarCasosPrioritarios(); });
 
     function etiquetaDia(clave) {
       const [a, m, d] = clave.split('-').map(Number);
@@ -352,6 +361,7 @@ export default {
       cargarKpis();
       cargarAnalitica(rangoDias.value);
       cargarKpisDistrito();
+      cargarCasosPrioritarios();
       // La dona traduce `departamento_actual_id` a nombre. Solo si el catálogo
       // aún no está: lo carga también el arranque de la app, y repetir la
       // consulta en cada visita al dashboard es gasto sin motivo.

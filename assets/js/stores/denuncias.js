@@ -45,35 +45,132 @@ const COLUMNAS_CASO = `
 const TOPE_CASOS = 200;
 const hayMasCasos = ref(false);
 
+/* Total REAL de casos visibles para este usuario, según la RLS. Sale del
+   `count: 'exact'` de la primera página, así que no depende de cuántas filas se
+   hayan traído. Es lo que distingue «hay 847 y ves 200» de «hay 200». */
+const totalCasos = ref(0);
+const cargandoMas = ref(false);
+
+/* Señal de «la lista cambió», para quien no pueda observar el arreglo.
+   Realtime parchea EN EL SITIO —`denuncias.value[i] = …`—, y un `watch` sobre
+   el ref no se entera de eso: solo reacciona a que se reemplace `.value`. La
+   alternativa sería `deep: true`, que recorre las 200 fichas en cada evento
+   para detectar un cambio que aquí ya conocemos. Un entero es O(1).
+
+   Lo usa el dashboard para releer sus diez casos más antiguos sin atender. */
+const versionCasos = ref(0);
+
 async function cargarDenuncias() {
   cargandoDenuncias.value = true;
   try {
     if (db) {
       // RLS en Supabase ya filtra lo que el usuario autenticado puede ver.
-      const { data, error } = await db
+      //
+      // `count: 'exact'` viaja en la MISMA petición, en la cabecera
+      // Content-Range: da el total real sin traer una fila de más. Es lo que
+      // permite decir «200 de 847» en vez de callar que hay 647 invisibles.
+      const { data, error, count } = await db
         .from('casos')
-        .select(COLUMNAS_CASO)
+        .select(COLUMNAS_CASO, { count: 'exact' })
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
+        // Desempate estable. Sin él, dos casos con el mismo `created_at`
+        // pueden salir en orden distinto en cada consulta, y entonces el
+        // cursor de `cargarMasCasos` se saltaría uno o lo repetiría.
+        .order('id', { ascending: false })
         .limit(TOPE_CASOS);
       if (error) throw error;
       // Mapear `casos` al formato esperado por los componentes UI (compatibilidad)
       denuncias.value = (data || []).map((c) => mapearCasoADenuncia(c, { nombreDistrito }));
-      hayMasCasos.value = (data || []).length >= TOPE_CASOS;
+      totalCasos.value = count ?? denuncias.value.length;
+      hayMasCasos.value = denuncias.value.length < totalCasos.value;
     } else {
       await new Promise((r) => setTimeout(r, 400));
       denuncias.value = []; // Sin mock si la BD está vacía
+      totalCasos.value = 0;
       hayMasCasos.value = false;
     }
   } catch (e) {
     console.error('Error cargando casos:', e);
     denuncias.value = []; // Sin mock, es mejor no mentir en producción
+    totalCasos.value = 0;
     hayMasCasos.value = false;
   } finally {
     // El índice de Realtime tiene que quedar alineado con la lista recién
     // cargada; si no, el primer parcheo escribiría en la posición equivocada.
     reconstruirIndice();
+    versionCasos.value++;
     cargandoDenuncias.value = false;
+  }
+}
+
+/**
+ * Añade la siguiente página al final de la lista.
+ *
+ * POR QUÉ CURSOR Y NO `OFFSET`
+ *
+ * `.range(200, 399)` obliga a PostgreSQL a leer y descartar las 200 primeras
+ * filas antes de devolver nada: cada página cuesta más que la anterior, O(n·p).
+ * Con cursor se pide «lo anterior a esta ficha», que el índice resuelve
+ * directamente y cuesta lo mismo en la página 2 que en la 40.
+ *
+ * Y hay un motivo de corrección, no solo de velocidad: con `OFFSET`, si entra
+ * un caso nuevo mientras alguien pagina —cosa habitual aquí, que hay Realtime—
+ * todo se desplaza una posición y la página siguiente repite una ficha y se
+ * salta otra. El cursor va anclado a una ficha concreta, así que no se descoloca.
+ *
+ * El cursor es COMPUESTO —`created_at` e `id`— porque `created_at` no es único:
+ * dos casos creados en el mismo instante empatarían y uno de los dos se
+ * perdería. El `id` es `generated always as identity`, así que desempata
+ * siempre.
+ */
+async function cargarMasCasos() {
+  if (!db || cargandoMas.value || !hayMasCasos.value) return;
+
+  const ultima = denuncias.value[denuncias.value.length - 1];
+  if (!ultima) return;
+
+  cargandoMas.value = true;
+  try {
+    // La marca de tiempo va TAL CUAL viene de PostgREST, sin pasarla por
+    // `Date`. `toISOString()` recorta a milisegundos y `timestamptz` guarda
+    // microsegundos: con `…123456` almacenado y `…123` en el filtro, la rama
+    // `eq` no casaría nunca —el desempate quedaría muerto— y el `lt` dejaría
+    // fuera, sin avisar, todo lo ocurrido dentro de ese milisegundo.
+    //
+    // El `+00:00` del huso no es problema: el SDK arma la consulta con
+    // `URLSearchParams`, que lo codifica como `%2B`.
+    const desde = ultima.created_at;
+
+    // «Estrictamente más antiguo, o del mismo instante pero con id menor».
+    const cursor = `created_at.lt.${desde},` +
+                   `and(created_at.eq.${desde},id.lt.${ultima.id})`;
+
+    const { data, error } = await db
+      .from('casos')
+      .select(COLUMNAS_CASO)
+      .is('deleted_at', null)
+      .or(cursor)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(TOPE_CASOS);
+    if (error) throw error;
+
+    const nuevas = (data || []).map((c) => mapearCasoADenuncia(c, { nombreDistrito }));
+    if (nuevas.length) {
+      // `push` con spread y no `concat`: evita copiar el arreglo entero, que ya
+      // puede tener cientos de fichas.
+      denuncias.value.push(...nuevas);
+      reconstruirIndice();
+    }
+    // Se compara contra el total real, no contra el tamaño de página: una
+    // última página justo de 200 dejaría el botón puesto para siempre.
+    hayMasCasos.value = denuncias.value.length < totalCasos.value && nuevas.length > 0;
+    versionCasos.value++;
+  } catch (e) {
+    console.error('Error cargando más casos:', e);
+  } finally {
+    cargandoMas.value = false;
   }
 }
 
@@ -236,10 +333,12 @@ function upsertCaso(fila) {
 
   if (indice !== undefined) {
     denuncias.value[indice] = mapeado;   // misma posición: el índice sigue válido
+    versionCasos.value++;
     return;
   }
   denuncias.value.splice(posicionPorFecha(mapeado.created_at), 0, mapeado);
   reconstruirIndice();
+  versionCasos.value++;
 }
 
 function quitarCaso(id) {
@@ -247,6 +346,7 @@ function quitarCaso(id) {
   if (indice === undefined) return;
   denuncias.value.splice(indice, 1);
   reconstruirIndice();
+  versionCasos.value++;
 }
 
 /* Coalescencia de eventos.
@@ -371,10 +471,14 @@ export function useDenuncias() {
     filtroTipo,
     cargandoDenuncias,
     cargarDenuncias,
+    cargarMasCasos,
+    cargandoMas,
+    totalCasos,
     suscribirRealtime,
     desuscribirRealtime,
     estadoRealtime,
     hayMasCasos,
+    versionCasos,
     nombreDeTipo,
     colorDeTipo,
   };

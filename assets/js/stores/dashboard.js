@@ -123,9 +123,69 @@ async function cargarAnalitica(dias = rangoDias.value) {
   }
 }
 
+// ── Lo más viejo sin cerrar ──────────────────────────────────────────────────
+
+const casosPrioritarios = ref([]);
+const cargandoPrioritarios = ref(false);
+const TOPE_PRIORITARIOS = 10;
+
+/**
+ * Los diez casos abiertos más antiguos.
+ *
+ * POR QUÉ ES UNA CONSULTA PROPIA Y NO UN `filter` SOBRE `denuncias`
+ *
+ * Antes el panel salía de `denuncias.value`, que trae los 200 casos MÁS
+ * RECIENTES. Pedirle a esa lista los pendientes más ANTIGUOS es una
+ * contradicción: los casos viejos sin atender son exactamente los que quedan
+ * fuera de una ventana de los más recientes. El panel que existe para que no se
+ * pierda de vista lo urgente era el que lo escondía, y en silencio.
+ *
+ * Con más de 200 casos abiertos el panel mostraba los diez menos urgentes de
+ * los recientes en lugar de los diez más urgentes del histórico.
+ *
+ * Ordenar y recortar en la base es además O(log n) sobre `idx_casos_created_at`
+ * en vez de traer 200 filas para descartar 190.
+ *
+ * `fecha_cierre is null` y no una lista de estados: cada categoría define su
+ * propio flujo en `estados_flujo`, así que no hay un código de estado único que
+ * signifique «abierto». La v30 pone `fecha_cierre` al entrar en un estado final
+ * y la limpia al reabrir, de modo que es el único indicador fiable.
+ */
+async function cargarCasosPrioritarios() {
+  if (!db) { casosPrioritarios.value = []; return; }
+  cargandoPrioritarios.value = true;
+  try {
+    const { data, error } = await db
+      .from('casos')
+      .select('id, correlativo, titulo, descripcion, direccion_referencia, created_at, categoria_id, distrito_id, prioridad_id')
+      .is('deleted_at', null)
+      .is('fecha_cierre', null)
+      .order('created_at', { ascending: true })
+      .limit(TOPE_PRIORITARIOS);
+
+    if (error) throw error;
+
+    // Se renombran dos campos para hablar el mismo idioma que la plantilla, que
+    // venía escrita contra el mapeo de `denuncias.js`: `direccion` sale de
+    // `direccion_referencia`, y `tipo_id` de `categoria_id` —lo usan
+    // `colorDeTipo` e `iconoDeTipo` para pintar el distintivo—.
+    casosPrioritarios.value = (data || []).map((c) => ({
+      ...c,
+      direccion: c.direccion_referencia || '',
+      tipo_id: c.categoria_id,
+    }));
+  } catch (e) {
+    casosPrioritarios.value = [];
+    console.error('[dashboard] Falló la consulta de casos prioritarios:', e.message);
+  } finally {
+    cargandoPrioritarios.value = false;
+  }
+}
+
 export function useDashboard() {
   return {
     kpis, cargandoKpis, cargarKpis,
     rangoDias, filasAnalitica, cargandoAnalitica, analiticaTruncada, cargarAnalitica,
+    casosPrioritarios, cargandoPrioritarios, cargarCasosPrioritarios,
   };
 }
