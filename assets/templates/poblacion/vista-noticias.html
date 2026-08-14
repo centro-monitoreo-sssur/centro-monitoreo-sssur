@@ -64,7 +64,11 @@
         </div>
 
         <!-- Descripción -->
-        <p class="text-sm text-gray-700 leading-relaxed">{{ noticiaSeleccionada.descripcion }}</p>
+        <!-- `v-html` con el cuerpo saneado: el comunicado se redacta con formato
+             desde el panel. La clase `contenido-rico` da estilo a los títulos y
+             listas que genera el editor; Tailwind no los alcanza porque no
+             existen en el marcado. Ver components.css. -->
+        <div class="contenido-rico text-sm text-gray-700" v-html="cuerpoSeguro(noticiaSeleccionada.descripcion)"></div>
 
         <!-- Datos: fecha, distritos -->
         <div class="bg-gray-50 rounded-2xl p-4 flex items-start justify-between gap-3">
@@ -126,7 +130,7 @@
           <div>
             <h1 class="text-xl font-black text-gray-900">Noticias</h1>
             <p class="text-xs text-gray-400 mt-0.5">Avisos de la Alcaldía
-              <span v-if="distritoUsuario" class="text-blue-500 font-semibold">· {{ distritoUsuario }}</span>
+              <span v-if="nombreDistritoUsuario" class="text-blue-500 font-semibold">· {{ nombreDistritoUsuario }}</span>
             </p>
           </div>
           <!-- Badge no leídas -->
@@ -221,7 +225,7 @@
                     class="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
                 </div>
 
-                <p class="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{{ noticia.descripcion }}</p>
+                <p class="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">{{ resumenTexto(noticia.descripcion) }}</p>
               </div>
             </div>
 

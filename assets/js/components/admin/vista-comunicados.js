@@ -23,6 +23,10 @@
 import { ref, computed, onMounted } from '../../core/vue.js';
 import { useComunicadosAdmin } from '../../stores/comunicados-admin.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+// Las imágenes van al mismo endpoint de cPanel que las evidencias de campo: se
+// comprimen ahí y en la base solo queda la URL. Así no tocan los 500 MB del
+// plan gratuito de Supabase.
+import { subirEvidencia, evidenciasConfiguradas } from '../../services/evidencias.js';
 
 const NUEVO = () => ({
   id: null,
@@ -110,6 +114,33 @@ export default {
       else lista.splice(i, 1);
     };
 
+    /* ── Imagen de portada ────────────────────────────────────────────────
+       Se sube a cPanel y en `noticias.imagen_url` solo queda la dirección. El
+       endpoint ya comprime a 1024 px y limita las subidas por hora, así que no
+       hace falta nada aquí salvo enseñar el progreso. */
+    const subiendoImagen = ref(false);
+    const imagenConfigurada = evidenciasConfiguradas;
+
+    const subirPortada = async (evento) => {
+      const archivo = evento.target?.files?.[0];
+      // Se limpia SIEMPRE: sin esto, elegir la misma imagen dos veces seguidas
+      // no dispara `change` y parece que el botón dejó de funcionar.
+      if (evento.target) evento.target.value = '';
+      if (!archivo) return;
+
+      errorFormulario.value = '';
+      subiendoImagen.value = true;
+      try {
+        const res = await subirEvidencia(archivo);
+        if (!res.ok) { errorFormulario.value = res.error; return; }
+        enEdicion.value.imagen_url = res.url;
+      } finally {
+        subiendoImagen.value = false;
+      }
+    };
+
+    const quitarPortada = () => { enEdicion.value.imagen_url = ''; };
+
     const guardar = async () => {
       if (guardando.value) return;      // doble clic = comunicado duplicado
       errorFormulario.value = '';
@@ -173,6 +204,8 @@ export default {
       resumenAlcance, estadoDe, etiquetaAudiencia, formatearFecha,
       distritos, nombreDistrito,
       AUDIENCIAS, CATEGORIAS, ICONOS, COLORES,
+      // Imagen de portada
+      subirPortada, quitarPortada, subiendoImagen, imagenConfigurada,
     };
   },
 };

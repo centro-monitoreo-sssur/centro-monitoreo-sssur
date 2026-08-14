@@ -186,10 +186,42 @@
         </div>
 
         <div>
-          <label for="com-cuerpo" class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Cuerpo *</label>
-          <textarea id="com-cuerpo" v-model="enEdicion.descripcion" rows="4" maxlength="2000"
-            class="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
-            placeholder="Qué ocurre, cuándo y qué debe hacer quien lo lea."></textarea>
+          <label class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Cuerpo *</label>
+          <ui-editor-texto
+            v-model="enEdicion.descripcion"
+            :alto="220"
+            placeholder="Qué ocurre, cuándo y qué debe hacer quien lo lea."></ui-editor-texto>
+          <p class="mt-1 text-[11px] text-gray-400">
+            Puedes usar títulos, negrita y listas. Al pegar desde Word se limpia el formato.
+          </p>
+        </div>
+
+        <!-- Imagen de portada. Va a cPanel, no a Supabase: la base solo guarda
+             la dirección, así que no consume los 500 MB del plan gratuito. -->
+        <div v-if="imagenConfigurada">
+          <label class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Imagen</label>
+
+          <div v-if="enEdicion.imagen_url" class="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
+            <img :src="enEdicion.imagen_url" alt="Portada del comunicado" class="w-full max-h-48 object-cover">
+            <button type="button" @click="quitarPortada"
+              class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-black/60 text-white flex items-center justify-center hover:bg-black/75"
+              aria-label="Quitar imagen">
+              <i class="fa-solid fa-trash text-xs"></i>
+            </button>
+          </div>
+
+          <label v-else
+            class="flex flex-col items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 cursor-pointer hover:border-gray-300 transition-colors"
+            :class="{ 'opacity-60 cursor-wait': subiendoImagen }">
+            <i class="fa-solid text-xl text-gray-400"
+               :class="subiendoImagen ? 'fa-circle-notch fa-spin' : 'fa-image'"></i>
+            <span class="text-xs font-semibold text-gray-500">
+              {{ subiendoImagen ? 'Subiendo...' : 'Añadir una imagen' }}
+            </span>
+            <span class="text-[10px] text-gray-400">Se comprime y se guarda en el servidor de la Alcaldía</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"
+              :disabled="subiendoImagen" @change="subirPortada">
+          </label>
         </div>
 
         <!-- AUDIENCIA. Lo más importante del formulario: decide quién lo ve. -->

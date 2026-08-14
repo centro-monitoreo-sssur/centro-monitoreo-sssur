@@ -111,7 +111,9 @@
                     </button>
                   </div>
                 </div>
-                <p class="text-sm text-gray-600 line-clamp-2">{{ notif.mensaje }}</p>
+                <!-- Texto plano en la tarjeta: el cuerpo llega como HTML y con
+                     `line-clamp` se verían las etiquetas. -->
+                <p class="text-sm text-gray-600 line-clamp-2">{{ resumenTexto(notif.mensaje) }}</p>
                 <div v-if="notif.prioridad !== 'normal'" class="mt-2">
                   <span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="getColorPrioridad(notif.prioridad)">
                     {{ getEtiquetaPrioridad(notif.prioridad) }}

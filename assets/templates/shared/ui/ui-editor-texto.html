@@ -1,0 +1,42 @@
+<!-- ============================================================
+     UI: editor de texto con formato
+     Ver assets/js/components/shared/ui/ui-editor-texto.js
+     ============================================================ -->
+<div class="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden bg-white dark:bg-gray-700 focus-within:ring-2 focus-within:ring-brand-500/40">
+
+  <!-- Barra de herramientas -->
+  <div class="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+    <template v-for="h in HERRAMIENTAS" :key="h.id">
+      <span v-if="h.separador" class="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-1"></span>
+      <!--
+        `@mousedown.prevent` y no `@click`: al pulsar un botón el navegador
+        mueve el foco fuera del área editable y con él se pierde la selección,
+        así que el comando no tendría sobre qué aplicarse. Previniendo el
+        mousedown, la selección sobrevive.
+      -->
+      <button v-else type="button"
+        @mousedown.prevent="aplicar(h)"
+        class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+        :title="h.titulo" :aria-label="h.titulo">
+        <i class="fa-solid" :class="[h.icono, h.pequeno ? 'text-[10px]' : 'text-xs']"></i>
+      </button>
+    </template>
+  </div>
+
+  <!--
+    `contenteditable` con la clase `editor-cuerpo`, que da estilo a los
+    elementos que se generan dentro. Tailwind no los alcanza: se crean en
+    tiempo de ejecución y su CDN solo emite las clases que ve en el marcado.
+    Los estilos están en assets/css/components.css.
+  -->
+  <div ref="areaEditable"
+    contenteditable="true"
+    class="editor-cuerpo px-3 py-3 text-sm text-gray-900 dark:text-white outline-none overflow-y-auto"
+    :style="{ minHeight: alto + 'px', maxHeight: (alto * 2) + 'px' }"
+    :data-placeholder="placeholder"
+    @input="emitir"
+    @blur="emitir"
+    @paste="alPegar"
+    role="textbox"
+    aria-multiline="true"></div>
+</div>

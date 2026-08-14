@@ -11,6 +11,7 @@
 import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useComunicados } from '../../stores/comunicados.js';
+import { sanearHtml } from '../shared/ui/ui-editor-texto.js';
 
 export default {
   setup() {
@@ -34,6 +35,24 @@ export default {
       fecha_creacion: c.fecha,
       autor: c.autor || 'Alcaldía de San Salvador Sur',
     })));
+
+
+    /* El cuerpo del comunicado se redacta con formato desde el panel, así que
+       llega como HTML. Se vuelve a sanear AQUÍ, al pintarlo, aunque ya se
+       saneó al escribirlo: la fila pudo entrar por otra vía —el editor SQL de
+       Supabase— y `v-html` sobre contenido no verificado es cómo se cuela un
+       script. Sanear dos veces no cuesta nada; confiar una sola vez, sí.
+
+       Ver la lista blanca en components/shared/ui/ui-editor-texto.js. */
+    const cuerpoSeguro = (html) => sanearHtml(html || '');
+
+    /* En las tarjetas del listado se recorta a dos líneas, y ahí el HTML
+       estorba: se verían las etiquetas. Se extrae solo el texto. */
+    const resumenTexto = (html) => {
+      const d = document.createElement('div');
+      d.innerHTML = sanearHtml(html || '');
+      return (d.textContent || '').replace(/\s+/g, ' ').trim();
+    };
 
     const contadorNoLeidas = sinLeer;
 
@@ -184,6 +203,7 @@ export default {
       // Estado de la carga: sin esto, «no hay comunicados» y «todavía estoy
       // pidiéndolos» se ven igual, que es una lista vacía sin explicación.
       cargando, errorComunicados,
+      cuerpoSeguro, resumenTexto,
       filtroTipo,
       filtroPrioridad,
       mostrarFiltros,
