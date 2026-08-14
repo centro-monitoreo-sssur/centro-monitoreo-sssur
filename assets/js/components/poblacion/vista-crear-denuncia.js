@@ -16,7 +16,7 @@ import { useDenunciasCiudadano } from '../../stores/denuncias-ciudadano.js';
 // Mismo endpoint de cPanel que usan las evidencias de campo: comprime allí y
 // en la base solo queda la URL, así que no toca el disco de Supabase.
 import { subirEvidencias, evidenciasConfiguradas } from '../../services/evidencias.js';
-import { comprimirImagen } from '../../utils/image-compressor.js';
+import { comprimirImagenDual } from '../../utils/image-compressor.js';
 import { validarDenunciaDuplicada, generarResumenSimilares } from '../../utils/validacion-duplicados.js';
 
 export default {
@@ -68,6 +68,12 @@ export default {
     const errorEnvio = ref('');
     const avisoEnvio = ref('');
     const subiendoEvidencias = ref(false);
+    /* Cubre desde el primer toque hasta el final, subida de fotos incluida.
+       El `enviando` del store solo abarca la llamada al RPC. */
+    const envioEnCurso = ref(false);
+
+    /** Tope de fotografías, desde Configuración. */
+    const topeFotos = computed(() => config.value.limitesFotos?.denunciaCiudadano ?? 1);
     /* Se genera una sola vez por intento de envío y se conserva entre
        reintentos: es lo que permite al RPC reconocer un reenvío y devolver la
        misma denuncia en vez de crear otra. */
@@ -616,7 +622,14 @@ export default {
      * denuncia en lugar de crear otra.
      */
     const confirmarGuardadoDenuncia = async () => {
-      if (enviandoDenuncia.value) return;      // doble toque = doble denuncia
+      /* El guardia cubre el envío ENTERO y no solo la llamada al RPC.
+         `enviandoDenuncia` lo pone el store, así que durante la subida de fotos
+         —que puede tardar segundos— seguía en falso: un segundo toque lanzaba
+         un envío paralelo, los dos pasaban la comprobación de idempotencia sin
+         ver la inserción del otro, y el segundo chocaba contra el índice único
+         de `referencia_cliente`. Eso era el 409. */
+      if (envioEnCurso.value) return;
+      envioEnCurso.value = true;
       errorEnvio.value = '';
 
       if (!referenciaEnvio.value) referenciaEnvio.value = nuevaReferencia();
@@ -634,11 +647,13 @@ export default {
         if (formulario.value.fotos.length && evidenciasConfiguradas) {
           subiendoEvidencias.value = true;
           try {
-            const subidas = await subirEvidencias(formulario.value.fotos);
-            adjuntos = (subidas || []).filter((s) => s?.ok).map((s) => ({
-              url: s.url, nombre: s.nombre, mime: s.mime, tamano: s.tamano, tipo: 'foto',
-            }));
-            fallaronFotos = adjuntos.length < formulario.value.fotos.length;
+            // Devuelve { adjuntos, errores, completo }, no un arreglo. Y los
+            // adjuntos ya vienen con la forma que espera el RPC.
+            const subida = await subirEvidencias(
+              formulario.value.fotos.map((f) => f.archivo)
+            );
+            adjuntos = subida.adjuntos || [];
+            fallaronFotos = !subida.completo;
           } catch (e) {
             fallaronFotos = true;
             console.warn('[crear-denuncia] Falló la subida de evidencias:', e.message);
@@ -680,6 +695,8 @@ export default {
       } catch (e) {
         errorEnvio.value = 'No se pudo enviar la denuncia. Inténtalo de nuevo.';
         console.error('[crear-denuncia]', e);
+      } finally {
+        envioEnCurso.value = false;
       }
     };
 
@@ -763,8 +780,7 @@ export default {
 
       // Tope configurable desde el panel: ver `limitesFotos` en
       // stores/configuracion.js. Antes eran 2 escritos a mano.
-      const tope = config.value.limitesFotos?.denunciaCiudadano ?? 1;
-      const fotosRestantes = tope - formulario.value.fotos.length;
+      const fotosRestantes = topeFotos.value - formulario.value.fotos.length;
       if (fotosRestantes <= 0) {
         alert('Solo puedes adjuntar un máximo de 2 fotografías.');
         return;
@@ -783,8 +799,16 @@ export default {
       try {
         for (const file of validFiles) {
           // Comprimir a max 1080px y jpeg quality 0.75 (aprox max 5MB, usualmente < 1MB)
-          const dataUrl = await comprimirImagen(file, 1080, 1080, 0.75);
-          formulario.value.fotos.push(dataUrl);
+          /* Se guardan las DOS formas: `vistaPrevia` para pintar el recuadro
+             y `archivo` —un Blob— para subir. Antes solo se guardaba el
+             DataURL, y `subirEvidencia` espera un archivo: con una cadena,
+             `FormData.append` la manda como campo de texto y en el servidor
+             `$_FILES` llega vacío.
+
+             1024/0.6 y no 1080/0.75: son los valores que ya usa la PWA de
+             campo, y producen archivos por debajo del límite acordado. */
+          const foto = await comprimirImagenDual(file, 1024, 1024, 0.6);
+          formulario.value.fotos.push(foto);
         }
       } catch (error) {
         console.error('Error al procesar la imagen:', error);
@@ -865,7 +889,8 @@ export default {
       errorCatalogo,
       sinCategoriasAbiertas,
       // Envío real
-      enviandoDenuncia, subiendoEvidencias, errorEnvio, avisoEnvio,
+      enviandoDenuncia, envioEnCurso, subiendoEvidencias, errorEnvio, avisoEnvio,
+      topeFotos,
       coordenadasSeleccionadas,
       mostrarMenuCapas,
       estiloTile,

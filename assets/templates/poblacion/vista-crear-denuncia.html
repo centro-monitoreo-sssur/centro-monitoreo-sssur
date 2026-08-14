@@ -355,7 +355,7 @@
 
         <div class="px-4 pb-4">
           <!-- Estado: sin foto -->
-          <label v-if="formulario.fotos.length < 2 && !formulario.fotoProcesando"
+          <label v-if="formulario.fotos.length < topeFotos && !formulario.fotoProcesando"
             class="group flex items-center gap-4 w-full border-2 border-dashed border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-200">
             <div
               class="w-12 h-12 rounded-xl bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors duration-200">
@@ -363,8 +363,11 @@
                 class="fa-solid fa-cloud-arrow-up text-gray-400 group-hover:text-blue-500 text-xl transition-colors duration-200"></i>
             </div>
             <div>
+              <!-- El tope sale de Configuración. Estaba escrito a mano como 2,
+                   así que el formulario ofrecía una foto más de las permitidas
+                   mientras el panel decía otra cosa. -->
               <p class="text-sm font-semibold text-gray-700 group-hover:text-blue-700">Toca para adjuntar foto ({{
-                formulario.fotos.length }}/2)</p>
+                formulario.fotos.length }}/{{ topeFotos }})</p>
               <p class="text-xs text-gray-400 mt-0.5">JPG · PNG · Se optimizarán a 5MB máx.</p>
             </div>
             <input type="file" accept="image/*" multiple capture="environment" class="hidden"
@@ -386,7 +389,9 @@
           <div v-if="formulario.fotos.length > 0 && !formulario.fotoProcesando" class="grid grid-cols-2 gap-3 mt-3">
             <div v-for="(foto, index) in formulario.fotos" :key="index"
               class="relative rounded-xl overflow-hidden h-32 border border-gray-100 shadow-sm">
-              <img :src="foto" class="w-full h-full object-cover" alt="Evidencia adjunta">
+              <!-- `foto` guarda las dos formas: `vistaPrevia` para pintar y
+                     `archivo` (Blob) para subir. Ver comprimirImagenDual. -->
+                <img :src="foto.vistaPrevia" class="w-full h-full object-cover" alt="Evidencia adjunta">
               <!-- Overlay oscuro sutil -->
               <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
               <!-- Badge de optimización -->
@@ -453,6 +458,14 @@
   <!-- Paso 2: Atrás + Continuar -->
   <div v-if="pasoActual === 2"
     class="fixed bottom-4 left-0 right-0 z-40 px-4 pb-1 pt-3 bg-gradient-to-t from-[#f8f9fb] via-[#f8f9fb]/90 to-transparent flex gap-2.5">
+    <!-- El fallo del envío no se mostraba en ninguna parte: quedaba en la
+         consola y el vecino no sabía por qué no pasaba nada. -->
+    <div v-if="errorEnvio"
+      class="absolute bottom-full left-0 right-0 mx-4 mb-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-2">
+      <i class="fa-solid fa-triangle-exclamation text-red-500 mt-0.5 shrink-0"></i>
+      <p class="text-xs text-red-700 leading-relaxed">{{ errorEnvio }}</p>
+    </div>
+
     <button @click="anteriorPaso"
       class="toque-comodo w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm" aria-label="Volver">
       <i aria-hidden="true" class="fa-solid fa-arrow-left text-sm"></i>
@@ -473,11 +486,24 @@
       class="toque-comodo w-12 h-14 rounded-2xl bg-white border border-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 hover:border-gray-300 hover:bg-gray-50 active:scale-95 transition-all duration-200 shadow-sm" aria-label="Volver">
       <i aria-hidden="true" class="fa-solid fa-arrow-left text-sm"></i>
     </button>
-    <button @click="guardarDenuncia" :disabled="formulario.descripcion.length < 10"
-      class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]" :class="formulario.descripcion.length >= 10
+    <!--
+      El botón refleja el envío. Antes no: el guardado era síncrono contra
+      `localStorage` y no podía tardar ni fallar. Al pasar al servidor, pulsar
+      dejaba de dar señal alguna durante varios segundos —lo que parecía que el
+      botón no hacía nada— y animaba a pulsar otra vez, que es lo que provocaba
+      el envío duplicado.
+    -->
+    <button @click="guardarDenuncia"
+      :disabled="formulario.descripcion.length < 10 || envioEnCurso"
+      class="flex-1 py-4 rounded-2xl font-bold text-base transition-all duration-200 active:scale-[0.98]"
+      :class="formulario.descripcion.length >= 10 && !envioEnCurso
         ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 hover:bg-blue-700'
         : 'bg-gray-200 text-gray-400 cursor-not-allowed'">
-      <span v-if="formulario.descripcion.length < 10">Escribe una descripción para enviar</span>
+      <span v-if="envioEnCurso">
+        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>
+        {{ subiendoEvidencias ? 'Subiendo fotografía...' : 'Enviando denuncia...' }}
+      </span>
+      <span v-else-if="formulario.descripcion.length < 10">Escribe una descripción para enviar</span>
       <span v-else>Enviar denuncia <i class="fa-solid fa-paper-plane ml-2"></i></span>
     </button>
   </div>

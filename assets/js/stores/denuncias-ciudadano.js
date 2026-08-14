@@ -95,6 +95,23 @@ async function crearDenuncia(datos) {
       mensaje: data?.mensaje || 'Denuncia registrada.',
     };
   } catch (e) {
+    /* Choque contra el índice único de `referencia_cliente`: significa que esta
+       MISMA denuncia ya se registró. La comprobación de idempotencia del RPC
+       tiene una ventana —dos envíos simultáneos no ven la inserción del otro—
+       y ahí gana el índice, que es como debe ser.
+
+       Se trata como éxito, no como error: el vecino pulsó dos veces y su
+       denuncia está registrada. Decirle que falló sería mentirle, y volvería a
+       intentarlo. */
+    // El nombre de la restricción viaja en `message` y la clave en `details`;
+    // se miran los dos porque PostgREST no siempre rellena ambos.
+    const detalleUnico = `${e?.message || ''} ${e?.details || ''}`;
+    if (e?.code === '23505' && /referencia_cliente/i.test(detalleUnico)) {
+      return {
+        ok: true, duplicado: true, correlativo: '',
+        mensaje: 'Esta denuncia ya estaba registrada.',
+      };
+    }
     const mensaje = traducirError(e);
     errorDenuncias.value = mensaje;
     return { ok: false, error: mensaje };
