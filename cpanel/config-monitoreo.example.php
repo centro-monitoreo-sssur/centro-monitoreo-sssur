@@ -73,11 +73,22 @@ const JWT_SECRET_LEGACY = '';
  * Orígenes autorizados a llamar a los endpoints (CORS).
  *
  * En producción el frontend y los endpoints comparten origen, así que CORS ni
- * interviene. La lista existe para Live Server durante el desarrollo.
+ * interviene. La lista existe para el desarrollo en local, donde la página se
+ * sirve desde 127.0.0.1 y los endpoints siguen estando en el dominio: sin el
+ * origen en esta lista, el navegador bloquea la subida ANTES de enviarla y en
+ * consola solo se ve «No 'Access-Control-Allow-Origin' header is present».
+ *
+ * Que un origen esté aquí no abre nada por sí solo: la subida sigue exigiendo
+ * un JWT válido de este proyecto de Supabase. Lo que concede la lista es poder
+ * PREGUNTAR, no poder subir.
+ *
+ * Si se cambia el puerto del servidor de desarrollo, hay que añadirlo aquí.
  */
 const ORIGENES_PERMITIDOS = [
     'https://monitoreo.sansalvadorsur.gob.sv',
     'http://monitoreo.sansalvadorsur.gob.sv',   // mientras no haya certificado
     'http://127.0.0.1:5500',   // Live Server
     'http://localhost:5500',
+    'http://127.0.0.1:8080',   // herramientas/servidor-dev.py
+    'http://localhost:8080',
 ];

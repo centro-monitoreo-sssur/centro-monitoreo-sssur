@@ -38,6 +38,16 @@ const COLUMNAS = `
 function traducirError(e) {
   const texto = e?.message || '';
 
+  /* Se registra SIEMPRE, y antes de traducir.
+     Varias validaciones del RPC se levantan con errcode 23503 —categoría no
+     disponible, canal sin configurar—, y PostgREST convierte ese código en un
+     409 Conflict. En la consola eso se ve igual que un choque de clave única y
+     no dice cuál de las dos ramas saltó: sin esta línea, diagnosticarlo exige
+     adivinar. El mensaje del RPC sí lo dice, así que se imprime. */
+  console.warn('[denuncias-ciudadano] RPC rechazado', {
+    code: e?.code, message: texto, details: e?.details, hint: e?.hint,
+  });
+
   // El tope diario llega con este código desde `crear_caso_ciudadano`.
   if (e?.code === '54000' || /24 horas/i.test(texto)) return texto;
   // Validaciones de contenido y ubicación: el RPC ya redacta el mensaje
@@ -48,7 +58,6 @@ function traducirError(e) {
   if (/function .*crear_caso_ciudadano/i.test(texto)) {
     return 'El registro de denuncias no está habilitado en el servidor.';
   }
-  console.error('[denuncias-ciudadano]', e);
   return 'No se pudo registrar la denuncia. Inténtalo de nuevo.';
 }
 
@@ -107,6 +116,9 @@ async function crearDenuncia(datos) {
     // se miran los dos porque PostgREST no siempre rellena ambos.
     const detalleUnico = `${e?.message || ''} ${e?.details || ''}`;
     if (e?.code === '23505' && /referencia_cliente/i.test(detalleUnico)) {
+      // Deja rastro: en la consola se verá un 409 y conviene que quede dicho
+      // que fue absorbido a propósito y no un fallo que se tragó nadie.
+      console.info('[denuncias-ciudadano] 409 por referencia repetida: la denuncia ya estaba registrada.');
       return {
         ok: true, duplicado: true, correlativo: '',
         mensaje: 'Esta denuncia ya estaba registrada.',

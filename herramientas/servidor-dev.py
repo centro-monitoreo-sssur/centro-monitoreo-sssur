@@ -31,6 +31,18 @@ Después, abrir http://127.0.0.1:8080/ — redirige a /panel/.
 
 OJO: el navegador considera «origen seguro» a localhost, así que el service
 worker y la instalación de PWA funcionan sin HTTPS.
+
+SUBIDA DE FOTOGRAFÍAS DESDE AQUÍ
+
+Este servidor no ejecuta PHP, así que las subidas siguen yendo al dominio de
+producción. Eso las convierte en peticiones de origen cruzado, y el endpoint
+solo responde a los orígenes de `ORIGENES_PERMITIDOS` en la configuración de
+cPanel. Si al enviar una denuncia aparece en consola
+
+    No 'Access-Control-Allow-Origin' header is present on the requested resource
+
+falta el origen de este servidor en esa lista. Con otro puerto, hay que
+añadirlo. Ver cpanel/config-monitoreo.example.php.
 """
 
 import http.server
