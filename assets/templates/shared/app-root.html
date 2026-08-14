@@ -66,6 +66,20 @@
   <vista-ajustes-campo></vista-ajustes-campo>
 </div>
 
+<!-- Comunicados de la PWA de campo.
+     El componente estaba registrado en components/index.js desde hace tiempo,
+     pero SIN esta rama y sin nadie que navegara a él: una ruta huérfana, así
+     que para el empleado la pantalla no existía.
+
+     Es el mismo fallo que ya arrastraba la vista de notificaciones del panel
+     —ver el comentario más abajo—: el enrutador es una cadena explícita de
+     `v-else-if`, así que registrar un componente NO basta para poder llegar a
+     él. Quien añada una vista tiene que tocar los tres sitios: index.js, esta
+     cadena, y algo que navegue. -->
+<div v-else-if="vistaActual === 'notificaciones-empleado'" class="min-h-screen">
+  <vista-notificaciones-empleado></vista-notificaciones-empleado>
+</div>
+
 <div v-else-if="vistaActual === 'mapa-vivo'" class="min-h-screen">
   <vista-mapa-vivo></vista-mapa-vivo>
 </div>
