@@ -1,7 +1,7 @@
 // Componente: Bottom Tab Bar Reutilizable
 import { ref, computed } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
-import { noticiasDemo } from '../../utils/noticias-demo.js';
+import { useComunicados } from '../../stores/comunicados.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 
 // Vistas donde el menú inferior NO debe mostrarse (formularios / registro)
@@ -33,10 +33,16 @@ export default {
       menuMasAbierto.value = !menuMasAbierto.value;
     };
 
-    // DEMO: badge de noticias no leídas — reemplazar con store real
-    const noLeidasNoticias = computed(() =>
-      noticiasDemo.filter(n => !n.leida).length
-    );
+    /* Contador de comunicados sin leer.
+       Contaba sobre `noticiasDemo`: cuatro avisos escritos a mano, dos de ellos
+       con `leida: false`. Por eso el distintivo decía SIEMPRE 2, hubiera lo que
+       hubiera publicado la Alcaldía y hubiera leído lo que hubiera leído el
+       vecino. Ahora sale del store, que cuenta lo que la RLS deja ver y
+       descuenta lo ya abierto.
+
+       La carga la hace `app-root` una vez al arrancar: este componente está
+       montado siempre y pedirla aquí la repetiría en cada cambio de pantalla. */
+    const { sinLeer: noLeidasNoticias } = useComunicados();
 
     const { contadorPendientes } = useOfflineQueue();
 

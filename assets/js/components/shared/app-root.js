@@ -13,6 +13,7 @@ import { usePermisos } from '../../stores/permisos.js';
 import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
 import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
 import { useUbicacion } from '../../services/ubicacion.js';
+import { useComunicados } from '../../stores/comunicados.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
@@ -27,6 +28,7 @@ export default {
     const { cargarKpis } = useDashboard();
     const { registrarSW, mostrarModalInstalacion, instalarPWA, posponerInstalacion } = usePwa();
     const { precalentar: precalentarUbicacion } = useUbicacion();
+    const { iniciarComunicados, detenerComunicados } = useComunicados();
     const { cargarAlcance, cargarPermisosModulo } = usePermisos();
 
     // Estado del modal de logout
@@ -121,6 +123,10 @@ export default {
     // Redirigir a login al perder la sesión (salvo si ya está en login/registro)
     watch(autenticado, (nuevoValor) => {
       if (nuevoValor) return;
+      // Sin sesión no hay comunicados que refrescar. Se suelta el escuchador de
+      // visibilidad: seguiría consultando al volver a la pestaña, y esa consulta
+      // saldría sin token —o con el del usuario anterior—.
+      detenerComunicados();
       if (vistaActual.value === 'login' || vistaActual.value === 'registro-poblacion') return;
       vistaActual.value = CONTEXTO === CONTEXTOS.POBLACION ? 'registro-poblacion' : 'login';
     });
@@ -161,6 +167,9 @@ export default {
          encabezado de services/ubicacion.js sobre por qué no se pide de entrada. */
       if (CONTEXTO === CONTEXTOS.EMPLEADOS || CONTEXTO === CONTEXTOS.POBLACION) {
         precalentarUbicacion();
+        // Los comunicados alimentan el distintivo del menú inferior, que está
+        // montado siempre. Se piden una vez aquí en vez de en cada pantalla.
+        if (autenticado.value) iniciarComunicados();
       }
 
       // El contexto ya está resuelto; aquí solo se aplica la vista que impone.

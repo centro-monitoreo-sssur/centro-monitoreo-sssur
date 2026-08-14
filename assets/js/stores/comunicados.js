@@ -138,10 +138,66 @@ function paraDistrito(distritoId) {
   );
 }
 
+// ── Cuándo se vuelve a mirar ────────────────────────────────────────────────
+//
+// NO se abre un canal de Realtime, y es una decisión deliberada: el plan
+// gratuito admite 200 conexiones concurrentes en total. Con volumen ciudadano
+// eso se agota, y el modo de fallo es silencioso —`too_many_connections`— así
+// que unos cuantos vecinos dejarían de recibir avisos sin que nadie se entere.
+//
+// Tampoco un temporizador a secas. Un intervalo consulta igual cuando el
+// teléfono está en el bolsillo, que es la mayor parte del tiempo, y gasta
+// batería y datos para nada.
+//
+// Se releen al VOLVER A LA PANTALLA. Es cuando la persona puede ver el
+// resultado, y cubre el caso real: abrir la aplicación, mirar, cerrarla. Con un
+// mínimo entre consultas para que alternar entre aplicaciones no dispare una
+// ráfaga.
+//
+// Un comunicado municipal no es una alerta: que llegue treinta segundos después
+// no cambia nada. Cuando SÍ haga falta avisar con la aplicación cerrada, eso
+// son notificaciones push y es otro proyecto —requiere claves VAPID y un
+// endpoint propio—.
+
+const MINIMO_ENTRE_CONSULTAS_MS = 60000;
+let ultimaConsulta = 0;
+let escuchaVisibilidad = null;
+
+async function refrescarSiTocaba() {
+  if (document.visibilityState !== 'visible') return;
+  if (Date.now() - ultimaConsulta < MINIMO_ENTRE_CONSULTAS_MS) return;
+  ultimaConsulta = Date.now();
+  await cargarComunicados();
+}
+
+/**
+ * Primera carga y suscripción a los regresos a la pantalla.
+ *
+ * Idempotente: la llama `app-root` al arrancar y volver a llamarla no añade un
+ * segundo escuchador.
+ */
+async function iniciarComunicados() {
+  ultimaConsulta = Date.now();
+  await cargarComunicados();
+
+  if (!escuchaVisibilidad && typeof document !== 'undefined') {
+    escuchaVisibilidad = () => { refrescarSiTocaba(); };
+    document.addEventListener('visibilitychange', escuchaVisibilidad);
+  }
+}
+
+function detenerComunicados() {
+  if (escuchaVisibilidad) {
+    document.removeEventListener('visibilitychange', escuchaVisibilidad);
+    escuchaVisibilidad = null;
+  }
+}
+
 export function useComunicados() {
   return {
     comunicados, cargando, errorComunicados,
     leidos, estaLeido, sinLeer,
     cargarComunicados, marcarLeido, paraDistrito,
+    iniciarComunicados, detenerComunicados,
   };
 }

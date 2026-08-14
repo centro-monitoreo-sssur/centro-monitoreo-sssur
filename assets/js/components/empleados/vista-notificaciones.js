@@ -1,21 +1,54 @@
-// Vista: Notificaciones (Empleados)
+// Vista: Comunicados (PWA de empleados)
+//
+// Leía `stores/notificaciones.js`, que consulta `public.notificaciones`. Esa
+// tabla tiene UNA sola policy desde la v5 —`notificaciones_admin_all`, para
+// admin y superadmin— así que un empleado de campo veía la pantalla vacía
+// SIEMPRE, y sin error: la RLS filtra en silencio.
+//
+// Ahora muestra los comunicados que la municipalidad dirige al personal. La
+// v36 los marca con audiencia `empleados`, y la policy hace el resto: este
+// código no filtra por audiencia, solo pide y recibe lo que le toca.
 import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
-import { useNotificaciones } from '../../stores/notificaciones.js';
+import { useComunicados } from '../../stores/comunicados.js';
 
 export default {
   setup() {
     const { irA } = useNavegacion();
-    const { 
-      notificaciones, 
-      contadorNoLeidas,
-      marcarComoLeida,
-      marcarTodasComoLeidas,
-      eliminarNotificacion,
-      eliminarTodasLeidas,
-      filtrarPorTipo,
-      filtrarPorPrioridad
-    } = useNotificaciones();
+    const {
+      comunicados, cargando, errorComunicados,
+      estaLeido, sinLeer, cargarComunicados, marcarLeido,
+    } = useComunicados();
+
+    /* Se traduce a la forma que ya espera la plantilla en vez de reescribir el
+       marcado. `prioridad` sale de la categoría —un comunicado no la declara—
+       y el icono, del propio comunicado cuando lo trae. */
+    const notificaciones = computed(() => comunicados.value.map((c) => ({
+      id: c.id,
+      titulo: c.titulo,
+      mensaje: c.descripcion,
+      tipo: c.categoria || 'informacion',
+      iconoPropio: c.categoria_icono || null,
+      prioridad: 'normal',
+      leida: estaLeido(c.id),
+      fecha_creacion: c.fecha,
+      autor: c.autor || 'Alcaldía de San Salvador Sur',
+    })));
+
+    const contadorNoLeidas = sinLeer;
+
+    // Los comunicados no se borran desde el teléfono: los publica y los retira
+    // la municipalidad. Se conservan los nombres que usa la plantilla para no
+    // tocarla, pero no hacen nada destructivo.
+    const marcarComoLeida = (id) => marcarLeido(id);
+    const marcarTodasComoLeidas = async () => {
+      for (const n of notificaciones.value) {
+        if (!n.leida) await marcarLeido(n.id);
+      }
+    };
+
+    const filtrarPorTipo = (tipo) => notificaciones.value.filter((n) => n.tipo === tipo);
+    const filtrarPorPrioridad = (p) => notificaciones.value.filter((n) => n.prioridad === p);
     
     const filtroTipo = ref('todas');
     const filtroPrioridad = ref('todas');
@@ -69,19 +102,13 @@ export default {
       marcarTodasComoLeidas();
     };
     
-    // Eliminar notificación
-    const handleEliminar = (id) => {
-      if (confirm('¿Eliminar esta notificación?')) {
-        eliminarNotificacion(id);
-      }
-    };
-    
-    // Eliminar todas las leídas
-    const handleEliminarTodasLeidas = () => {
-      if (confirm('¿Eliminar todas las notificaciones leídas?')) {
-        eliminarTodasLeidas();
-      }
-    };
+    /* Un comunicado no se borra desde el teléfono: lo publica y lo retira la
+       municipalidad, y que cada empleado pudiera hacer desaparecer el suyo
+       significaría que un aviso importante se pierde con un toque accidental.
+       Los dos handlers se conservan porque la plantilla los invoca, pero solo
+       marcan como leído, que es la acción que sí le corresponde a quien lee. */
+    const handleEliminar = (id) => marcarComoLeida(id);
+    const handleEliminarTodasLeidas = () => marcarTodasComoLeidas();
     
     // Limpiar filtros
     const handleLimpiarFiltros = () => {
@@ -142,11 +169,21 @@ export default {
       return etiquetas[prioridad] || prioridad;
     };
     
+    // `app-root` ya los pidió al arrancar y los refresca al volver a la
+    // pantalla, pero esta vista puede abrirse en una sesión donde eso todavía
+    // no ocurrió —por ejemplo, tras un login recién hecho—.
+    onMounted(() => {
+      if (!comunicados.value.length) cargarComunicados();
+    });
+
     return {
       notificaciones,
       notificacionesFiltradas,
       notificacionesPorFecha,
       contadorNoLeidas,
+      // Estado de la carga: sin esto, «no hay comunicados» y «todavía estoy
+      // pidiéndolos» se ven igual, que es una lista vacía sin explicación.
+      cargando, errorComunicados,
       filtroTipo,
       filtroPrioridad,
       mostrarFiltros,
