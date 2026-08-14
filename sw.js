@@ -1,4 +1,8 @@
-const CACHE_VERSION = 'v1.1.9';
+// v1.2.0 — sube el segundo dígito y no el tercero porque esta entrega añade
+// funciones, no solo arregla: la evidencia fotográfica de un caso se ve por fin
+// en las cuatro pantallas, una denuncia ciudadana avisa sola al Centro de
+// Monitoreo, y un comunicado puede señalar un sitio o trazar un cierre de vía.
+const CACHE_VERSION = 'v1.2.0';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
 // ── Caché de teselas del mapa ───────────────────────────────────────────────
