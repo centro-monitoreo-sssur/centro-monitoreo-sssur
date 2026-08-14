@@ -52,13 +52,18 @@ export default {
     // de entrada, no para fijar el punto de la denuncia.
     const { posicion: posicionGps } = useUbicacion();
 
-    const tabActivo = ref('');
+    /* Se guarda el ID del grupo, no su nombre. Antes la plantilla recorría un
+       objeto `{ nombre: categorias }`, y aplanarlo así perdía el icono, el
+       color y la descripción que cada grupo trae: las pestañas salían como
+       texto suelto, sin el icono que sí tiene la PWA de campo. */
+    const grupoActivo = ref('');
 
-    // Objeto plano porque la plantilla recorre `categoriasTabs[tabActivo]`.
-    // La clave es el NOMBRE del grupo, que es lo que se pinta en la pestaña.
-    const categoriasTabs = computed(() =>
-      Object.fromEntries(gruposCatalogo.value.map((g) => [g.nombre, g.categorias]))
+    const grupoActivoInfo = computed(
+      () => gruposCatalogo.value.find((g) => g.id === grupoActivo.value) || null
     );
+
+    /** Categorías de la pestaña abierta. */
+    const categoriasVisibles = computed(() => grupoActivoInfo.value?.categorias || []);
 
     // Estado del mapa
     const mapa = ref(null);
@@ -711,8 +716,8 @@ export default {
       // Primera pestaña por defecto. No se puede fijar al declararla porque
       // depende de qué grupos tengan categorías abiertas —los vacíos ni se
       // pintan— y eso solo se sabe tras consultar.
-      if (!tabActivo.value && gruposCatalogo.value.length) {
-        tabActivo.value = gruposCatalogo.value[0].nombre;
+      if (!grupoActivo.value && gruposCatalogo.value.length) {
+        grupoActivo.value = gruposCatalogo.value[0].id;
       }
 
       // Una categoría guardada de una sesión anterior puede haber dejado de
@@ -752,8 +757,7 @@ export default {
 
     return {
       formulario,
-      categoriasTabs,
-      tabActivo,
+      gruposCatalogo, grupoActivo, grupoActivoInfo, categoriasVisibles,
       // Estado del catálogo. La pantalla tiene que poder distinguir «cargando»
       // de «no hay ninguna abierta» de «falló la consulta»: las tres se veían
       // igual —una cuadrícula vacía— y ninguna se explicaba.

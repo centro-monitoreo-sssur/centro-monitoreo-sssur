@@ -88,18 +88,31 @@
         <!-- Pestañas por departamento responsable. Desplazables en horizontal:
              son tantas como unidades tengan categorías abiertas, y repartirlas
              a partes iguales las dejaría ilegibles en un teléfono. -->
-        <div class="flex gap-1.5 p-1.5 bg-gray-200/70 rounded-2xl mb-5 overflow-x-auto no-scrollbar">
-          <button v-for="tab in Object.keys(categoriasTabs)" :key="tab" @click="tabActivo = tab"
-            class="shrink-0 px-4 py-2.5 text-[11px] font-bold rounded-xl transition-all duration-300 whitespace-nowrap"
-            :class="tabActivo === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
-            {{ tab }}
+        <div class="flex gap-1.5 p-1.5 bg-gray-100 rounded-2xl">
+          <button v-for="grupo in gruposCatalogo" :key="grupo.id" @click="grupoActivo = grupo.id"
+            type="button"
+            class="flex-1 min-w-0 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl transition-all duration-300"
+            :class="grupoActivo === grupo.id ? 'bg-white shadow-sm' : 'active:scale-95'">
+            <i class="fa-solid text-base transition-colors duration-300"
+              :class="[grupo.icono, grupoActivo === grupo.id ? '' : 'text-gray-400']"
+              :style="grupoActivo === grupo.id ? { color: grupo.color } : {}"></i>
+            <span class="text-[11px] font-bold leading-none truncate max-w-full"
+              :class="grupoActivo === grupo.id ? 'text-gray-900' : 'text-gray-500'">
+              {{ grupo.nombre }}
+            </span>
           </button>
         </div>
+
+        <!-- Qué cubre el grupo abierto y cuántas opciones tiene. Sin esto, tres
+             iconos sin más contexto obligan a entrar en cada uno a ver qué hay. -->
+        <p v-if="grupoActivoInfo" class="text-[11px] text-gray-400 -mt-3 mb-4 px-1">
+          {{ grupoActivoInfo.descripcion }} · {{ grupoActivoInfo.categorias.length }} opciones
+        </p>
 
         <!-- Grid de categorías SOSAFE Style (3 columnas circulares) -->
         <div class="pb-24">
           <div class="grid grid-cols-3 gap-x-2 gap-y-6">
-            <button v-for="categoria in (categoriasTabs[tabActivo] || [])" :key="categoria.id"
+            <button v-for="categoria in categoriasVisibles" :key="categoria.id"
               @click="formulario.categoriaId = categoria.id"
               :title="categoria.descripcion"
               class="flex flex-col items-center gap-2 relative group transition-all duration-200 active:scale-[0.92]">
