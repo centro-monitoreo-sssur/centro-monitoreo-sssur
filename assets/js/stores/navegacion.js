@@ -426,7 +426,11 @@ const gruposNav = [
     icono: 'fa-people-roof',
     items: [
       { id: 'poblacion',            label: 'Población Registrada', icono: 'fa-users', modulo: 'poblacion' },
-      { id: 'vista-notificaciones', label: 'Notificaciones',       icono: 'fa-bell',  modulo: 'config' },
+      // Los comunicados sustituyen a la antigua «Notificaciones»: aquella
+      // administraba `public.notificaciones`, una tabla que solo se llenaba a
+      // mano desde ahí, con RLS de solo-admin y sin `usuario_id`. Nadie leía
+      // lo que se escribía. Ver la cabecera de admin/vista-comunicados.js.
+      { id: 'vista-comunicados',   label: 'Comunicados',          icono: 'fa-bullhorn', modulo: 'noticias' },
     ],
   },
   {
@@ -486,6 +490,7 @@ const titulos = {
   bitacora: 'Bitácora de Auditoría', config: 'Configuración General',
   departamentos: 'Departamentos y Unidades', poblacion: 'Población Registrada',
   'vista-notificaciones': 'Gestión de Notificaciones',
+  'vista-comunicados': 'Comunicados de la Municipalidad',
   cartograma: 'Cartograma Territorial',   // faltaba: la topbar mostraba el genérico
 };
 const tituloVista = computed(() => titulos[vistaActual.value] || 'Centro de Monitoreo');

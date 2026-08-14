@@ -1,0 +1,299 @@
+<!-- ============================================================
+     VISTA: Comunicados (Centro de Monitoreo)
+     Avisos que la municipalidad publica hacia la ciudadanía, el personal de
+     campo o el propio Centro de Monitoreo.
+     ============================================================ -->
+<div class="p-4 sm:p-6 h-full flex flex-col">
+
+  <!-- Indicadores -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6 flex-shrink-0">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-bullhorn text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comunicados</p>
+        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ totalComunicados }}</p>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Publicados</p>
+        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ vigentes }}</p>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-clock text-amber-600 dark:text-amber-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Programados</p>
+        <p class="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{{ programados }}</p>
+      </div>
+    </div>
+    <!-- Lo que de verdad ve el vecino. Es el número que interesa a la Alcaldía
+         y el que antes no existía en ninguna pantalla. -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-users text-indigo-600 dark:text-indigo-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En el portal</p>
+        <p class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">{{ paraPublico }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="error" class="mb-4 flex-shrink-0 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-3">
+    <i class="fas fa-triangle-exclamation text-red-500 mt-0.5"></i>
+    <p class="text-xs text-red-700 dark:text-red-300">{{ error }}</p>
+  </div>
+
+  <div v-if="aviso" class="mb-4 flex-shrink-0 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 flex items-start gap-3">
+    <i class="fas fa-circle-check text-emerald-500 mt-0.5"></i>
+    <p class="text-xs text-emerald-700 dark:text-emerald-300">{{ aviso }}</p>
+  </div>
+
+  <!-- Barra de acciones -->
+  <div class="flex flex-wrap items-center gap-3 mb-4 flex-shrink-0">
+    <div class="flex gap-1.5 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+      <button @click="filtroAudiencia = 'todas'"
+        class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors"
+        :class="filtroAudiencia === 'todas' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700'">
+        Todas
+      </button>
+      <button v-for="a in AUDIENCIAS" :key="a.id" @click="filtroAudiencia = a.id"
+        class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
+        :class="filtroAudiencia === a.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700'">
+        <i class="fas text-[10px]" :class="a.icono"></i>
+        {{ a.label }}
+      </button>
+    </div>
+
+    <button @click="abrir()"
+      class="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors">
+      <i class="fas fa-plus text-xs"></i>
+      Nuevo comunicado
+    </button>
+  </div>
+
+  <!-- Listado -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex-1 min-h-0 flex flex-col">
+    <div v-if="cargando" class="py-16 text-center text-gray-400">
+      <i class="fas fa-circle-notch fa-spin text-2xl mb-3"></i>
+      <p class="text-sm">Cargando comunicados...</p>
+    </div>
+
+    <div v-else-if="!comunicadosFiltrados.length" class="py-16 text-center">
+      <i class="fas fa-bullhorn text-3xl text-gray-300 dark:text-gray-600 mb-3"></i>
+      <p class="font-bold text-gray-700 dark:text-gray-300">Todavía no hay comunicados</p>
+      <p class="text-sm text-gray-400 mt-1">Publica el primero con «Nuevo comunicado».</p>
+    </div>
+
+    <div v-else class="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+      <div v-for="c in comunicadosFiltrados" :key="c.id"
+        class="px-5 py-4 flex items-start gap-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white"
+          :style="{ backgroundColor: '#3b82f6' }">
+          <i class="fas" :class="c.categoria_icono || 'fa-bullhorn'"></i>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h4 class="text-sm font-bold text-gray-900 dark:text-white truncate"
+              :class="{ 'line-through opacity-60': !c.activa }">{{ c.titulo }}</h4>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" :class="estadoDe(c).clase">
+              {{ estadoDe(c).texto }}
+            </span>
+            <!-- A quién llega. Es el dato que decide si el comunicado está bien
+                 dirigido, así que va en la fila y no escondido en el detalle. -->
+            <span v-for="a in c.audiencias" :key="a"
+              class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+              {{ etiquetaAudiencia(a) }}
+            </span>
+          </div>
+
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{{ c.descripcion }}</p>
+
+          <p class="text-[10px] text-gray-400 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span><i class="fas fa-tag text-[9px]"></i> {{ c.categoria }}</span>
+            <span>
+              <i class="fas fa-location-dot text-[9px]"></i>
+              {{ c.distritos.length ? c.distritos.map(nombreDistrito).join(', ') : 'Todo el municipio' }}
+            </span>
+            <span v-if="c.fecha_publicacion">
+              <i class="fas fa-clock text-[9px]"></i> Desde {{ formatearFecha(c.fecha_publicacion) }}
+            </span>
+            <span v-if="c.fecha_expiracion">
+              <i class="fas fa-hourglass-end text-[9px]"></i> Hasta {{ formatearFecha(c.fecha_expiracion) }}
+            </span>
+          </p>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <button @click="abrir(c)"
+            class="w-8 h-8 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+            aria-label="Editar comunicado">
+            <i class="fas fa-pen text-xs"></i>
+          </button>
+          <!-- Retirar, no borrar: `noticias_lecturas` referencia el comunicado
+               y borrarlo se llevaría por delante quién lo había leído. -->
+          <button @click="alternarActiva(c)"
+            class="w-8 h-8 rounded-lg transition-colors"
+            :class="c.activa
+              ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
+              : 'text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'"
+            :aria-label="c.activa ? 'Retirar de circulación' : 'Volver a publicar'"
+            :title="c.activa ? 'Retirar de circulación' : 'Volver a publicar'">
+            <i class="fas text-xs" :class="c.activa ? 'fa-eye-slash' : 'fa-rotate-left'"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MODAL: alta y edición
+  ══════════════════════════════════════════════════════════════════ -->
+  <div v-if="modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="cerrar"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+
+      <div class="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+          {{ enEdicion.id ? 'Editar comunicado' : 'Nuevo comunicado' }}
+        </h3>
+        <button @click="cerrar" class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500" aria-label="Cerrar">
+          <i class="fas fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5">
+
+        <div v-if="errorFormulario" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {{ errorFormulario }}
+        </div>
+
+        <div>
+          <label for="com-titulo" class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Título *</label>
+          <input id="com-titulo" v-model="enEdicion.titulo" type="text" maxlength="160"
+            class="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
+            placeholder="Ej. Corte de agua programado en El Progreso">
+        </div>
+
+        <div>
+          <label for="com-cuerpo" class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Cuerpo *</label>
+          <textarea id="com-cuerpo" v-model="enEdicion.descripcion" rows="4" maxlength="2000"
+            class="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
+            placeholder="Qué ocurre, cuándo y qué debe hacer quien lo lea."></textarea>
+        </div>
+
+        <!-- AUDIENCIA. Lo más importante del formulario: decide quién lo ve. -->
+        <div>
+          <label class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">¿Quién debe verlo? *</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button v-for="a in AUDIENCIAS" :key="a.id" type="button" @click="alternarAudiencia(a.id)"
+              class="text-left p-3 rounded-xl border-2 transition-all"
+              :class="enEdicion.audiencias.includes(a.id)
+                ? 'border-brand-600 bg-brand-50 dark:bg-brand-600/10'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'">
+              <div class="flex items-center gap-2">
+                <i class="fas text-sm" :class="[a.icono, enEdicion.audiencias.includes(a.id) ? 'text-brand-600' : 'text-gray-400']"></i>
+                <span class="text-xs font-bold text-gray-900 dark:text-white">{{ a.label }}</span>
+                <i v-if="enEdicion.audiencias.includes(a.id)" class="fas fa-check text-brand-600 text-[10px] ml-auto"></i>
+              </div>
+              <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1 leading-tight">{{ a.ayuda }}</p>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+            Distritos
+            <span class="font-normal normal-case text-gray-400">— ninguno seleccionado = todo el municipio</span>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button v-for="d in distritos" :key="d.id" type="button" @click="alternarDistrito(d.id)"
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+              :class="enEdicion.distritos.includes(d.id)
+                ? 'border-brand-600 bg-brand-50 dark:bg-brand-600/10 text-brand-700 dark:text-brand-300'
+                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300'">
+              {{ d.nombre }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Vista previa del alcance. Un comunicado mal dirigido no se puede
+             «despublicar» de la memoria de quien ya lo leyó. -->
+        <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 flex items-start gap-3">
+          <i class="fas fa-eye text-blue-500 mt-0.5"></i>
+          <p class="text-xs text-blue-800 dark:text-blue-200">{{ resumenAlcance }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="com-categoria" class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Categoría</label>
+            <select id="com-categoria" v-model="enEdicion.categoria"
+              class="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-white">
+              <option v-for="cat in CATEGORIAS" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Icono</label>
+            <div class="flex flex-wrap gap-1.5">
+              <button v-for="ic in ICONOS" :key="ic" type="button" @click="enEdicion.categoria_icono = ic"
+                class="w-9 h-9 rounded-lg border transition-colors flex items-center justify-center"
+                :class="enEdicion.categoria_icono === ic
+                  ? 'border-brand-600 bg-brand-50 dark:bg-brand-600/10 text-brand-600'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-400 hover:border-gray-300'">
+                <i class="fas text-sm" :class="ic"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="com-desde" class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+              Publicar desde
+              <span class="font-normal normal-case text-gray-400">— vacío: ya</span>
+            </label>
+            <input id="com-desde" v-model="enEdicion.fecha_publicacion" type="datetime-local"
+              class="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-white">
+          </div>
+          <div>
+            <label for="com-hasta" class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+              Retirar el
+              <span class="font-normal normal-case text-gray-400">— vacío: no caduca</span>
+            </label>
+            <input id="com-hasta" v-model="enEdicion.fecha_expiracion" type="datetime-local"
+              class="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-white">
+          </div>
+        </div>
+
+        <div>
+          <label for="com-autor" class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Firma</label>
+          <input id="com-autor" v-model="enEdicion.autor" type="text" maxlength="120"
+            class="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2.5 text-sm text-gray-900 dark:text-white"
+            placeholder="Alcaldía de San Salvador Sur">
+          <p class="mt-1 text-[11px] text-gray-400">Es lo que verá quien lo lea como remitente.</p>
+        </div>
+      </div>
+
+      <div class="sticky bottom-0 bg-white dark:bg-gray-800 px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end">
+        <button @click="cerrar"
+          class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold">
+          Cancelar
+        </button>
+        <button @click="guardar" :disabled="guardando"
+          class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 disabled:opacity-50">
+          {{ guardando ? 'Guardando...' : (enEdicion.id ? 'Guardar cambios' : 'Publicar') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

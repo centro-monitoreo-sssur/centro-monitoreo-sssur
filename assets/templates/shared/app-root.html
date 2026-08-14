@@ -133,6 +133,7 @@
            componente existiera. Se aceptan ambos valores porque 'notificaciones'
            sigue estando en enlaces antiguos guardados en localStorage. -->
       <vista-notificaciones v-else-if="vistaActual==='vista-notificaciones' || vistaActual==='notificaciones'"></vista-notificaciones>
+      <vista-comunicados v-else-if="vistaActual==='vista-comunicados'"></vista-comunicados>
       <vista-bitacora v-else-if="vistaActual==='bitacora'"></vista-bitacora>
       <vista-placeholder v-else :titulo="tituloVista"></vista-placeholder>
     </main>
