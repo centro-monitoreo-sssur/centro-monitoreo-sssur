@@ -998,6 +998,10 @@
             <span class="text-xs text-gray-500 font-mono">{{ modalDetalle.pt.time }}</span>
           </div>
 
+          <!-- La foto del reporte. En una consola de monitoreo es lo que
+               permite decidir si algo es urgente sin desplazar a nadie. -->
+          <ui-galeria-evidencias :caso-id="modalDetalle.pt.id" compacta ocultar-si-vacia />
+
           <div class="grid grid-cols-2 gap-2">
             <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5">
               <div class="text-[9px] text-gray-400 uppercase tracking-wide mb-0.5">Latitud</div>

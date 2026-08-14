@@ -28,9 +28,24 @@ RemoveType    .php .phtml .php3 .php4 .php5 .php7 .php8 .phps
     RewriteRule \.(php|phtml|php[0-9]|phps|cgi|pl|py|sh|htaccess)$ - [F,L,NC]
 </IfModule>
 
-# 2. Solo se sirven imágenes, y siempre como descarga inerte.
+# 2. Solo se sirven imágenes, con su tipo real y nada más.
+#
+#    Aquí había `application/octet-stream`, que junto a `nosniff` hace que
+#    Chrome se niegue a pintar la imagen en un `<img>`. Es el mismo cambio que
+#    en el .htaccess de evidencias y por el mismo motivo; ver el comentario
+#    largo de aquel. La protección la dan la lista blanca de extensiones y el
+#    bloqueo del punto 1, no mentir sobre el tipo.
+<FilesMatch "\.(jpe?g)$">
+    ForceType image/jpeg
+</FilesMatch>
+<FilesMatch "\.png$">
+    ForceType image/png
+</FilesMatch>
+<FilesMatch "\.webp$">
+    ForceType image/webp
+</FilesMatch>
+
 <FilesMatch "\.(jpg|jpeg|png|webp)$">
-    ForceType application/octet-stream
     Header set Content-Disposition "inline"
     # Nombre de archivo con sufijo aleatorio en cada subida ⇒ se puede cachear
     # de forma agresiva sin riesgo de servir una foto obsoleta.

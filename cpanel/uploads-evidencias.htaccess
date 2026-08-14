@@ -31,11 +31,30 @@ RemoveType    .php .phtml .php3 .php4 .php5 .php7 .php8 .phps
     RewriteRule \.(php|phtml|php[0-9]|phps|cgi|pl|py|sh|htaccess)$ - [F,L,NC]
 </IfModule>
 
-# 2. Solo se sirven imágenes, y siempre como contenido inerte.
+# 2. Solo se sirven imágenes, con su tipo real y nada más.
 #    El endpoint reescribe todo a JPEG, así que basta con esa extensión; las
 #    demás se dejan por si alguna vez se admite otro formato.
+#
+#    OJO CON `application/octet-stream`, que es lo que había aquí: junto a
+#    `nosniff` —que es correcto y se conserva— le dice al navegador «esto no es
+#    una imagen y no lo adivines». Chrome entonces se niega a pintarla en un
+#    `<img>`, así que la evidencia no se podía mostrar en ninguna pantalla.
+#
+#    Declarar el tipo real no afloja nada: lo que impedía servir un HTML o un
+#    PHP disfrazado es la lista blanca de extensiones y el bloqueo del punto 1,
+#    no mentir sobre el tipo. Y con `nosniff` un .jpg que contuviera marcado
+#    sigue sin poder reinterpretarse como otra cosa.
+<FilesMatch "\.(jpe?g)$">
+    ForceType image/jpeg
+</FilesMatch>
+<FilesMatch "\.png$">
+    ForceType image/png
+</FilesMatch>
+<FilesMatch "\.webp$">
+    ForceType image/webp
+</FilesMatch>
+
 <FilesMatch "\.(jpg|jpeg|png|webp)$">
-    ForceType application/octet-stream
     Header set Content-Disposition "inline"
     # El nombre lleva marca de tiempo y sufijo aleatorio, así que una URL
     # siempre apunta al mismo contenido: se puede cachear indefinidamente.

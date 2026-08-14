@@ -150,6 +150,13 @@
           {{ denunciaSeleccionada.descripcion || 'Sin descripción detallada.' }}
         </p>
 
+        <!-- La foto va pegada a la descripción y por encima de todo lo demás:
+             en una denuncia de vía pública dice en un vistazo lo que el texto
+             tarda un párrafo. Hasta ahora no se mostraba en ninguna pantalla. -->
+        <div class="mt-5">
+          <ui-galeria-evidencias :caso-id="denunciaSeleccionada.id" />
+        </div>
+
         <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 mt-5">Ubicación</h4>
         <div class="flex gap-2 text-sm text-gray-800 dark:text-gray-200">
           <i class="fa-solid fa-location-dot text-rose-500 mt-1 shrink-0" aria-hidden="true"></i>

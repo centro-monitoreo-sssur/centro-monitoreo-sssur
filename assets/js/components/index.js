@@ -24,6 +24,7 @@ import uiSelect from './shared/ui/ui-select.js';
 import uiModal  from './shared/ui/ui-modal.js';
 import uiTabla  from './shared/ui/ui-tabla.js';
 import uiEditorTexto from './shared/ui/ui-editor-texto.js';
+import uiGaleriaEvidencias from './shared/ui/ui-galeria-evidencias.js';
 import modalComunicadoInterno from './shared/modal-comunicado-interno.js';
 
 // ── ADMIN ────────────────────────────────────────────────────
@@ -83,6 +84,7 @@ export const componentes = {
   // ── SHARED · primitivas de UI ──────────────────────────────
   'ui-boton':               { comp: uiBoton,               tpl: 'shared/ui/ui-boton' },
   'ui-editor-texto':        { comp: uiEditorTexto,         tpl: 'shared/ui/ui-editor-texto' },
+  'ui-galeria-evidencias':  { comp: uiGaleriaEvidencias,   tpl: 'shared/ui/ui-galeria-evidencias' },
   'modal-comunicado-interno': { comp: modalComunicadoInterno, tpl: 'shared/modal-comunicado-interno' },
   'ui-badge':               { comp: uiBadge,               tpl: 'shared/ui/ui-badge' },
   'ui-card':                { comp: uiCard,                tpl: 'shared/ui/ui-card' },

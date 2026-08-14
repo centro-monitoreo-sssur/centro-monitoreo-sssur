@@ -99,6 +99,14 @@
       <p class="text-sm text-gray-600 leading-relaxed">{{ denuncia.descripcion }}</p>
     </div>
 
+    <!-- Fotografías
+         El vecino subió la foto y hasta ahora no volvía a verla en ningún
+         sitio: no tenía cómo comprobar que llegó. Cuando la cuadrilla cierra
+         el caso con su propia foto, aquí ve las dos y qué se hizo. -->
+    <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
+      <ui-galeria-evidencias :caso-id="denuncia.id" titulo="Fotografías" compacta />
+    </div>
+
     <!-- Ubicación -->
     <div class="bg-white rounded-3xl shadow-xl shadow-gray-200/50 p-5 border border-gray-100">
       <h3 class="font-bold text-gray-900 text-base mb-3">Ubicación</h3>
