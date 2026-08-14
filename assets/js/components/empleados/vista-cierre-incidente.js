@@ -11,6 +11,7 @@
 // ============================================================================
 import { ref, computed, onMounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
+import { useConfiguracion } from '../../stores/configuracion.js';
 import { useMisCasos } from '../../stores/mis-casos.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
@@ -20,6 +21,8 @@ import { subirEvidencias, evidenciasConfiguradas } from '../../services/evidenci
 export default {
   setup() {
     const { irA } = useNavegacion();
+    // Los topes de fotografías son configurables desde el panel.
+    const { config } = useConfiguracion();
     const { casoSeleccionado, cerrarCaso, refrescarCaso } = useMisCasos();
     const { agregarOperacion, TIPOS_OPERACION } = useOfflineQueue();
     const { estaOnline } = useConexion();
@@ -38,7 +41,11 @@ export default {
        No son intercambiables: `FormData.append` con una cadena la manda como
        campo de texto y en el servidor `$_FILES` llega vacío. Ver el comentario
        de utils/image-compressor.js. */
-    const MAX_FOTOS = 3;
+    /* El tope sale de Configuración y ya no está escrito aquí: depende del
+       espacio del hosting compartido y del consumo real, y eso cambia. Mejor
+       que la gerencia lo ajuste sin tocar código.
+       Ver `limitesFotos` en stores/configuracion.js. */
+    const MAX_FOTOS = computed(() => config.value.limitesFotos?.cierreIncidente ?? 1);
     const fotos = ref([]);
     const fotoProcesando = ref(false);
 
@@ -47,11 +54,13 @@ export default {
       evento.target.value = '';            // permite volver a elegir la misma foto
       if (!seleccionados.length) return;
 
-      const espacio = MAX_FOTOS - fotos.value.length;
+      const espacio = MAX_FOTOS.value - fotos.value.length;
       if (espacio <= 0) {
         resultado.value = {
           tipo: 'advertencia',
-          texto: `Puedes adjuntar como máximo ${MAX_FOTOS} fotografías al cierre.`,
+          texto: MAX_FOTOS.value === 1
+            ? 'Puedes adjuntar una fotografía al cierre.'
+            : `Puedes adjuntar como máximo ${MAX_FOTOS.value} fotografías al cierre.`,
         };
         return;
       }

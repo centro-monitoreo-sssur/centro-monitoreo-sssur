@@ -9,6 +9,7 @@ import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
 // que se envíe tiene que ser el de verdad.
 import { useCatalogoPublico } from '../../services/catalogo-publico.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+import { useConfiguracion } from '../../stores/configuracion.js';
 import { useCiudadano } from '../../stores/ciudadano.js';
 import { useUbicacion } from '../../services/ubicacion.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
@@ -17,6 +18,8 @@ import { validarDenunciaDuplicada, generarResumenSimilares } from '../../utils/v
 export default {
   setup() {
     const { irA } = useNavegacion();
+    // Los topes de fotografías son configurables desde el panel.
+    const { config } = useConfiguracion();
 
     const formulario = ref({
       categoriaId: localStorage.getItem('tipo_denuncia_seleccionado') || '',
@@ -667,7 +670,10 @@ export default {
       const files = Array.from(event.target.files);
       if (!files.length) return;
 
-      const fotosRestantes = 2 - formulario.value.fotos.length;
+      // Tope configurable desde el panel: ver `limitesFotos` en
+      // stores/configuracion.js. Antes eran 2 escritos a mano.
+      const tope = config.value.limitesFotos?.denunciaCiudadano ?? 1;
+      const fotosRestantes = tope - formulario.value.fotos.length;
       if (fotosRestantes <= 0) {
         alert('Solo puedes adjuntar un máximo de 2 fotografías.');
         return;

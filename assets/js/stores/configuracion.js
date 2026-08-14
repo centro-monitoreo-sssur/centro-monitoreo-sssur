@@ -125,6 +125,19 @@ const DEFAULTS = {
     poblacion: true,   // ?contexto=poblacion activo/inactivo
     empleados: true,   // ?contexto=empleados activo/inactivo
   },
+
+  /* Cuántas fotografías admite cada formulario.
+     Configurable y no fijo en el código porque el valor correcto depende de
+     algo que cambia: el espacio del hosting y el consumo real. Empieza bajo y
+     se sube cuando se sepa cuánto se está usando de verdad.
+
+     Las fotos van a cPanel, no a Supabase, así que lo que se protege es el
+     disco del hosting compartido. Cada una pesa ~150 KB tras comprimir. */
+  limitesFotos: {
+    cierreIncidente:  1,   // PWA campo · Cierre de Incidente
+    denunciaCampo:    3,   // PWA campo · Levantar Denuncia
+    denunciaCiudadano: 1,  // Portal · Evidencia fotográfica
+  },
 };
 
 
@@ -191,6 +204,11 @@ async function cargarDesdeDB() {
           },
           categorias: data.valor.categorias ?? null,
           accesoContextos: { ...DEFAULTS.accesoContextos, ...data.valor.accesoContextos },
+          // Igual que los demás objetos anidados: sin fusionar con los valores
+          // por defecto, una configuración guardada antes de que existiera esta
+          // clave dejaría los límites en `undefined` y los formularios no
+          // sabrían cuántas fotos admitir.
+          limitesFotos: { ...DEFAULTS.limitesFotos, ...(data.valor.limitesFotos || {}) },
         };
       }
     }

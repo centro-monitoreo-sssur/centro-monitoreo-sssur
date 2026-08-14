@@ -942,6 +942,56 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════
+       TAB — FOTOGRAFÍAS
+  ════════════════════════════════════════════════════════════ -->
+  <div v-if="tabActiva === 'multimedia'" class="space-y-5">
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center">
+          <i class="fa-solid fa-camera text-cyan-500 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-gray-800 dark:text-white">Fotografías por formulario</h2>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Cuántas imágenes admite cada tipo de reporte</p>
+        </div>
+      </div>
+
+      <div class="p-5 space-y-5">
+        <div v-for="l in LIMITES_FOTOS" :key="l.clave"
+          class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-gray-800 dark:text-white">{{ l.titulo }}</div>
+            <div class="text-[11px] text-gray-500 dark:text-gray-400">{{ l.donde }}</div>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <input type="range" min="1" max="5" step="1"
+              v-model.number="config.limitesFotos[l.clave]"
+              class="w-32 accent-cyan-500"
+              :aria-label="'Fotografías permitidas en ' + l.titulo">
+            <span class="w-20 text-center text-sm font-bold text-gray-900 dark:text-white tabular-nums">
+              {{ config.limitesFotos[l.clave] }}
+              <span class="font-normal text-gray-400">{{ config.limitesFotos[l.clave] === 1 ? 'foto' : 'fotos' }}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- El dato que hace entendible la decisión. Sin él, elegir entre 1 y 5
+             es arbitrario; con él se ve qué se está gastando. -->
+        <div class="rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 px-4 py-3 flex gap-3">
+          <i class="fa-solid fa-hard-drive text-cyan-500 mt-0.5 shrink-0"></i>
+          <div class="text-cyan-800 dark:text-cyan-200 text-xs leading-relaxed">
+            Las fotos se comprimen a ~150 KB y se guardan en <strong>cPanel</strong>, no en Supabase,
+            así que no consumen los 500 MB del plan gratuito de la base de datos.
+            Con los valores actuales, un reporte ocupa como máximo
+            <strong>{{ pesoMaximoPorReporte }}</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
        TAB 5 — SEGURIDAD
   ════════════════════════════════════════════════════════════ -->
   <div v-if="tabActiva === 'seguridad'" class="space-y-5">

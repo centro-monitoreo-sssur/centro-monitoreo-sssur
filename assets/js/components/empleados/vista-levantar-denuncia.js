@@ -13,6 +13,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
 import { cargarLimitesSSSur, cargarColoniasSanMarcos } from '../../services/geo-json/cargador.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+import { useConfiguracion } from '../../stores/configuracion.js';
 import { comprimirImagenDual } from '../../utils/image-compressor.js';
 import { subirEvidencias, evidenciasConfiguradas } from '../../services/evidencias.js';
 // Mismo catálogo y mismos estilos que el resto de mapas. Esta vista tenía su
@@ -36,6 +37,8 @@ const CLAVE_CATEGORIA = 'tipo_denuncia_seleccionado';
 export default {
   setup() {
     const { irA } = useNavegacion();
+    // Los topes de fotografías son configurables desde el panel.
+    const { config } = useConfiguracion();
     const { agregarOperacion, TIPOS_OPERACION } = useOfflineQueue();
     const { estaOnline } = useConexion();
     const { tiposDenuncia, areaDeTipo } = useCatalogos();
@@ -863,7 +866,10 @@ export default {
       const files = Array.from(event.target.files);
       if (!files.length) return;
 
-      const fotosRestantes = 2 - formulario.value.fotos.length;
+      // Tope configurable desde el panel: ver `limitesFotos` en
+      // stores/configuracion.js. Antes eran 2 escritos a mano.
+      const tope = config.value.limitesFotos?.denunciaCampo ?? 3;
+      const fotosRestantes = tope - formulario.value.fotos.length;
       if (fotosRestantes <= 0) {
         alert('Solo puedes adjuntar un máximo de 2 fotografías.');
         return;

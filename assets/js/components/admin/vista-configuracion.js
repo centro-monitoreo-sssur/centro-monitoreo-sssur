@@ -98,9 +98,37 @@ export default {
       { id: 'mapa',           label: 'Mapa',            icono: 'fa-map' },
       { id: 'sistema',        label: 'Sistema',         icono: 'fa-sliders' },
       { id: 'acceso',         label: 'Acceso URL',      icono: 'fa-link' },
+      // Los topes de fotografías viven aquí y no en el código porque el
+      // valor correcto depende del espacio del hosting y del consumo real.
+      { id: 'multimedia',     label: 'Fotografías',     icono: 'fa-camera' },
       { id: 'seguridad',      label: 'Seguridad',       icono: 'fa-shield-halved' },
       { id: 'exportacion',    label: 'Exportación',     icono: 'fa-file-export' },
     ];
+
+    /* ── Topes de fotografías ────────────────────────────────
+       Se declaran aquí y no en la plantilla para que añadir un formulario nuevo
+       sea una línea en esta lista y no otro bloque de marcado copiado. */
+    const LIMITES_FOTOS = [
+      { clave: 'cierreIncidente',   titulo: 'Cierre de incidente',
+        donde: 'PWA de campo · evidencia de la resolución' },
+      { clave: 'denunciaCampo',     titulo: 'Levantar denuncia',
+        donde: 'PWA de campo · toma presencial' },
+      { clave: 'denunciaCiudadano', titulo: 'Denuncia ciudadana',
+        donde: 'Portal · evidencia fotográfica' },
+    ];
+
+    /* Cuánto ocupa como mucho un reporte con los topes actuales.
+       Se enseña porque sin una referencia de tamaño, elegir entre 1 y 5 es una
+       decisión a ciegas. 150 KB es lo que pesa una foto tras la compresión que
+       aplica `utils/image-compressor.js` (1024 px, calidad 0.6). */
+    const KB_POR_FOTO = 150;
+    const pesoMaximoPorReporte = computed(() => {
+      const maximo = Math.max(
+        ...LIMITES_FOTOS.map((l) => Number(config.value.limitesFotos?.[l.clave]) || 0)
+      );
+      const kb = maximo * KB_POR_FOTO;
+      return kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+    });
 
     // ── Categorías ──────────────────────────────────────────
     // Trabajamos sobre una copia local reactiva de las categorías
@@ -321,6 +349,8 @@ export default {
       isDarkMode, toggleDarkMode,
       // Acceso URL
       accesos, abrirAcceso,
+      // Fotografías
+      LIMITES_FOTOS, pesoMaximoPorReporte,
     };
   },
 };
