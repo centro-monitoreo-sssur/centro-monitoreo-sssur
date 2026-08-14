@@ -8,6 +8,7 @@ import { db } from '../core/supabase.js';
 import { almacen, almacenDispositivo } from '../core/almacen.js';
 import { useDenuncias } from './denuncias.js';
 import { usePermisos } from './permisos.js';
+import { useNotificaciones } from './notificaciones.js';
 
 // Nombres de las claves persistidas, en un solo sitio. Estaban repetidas como
 // literales en catorce llamadas distintas, y una errata en cualquiera de ellas
@@ -342,6 +343,7 @@ if (db) {
       // cubre TODAS las formas de perder la sesión —botón de salir, caducidad
       // del token, cierre desde otro dispositivo—, no solo la voluntaria.
       desuscribirRealtime();
+      desuscribirNotificaciones();
       limpiarAlcance();
       usuarioActual.value = '';
       rolUsuario.value = '';
@@ -382,6 +384,11 @@ const toggleSidebar = () => {
 };
 
 const { denunciasPendientesCount, desuscribirRealtime } = useDenuncias();
+// La bandeja también tiene canal propio desde que `app-root` la escucha durante
+// toda la sesión y no solo con su vista abierta. Se cierra donde se cierra el
+// de casos, por la misma razón: esta rama cubre todas las formas de perder la
+// sesión, no solo el botón de salir.
+const { desuscribirRealtime: desuscribirNotificaciones } = useNotificaciones();
 
 // ── Menú por grupos ──────────────────────────────────────────
 // `modulo` es el `codigo_modulo` de public.permisos_modulos, que es lo que

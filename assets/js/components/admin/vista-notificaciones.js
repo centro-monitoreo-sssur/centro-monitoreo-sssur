@@ -17,7 +17,7 @@
 // sin errores, porque RLS filtra en silencio; por eso la vista lo advierte en
 // lugar de aparentar que no hay nada que mostrar.
 // ============================================================
-import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
+import { ref, computed, onMounted } from '../../core/vue.js';
 import { useNotificaciones } from '../../stores/notificaciones.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { tiempoRelativo } from '../../utils/tiempo.js';
@@ -46,7 +46,7 @@ export default {
   setup() {
     const {
       notificacionesOrdenadas, notificacionesNoLeidas, cargando, errorNotificaciones,
-      cargarNotificaciones, suscribirRealtime, desuscribirRealtime,
+      cargarNotificaciones, suscribirRealtime,
       agregarNotificacion, marcarComoLeida, marcarTodasComoLeidas,
       eliminarNotificacion, eliminarLeidas,
     } = useNotificaciones();
@@ -196,11 +196,16 @@ export default {
       }
     }
 
+    /* Se recarga al entrar, pero NO se cierra el canal al salir.
+       La suscripción es de la aplicación, no de esta vista: la abre `app-root`
+       al iniciar sesión y la cierra `navegacion` al perderla. Darla de baja
+       aquí dejaba sorda a la campana del sidebar en cuanto el operador se
+       movía a otra pantalla. La llamada a suscribir se conserva por si se llega
+       aquí sin haber pasado por el arranque; el store ignora la segunda. */
     onMounted(() => {
       cargarNotificaciones();
       suscribirRealtime();
     });
-    onUnmounted(desuscribirRealtime);
 
     return {
       lista, resumen, cargando, errorNotificaciones, puedeGestionar,

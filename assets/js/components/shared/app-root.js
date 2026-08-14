@@ -14,6 +14,7 @@ import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
 import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
 import { useUbicacion } from '../../services/ubicacion.js';
 import { useComunicados } from '../../stores/comunicados.js';
+import { useNotificaciones } from '../../stores/notificaciones.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
@@ -30,6 +31,15 @@ export default {
     const { precalentar: precalentarUbicacion } = useUbicacion();
     const { iniciarComunicados, detenerComunicados } = useComunicados();
     const { cargarAlcance, cargarPermisosModulo } = usePermisos();
+    /* La bandeja se escuchaba solo mientras la vista de Notificaciones estaba
+       abierta —se suscribía en su `onMounted`—, así que la campana del sidebar
+       no se movía si el operador estaba en cualquier otra pantalla, que es
+       donde está casi siempre. Una alerta que hay que ir a buscar no es una
+       alerta. */
+    const {
+      cargarNotificaciones,
+      suscribirRealtime: suscribirNotificaciones,
+    } = useNotificaciones();
 
     // Estado del modal de logout
     const mostrarModalLogout = ref(false);
@@ -230,6 +240,13 @@ export default {
           await cargarIntervenciones();
           await cargarKpis();
           suscribirRealtime();
+          // La bandeja, en el Centro de Monitoreo y no en la PWA de campo: la
+          // policy de la v5 solo deja ver `notificaciones` a admin y superadmin,
+          // así que en campo la consulta devolvería cero filas siempre.
+          if (CONTEXTO === CONTEXTOS.MONITOREO) {
+            cargarNotificaciones();
+            suscribirNotificaciones();
+          }
         }
       } else if (!contexto) {
         // Si no está autenticado y no hay contexto, ir a login
