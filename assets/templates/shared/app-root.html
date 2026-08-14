@@ -144,6 +144,11 @@
   </div>
 </div>
 
+<!-- Aviso interno a pantalla completa. Va aquí, fuera de la cadena de
+     vistas, porque debe aparecer sin importar qué pantalla esté abierta.
+     El propio componente decide si hay algo que mostrar. -->
+<modal-comunicado-interno></modal-comunicado-interno>
+
 <!-- Modal de Confirmación (global, fuera del sidebar) -->
 <modal-confirmacion 
   v-if="mostrarModalLogout"

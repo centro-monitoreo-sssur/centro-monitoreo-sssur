@@ -101,6 +101,22 @@ const estaLeido = (id) => leidos.value.has(id);
 const sinLeer = computed(() => comunicados.value.filter((c) => !leidos.value.has(c.id)).length);
 
 /**
+ * Comunicados internos que este operador todavía no ha abierto.
+ *
+ * Solo `interno`. Un aviso dirigido a la ciudadanía no debe interrumpir a quien
+ * está atendiendo casos: lo verá en su sitio, no en mitad del trabajo.
+ *
+ * Ordenados del más antiguo al más nuevo para atenderlos en el orden en que se
+ * publicaron; el modal los va mostrando de uno en uno.
+ */
+const internosSinLeer = computed(() =>
+  comunicados.value
+    .filter((c) => c.audiencias?.includes('interno') && !leidos.value.has(c.id))
+    .slice()
+    .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+);
+
+/**
  * Marca uno como leído.
  *
  * Se actualiza el `Set` ANTES de la ida al servidor: el distintivo debe bajar
@@ -196,7 +212,7 @@ function detenerComunicados() {
 export function useComunicados() {
   return {
     comunicados, cargando, errorComunicados,
-    leidos, estaLeido, sinLeer,
+    leidos, estaLeido, sinLeer, internosSinLeer,
     cargarComunicados, marcarLeido, paraDistrito,
     iniciarComunicados, detenerComunicados,
   };

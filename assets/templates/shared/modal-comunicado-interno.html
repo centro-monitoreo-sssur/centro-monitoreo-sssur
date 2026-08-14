@@ -1,0 +1,64 @@
+<!-- ============================================================
+     Aviso interno a pantalla completa.
+     Ver assets/js/components/shared/modal-comunicado-interno.js
+     ============================================================ -->
+<transition name="fade">
+  <div v-if="actual" class="fixed inset-0 z-[200] flex items-center justify-center p-4">
+
+    <!--
+      El fondo NO cierra el modal, a diferencia del resto de la aplicación.
+      Es deliberado: un aviso interno hay que leerlo, y un clic despistado fuera
+      lo descartaría marcándolo como leído sin que nadie lo haya visto. Solo se
+      sale por el botón.
+    -->
+    <div class="absolute inset-0 bg-gray-900/70 backdrop-blur-sm"></div>
+
+    <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col"
+         role="dialog" aria-modal="true" aria-labelledby="titulo-aviso-interno">
+
+      <!-- Cabecera -->
+      <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex items-start gap-4">
+        <div class="w-11 h-11 rounded-2xl bg-brand-600 flex items-center justify-center shrink-0 shadow-lg shadow-brand-600/30">
+          <i class="fa-solid text-white text-lg"
+             :class="actual.categoria_icono || 'fa-bullhorn'" aria-hidden="true"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-[11px] font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest">
+            Aviso interno · {{ actual.categoria }}
+          </p>
+          <h2 id="titulo-aviso-interno" class="text-xl font-bold text-gray-900 dark:text-white leading-tight mt-0.5 break-words">
+            {{ actual.titulo }}
+          </h2>
+          <p class="text-xs text-gray-400 mt-1">{{ fechaLegible }}</p>
+        </div>
+      </div>
+
+      <!-- Cuerpo. Se pinta como HTML porque se redacta con formato desde
+           Comunicados, y `contenido-rico` es lo que da estilo a los títulos y
+           listas que genera el editor. Saneado antes de pintarse. -->
+      <div class="px-6 py-5 overflow-y-auto flex-1 min-h-0">
+        <img v-if="actual.imagen_url" :src="actual.imagen_url" alt=""
+             class="w-full max-h-64 object-cover rounded-xl mb-4">
+        <div class="contenido-rico text-sm text-gray-700 dark:text-gray-200"
+             v-html="cuerpoSeguro"></div>
+      </div>
+
+      <!-- Pie -->
+      <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          <i class="fa-solid fa-building-columns text-[10px]" aria-hidden="true"></i>
+          {{ actual.autor || 'Alcaldía de San Salvador Sur' }}
+          <!-- Cuántos quedan detrás. Sin esto, quien tenga tres pendientes ve
+               aparecer otro modal al cerrar y parece un fallo. -->
+          <span v-if="hayMas" class="ml-2 text-brand-600 dark:text-brand-400 font-semibold">
+            · {{ hayMas }} aviso{{ hayMas === 1 ? '' : 's' }} más
+          </span>
+        </p>
+        <button type="button" @click="confirmar" :disabled="cerrando"
+          class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors disabled:opacity-50">
+          {{ cerrando ? 'Guardando...' : (hayMas ? 'Entendido, ver siguiente' : 'Entendido') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</transition>

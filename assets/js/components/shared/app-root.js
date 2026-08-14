@@ -167,10 +167,15 @@ export default {
          encabezado de services/ubicacion.js sobre por qué no se pide de entrada. */
       if (CONTEXTO === CONTEXTOS.EMPLEADOS || CONTEXTO === CONTEXTOS.POBLACION) {
         precalentarUbicacion();
-        // Los comunicados alimentan el distintivo del menú inferior, que está
-        // montado siempre. Se piden una vez aquí en vez de en cada pantalla.
-        if (autenticado.value) iniciarComunicados();
       }
+
+      /* Los comunicados se piden en los TRES contextos, cada uno por su motivo:
+         en las PWA alimentan el distintivo del menú inferior, y en el Centro de
+         Monitoreo son lo que dispara el aviso interno a pantalla completa.
+
+         Una sola vez aquí, y no en cada pantalla: el menú y el modal están
+         montados siempre. */
+      if (autenticado.value) iniciarComunicados();
 
       // El contexto ya está resuelto; aquí solo se aplica la vista que impone.
       const contexto = aplicarContextoInicial();
