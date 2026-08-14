@@ -35,11 +35,16 @@ worker y la instalación de PWA funcionan sin HTTPS.
 
 import http.server
 import os
+import re
 import socketserver
 import sys
 
 RUTAS_APLICACION = ('panel', 'campo', 'ciudadano')
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Lo que es código y por tanto cambia con cada edición. Misma idea que la
+# constante `ES_CODIGO` de sw.js, para que los dos criterios no se separen.
+CODIGO = re.compile(r'\.(?:js|mjs|css|html|json)$', re.IGNORECASE)
 
 
 class Manejador(http.server.SimpleHTTPRequestHandler):
@@ -90,9 +95,20 @@ class Manejador(http.server.SimpleHTTPRequestHandler):
         super().do_HEAD()
 
     def end_headers(self):
-        # El service worker no se cachea, igual que en el .htaccess. Sin esto,
-        # un sw.js viejo sobrevive a los cambios y se depura a ciegas.
-        if self.path.endswith('sw.js'):
+        # Nada de código se cachea en desarrollo.
+        #
+        # Las PLANTILLAS ya llegaban frescas: `template-loader.js` las pide con
+        # `cache: 'no-cache'`. Los MÓDULOS JS no, porque los carga el navegador
+        # y aquí no se enviaba ninguna cabecera que se lo impidiera.
+        #
+        # Esa asimetría produce el peor fallo posible de depurar: una plantilla
+        # nueva que invoca algo que el componente viejo todavía no expone, y un
+        # «X is not a function» que no se parece en nada a un problema de caché.
+        # Pasó de verdad con el botón de visibilidad del catálogo.
+        #
+        # El service worker no interviene en localhost —se desactiva solo—, así
+        # que la única defensa es esta.
+        if CODIGO.search(self.path.split('?', 1)[0]):
             self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
         super().end_headers()
 

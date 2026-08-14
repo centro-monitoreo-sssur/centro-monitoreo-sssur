@@ -687,6 +687,56 @@ export default {
       });
     }
 
+    /* ─── Reencuadre cuando el contenedor cambia de tamaño ─────────────────
+
+       Leaflet mide el contenedor UNA vez, al crearse, y guarda ese tamaño. Si
+       en ese instante la caja todavía no tiene sus dimensiones definitivas
+       —porque el grid no ha terminado de repartir, porque una fuente aún no
+       cargó, o simplemente porque `nextTick` llega antes de que el navegador
+       haya hecho su primer reflujo— el mapa se queda con una medida
+       equivocada: pide las teselas de un recuadro que no corresponde y los
+       polígonos salen descolocados o directamente sin color.
+
+       Es justo el síntoma de «se ve mal al entrar, pero bien si salgo y
+       vuelvo»: al volver, el contenedor ya tiene su tamaño real.
+
+       `invalidateSize()` es lo que le dice que vuelva a medir. Va en un
+       `ResizeObserver` y no en un `setTimeout` porque no hay que adivinar
+       cuánto tarda el reflujo, y porque así cubre también plegar el menú
+       lateral o redimensionar la ventana.
+
+       No hace falta el `panBy` compensatorio de `vista-mapa.js`: allí los
+       paneles laterales son columnas reales del grid y mueven la esquina del
+       mapa; aquí las tarjetas flotan por encima y la caja no se desplaza. */
+    let _observadorCaja = null;
+
+    function vigilarCajaDelMapa() {
+      if (!mapa || _observadorCaja || typeof ResizeObserver !== 'function') {
+        // Sin ResizeObserver queda un reencuadre único, que ya cubre el caso
+        // habitual de entrar a la vista.
+        if (mapa && !_observadorCaja) {
+          setTimeout(() => mapa && mapa.invalidateSize({ animate: false }), 320);
+        }
+        return;
+      }
+
+      // Un solo trabajo por fotograma: el observador puede dispararse varias
+      // veces seguidas y cada `invalidateSize` recoloca todas las teselas.
+      let pendiente = false;
+      _observadorCaja = new ResizeObserver(() => {
+        if (pendiente) return;
+        pendiente = true;
+        requestAnimationFrame(() => {
+          pendiente = false;
+          if (!mapa) return;
+          const { width, height } = mapa.getContainer().getBoundingClientRect();
+          if (!width || !height) return;   // vista oculta: no hay nada que medir
+          mapa.invalidateSize({ animate: false });
+        });
+      });
+      _observadorCaja.observe(mapa.getContainer());
+    }
+
     // ── Ciclo de vida ──────────────────────────────────────────────────────────
     onMounted(() => {
       // Sin período: el acumulado histórico. El `watch` de `filtroFecha` se
@@ -761,6 +811,8 @@ export default {
             if (capasActivas[id]) gestorCapas.mostrar(id);
           }
 
+          vigilarCajaDelMapa();
+
         } catch (e) {
           console.error('[Cartograma]', e);
         } finally {
@@ -770,6 +822,9 @@ export default {
     });
 
     onUnmounted(() => {
+      // El observador, antes que nada: si sigue vivo cuando el mapa ya no
+      // existe, su callback llamaría a `invalidateSize` sobre null.
+      if (_observadorCaja) { _observadorCaja.disconnect(); _observadorCaja = null; }
       // El gestor suelta sus capas ANTES de destruir el mapa: después, el
       // contenedor ya no existe y `removeLayer` fallaría.
       if (gestorCapas) { gestorCapas.destruir(); gestorCapas = null; }
