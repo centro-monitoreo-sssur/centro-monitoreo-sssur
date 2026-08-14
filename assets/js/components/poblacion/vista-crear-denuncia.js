@@ -12,6 +12,10 @@ import { useCatalogos } from '../../stores/catalogos.js';
 import { useConfiguracion } from '../../stores/configuracion.js';
 import { useCiudadano } from '../../stores/ciudadano.js';
 import { useUbicacion } from '../../services/ubicacion.js';
+import { useDenunciasCiudadano } from '../../stores/denuncias-ciudadano.js';
+// Mismo endpoint de cPanel que usan las evidencias de campo: comprime allí y
+// en la base solo queda la URL, así que no toca el disco de Supabase.
+import { subirEvidencias, evidenciasConfiguradas } from '../../services/evidencias.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
 import { validarDenunciaDuplicada, generarResumenSimilares } from '../../utils/validacion-duplicados.js';
 
@@ -54,6 +58,36 @@ export default {
     // Posición ya buscada al abrir la aplicación; sirve para encuadrar el mapa
     // de entrada, no para fijar el punto de la denuncia.
     const { posicion: posicionGps } = useUbicacion();
+    const {
+      denuncias: misDenuncias,
+      crearDenuncia, cargarMisDenuncias, nuevaReferencia, enviando: enviandoDenuncia,
+    } = useDenunciasCiudadano();
+
+    // Estado del envío. Antes no existía: el guardado era síncrono contra
+    // `localStorage` y no podía fallar.
+    const errorEnvio = ref('');
+    const avisoEnvio = ref('');
+    const subiendoEvidencias = ref(false);
+    /* Se genera una sola vez por intento de envío y se conserva entre
+       reintentos: es lo que permite al RPC reconocer un reenvío y devolver la
+       misma denuncia en vez de crear otra. */
+    const referenciaEnvio = ref('');
+
+    /* La referencia de dirección que exige el RPC —mínimo 5 caracteres—.
+       El formulario del portal no la pide como campo aparte para no alargarlo,
+       así que se compone del distrito y el punto marcado. La cuadrilla necesita
+       algo más que una coordenada para llegar, y esto es lo mejor disponible
+       sin añadir un paso al vecino. */
+    const referenciaDireccion = computed(() => {
+      const distrito = perfilCiudadano.value?.distrito_id;
+      const nombre = distrito != null
+        ? (distritosCatalogo.value || []).find((d) => d.id === distrito)?.nombre
+        : null;
+      const punto = coordenadasSeleccionadas.value || '';
+      return nombre
+        ? `${nombre} · punto marcado en el mapa (${punto})`
+        : `Punto marcado en el mapa (${punto})`;
+    });
 
     /* Se guarda el ID del grupo, no su nombre. Antes la plantilla recorría un
        objeto `{ nombre: categorias }`, y aplanarlo así perdía el icono, el
@@ -516,8 +550,24 @@ export default {
         created_at: new Date().toISOString()
       };
 
-      // Obtener denuncias existentes del localStorage
-      const denunciasExistentes = JSON.parse(localStorage.getItem('denuncias_poblacion') || '[]');
+      /* Se compara contra las denuncias del PROPIO vecino, traídas de la base.
+         Antes se leía un arreglo de `localStorage` que ya no escribe nadie, así
+         que la comprobación no detectaba nada.
+
+         Alcance real, y conviene tenerlo claro: solo avisa de que TÚ ya
+         reportaste algo parecido ahí. No puede ver los reportes de otros —la
+         RLS se los oculta, y con razón—, así que dos vecinos reportando el
+         mismo bache siguen generando dos casos. Detectar eso es trabajo del
+         Centro de Monitoreo, no del portal. */
+      const denunciasExistentes = (misDenuncias.value || []).map((d) => ({
+        id: d.id,
+        lat: d.lat,
+        lng: d.lng,
+        tipo_id: d.categoria_id,
+        categoriaNombre: d.categoria_nombre,
+        descripcion: d.descripcion,
+        created_at: d.created_at,
+      }));
 
       // Validar duplicados
       const validacionDuplicado = validarDenunciaDuplicada(denunciaTemp, denunciasExistentes);
@@ -552,44 +602,85 @@ export default {
       confirmarGuardadoDenuncia();
     };
 
-    // Confirmar guardado de denuncia (después de alerta de duplicado)
-    const confirmarGuardadoDenuncia = () => {
-      const denuncia = denunciaPendiente.value || {
-        id: Date.now(),
-        categoriaId: formulario.value.categoriaId,
-        categoriaNombre: categoriaPorId(formulario.value.categoriaId)?.nombre || "Otro",
-        departamento: categoriaPorId(formulario.value.categoriaId)?.departamento || "No especificado",
-        descripcion: formulario.value.descripcion,
-        coordenadas: coordenadasSeleccionadas.value,
-        anonima: formulario.value.anonima,
-        fotos: formulario.value.fotos,
-        fecha: new Date().toISOString(),
-        estado: 'pendiente'
-      };
+    /**
+     * Envía la denuncia de verdad.
+     *
+     * Antes esto la metía en un arreglo de `localStorage`: no llegaba a nadie y
+     * desaparecía al borrar los datos del navegador. Ahora va al RPC
+     * `crear_caso_ciudadano`, que la registra en `casos` y la hace visible en
+     * el Centro de Monitoreo.
+     *
+     * La referencia de cliente se genera UNA vez y se conserva entre
+     * reintentos: si el envío se corta después de que el servidor la registrara
+     * —cosa normal con mala cobertura— volver a pulsar devuelve la misma
+     * denuncia en lugar de crear otra.
+     */
+    const confirmarGuardadoDenuncia = async () => {
+      if (enviandoDenuncia.value) return;      // doble toque = doble denuncia
+      errorEnvio.value = '';
 
-      // Si hay denuncias similares, agregar referencia a la más cercana (merge simple)
-      if (denunciasSimilares.value.length > 0) {
-        const denunciaCercana = denunciasSimilares.value[0];
-        denuncia.denunciaRelacionadaId = denunciaCercana.id;
-        denuncia.esDuplicadoConfirmado = true;
-        denuncia.motivoDuplicado = 'Usuario confirmó reporte similar';
+      if (!referenciaEnvio.value) referenciaEnvio.value = nuevaReferencia();
+
+      const coords = (coordenadasSeleccionadas.value || '')
+        .split(',').map((c) => parseFloat(c.trim()));
+      const [lat, lng] = coords.length === 2 ? coords : [null, null];
+
+      try {
+        /* Las fotos primero, y a cPanel. Si fallan, la denuncia se manda igual
+           SIN ellas: perder la evidencia es malo, perder el reporte entero es
+           peor. Se avisa al final para que el vecino sepa qué pasó. */
+        let adjuntos = [];
+        let fallaronFotos = false;
+        if (formulario.value.fotos.length && evidenciasConfiguradas) {
+          subiendoEvidencias.value = true;
+          try {
+            const subidas = await subirEvidencias(formulario.value.fotos);
+            adjuntos = (subidas || []).filter((s) => s?.ok).map((s) => ({
+              url: s.url, nombre: s.nombre, mime: s.mime, tamano: s.tamano, tipo: 'foto',
+            }));
+            fallaronFotos = adjuntos.length < formulario.value.fotos.length;
+          } catch (e) {
+            fallaronFotos = true;
+            console.warn('[crear-denuncia] Falló la subida de evidencias:', e.message);
+          } finally {
+            subiendoEvidencias.value = false;
+          }
+        }
+
+        const res = await crearDenuncia({
+          categoriaId: formulario.value.categoriaId,
+          descripcion: formulario.value.descripcion,
+          // El RPC exige al menos 5 caracteres. El formulario del portal no
+          // pide una referencia aparte, así que se usa el punto marcado en el
+          // mapa: es lo que la cuadrilla necesita para llegar.
+          direccionReferencia: referenciaDireccion.value,
+          lat, lng,
+          anonima: formulario.value.anonima === true,
+          referenciaCliente: referenciaEnvio.value,
+          adjuntos,
+        });
+
+        if (!res.ok) { errorEnvio.value = res.error; return; }
+
+        localStorage.removeItem('tipo_denuncia_seleccionado');
+        mostrarAlertaDuplicado.value = false;
+        denunciaPendiente.value = null;
+        limpiarMarcadoresSimilares();
+
+        // Se recarga la lista para que «Mis Denuncias» ya la tenga al llegar,
+        // en vez de mostrar un vacío durante un instante.
+        await cargarMisDenuncias();
+
+        avisoEnvio.value = res.duplicado
+          ? 'Esta denuncia ya estaba registrada.'
+          : `Denuncia registrada con el número ${res.correlativo}.` +
+            (fallaronFotos ? ' No se pudieron adjuntar todas las fotografías.' : '');
+
+        irA('mis-denuncias');
+      } catch (e) {
+        errorEnvio.value = 'No se pudo enviar la denuncia. Inténtalo de nuevo.';
+        console.error('[crear-denuncia]', e);
       }
-
-      // Guardar en localStorage (DEMO)
-      const denuncias = JSON.parse(localStorage.getItem('denuncias_poblacion') || '[]');
-      denuncias.push(denuncia);
-      localStorage.setItem('denuncias_poblacion', JSON.stringify(denuncias));
-
-      // Limpiar localStorage de tipo seleccionado
-      localStorage.removeItem('tipo_denuncia_seleccionado');
-
-      // Cerrar alerta si estaba abierta
-      mostrarAlertaDuplicado.value = false;
-      denunciaPendiente.value = null;
-      limpiarMarcadoresSimilares();
-
-      alert('Denuncia creada exitosamente');
-      irA('mis-denuncias');
     };
 
     // Cancelar guardado después de alerta de duplicado
@@ -718,6 +809,9 @@ export default {
       // degradación aceptable y no merece retrasar la pantalla.
       if (!perfilCiudadano.value) cargarPerfil();
       if (!distritosCatalogo.value.length) cargarDistritos();
+      // Las denuncias propias alimentan la comprobación de duplicados. Sin
+      // `await`: si llegan tarde, lo único que se pierde es ese aviso.
+      cargarMisDenuncias();
 
       // Primera pestaña por defecto. No se puede fijar al declararla porque
       // depende de qué grupos tengan categorías abiertas —los vacíos ni se
@@ -770,6 +864,8 @@ export default {
       cargandoCatalogo,
       errorCatalogo,
       sinCategoriasAbiertas,
+      // Envío real
+      enviandoDenuncia, subiendoEvidencias, errorEnvio, avisoEnvio,
       coordenadasSeleccionadas,
       mostrarMenuCapas,
       estiloTile,
