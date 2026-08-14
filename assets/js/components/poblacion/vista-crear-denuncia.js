@@ -30,14 +30,17 @@ export default {
     const pasoActual = ref(1);
     const totalPasos = 3;
 
-    // Categorías reales, agrupadas por el departamento que las resuelve.
-    //
-    // Antes eran dos pestañas fijas —«Seguridad y Emergencias» y «Ciudad y
-    // Servicios»— y cada categoría caía en una según palabras del nombre de su
-    // departamento. Una unidad nueva iba al cajón de sastre sin que nadie lo
-    // notara.
+    /* Categorías reales, en los tres macro-grupos de siempre: Ciudad,
+       Seguridad y Trámites. Los mismos que usa la PWA de campo, con el mismo
+       `utils/grupos-categorias.js`.
+
+       Se probó agrupar por departamento responsable y estaba mal: un vecino no
+       sabe si un bache lo atiende Obras Municipales o el Distrital, y salían
+       tantas pestañas como unidades con categorías abiertas, con nombres de
+       cuatro palabras. El departamento se muestra al confirmar la categoría
+       elegida, no como forma de encontrarla. */
     const {
-      porDepartamento, departamentos: departamentosCatalogo,
+      grupos: gruposCatalogo,
       cargando: cargandoCatalogo, errorCatalogo, sinCategoriasAbiertas,
       cargarCategoriasPublicas, categoriaPorId,
     } = useCatalogoPublico();
@@ -52,7 +55,10 @@ export default {
     const tabActivo = ref('');
 
     // Objeto plano porque la plantilla recorre `categoriasTabs[tabActivo]`.
-    const categoriasTabs = computed(() => Object.fromEntries(porDepartamento.value));
+    // La clave es el NOMBRE del grupo, que es lo que se pinta en la pestaña.
+    const categoriasTabs = computed(() =>
+      Object.fromEntries(gruposCatalogo.value.map((g) => [g.nombre, g.categorias]))
+    );
 
     // Estado del mapa
     const mapa = ref(null);
@@ -703,10 +709,10 @@ export default {
       if (!distritosCatalogo.value.length) cargarDistritos();
 
       // Primera pestaña por defecto. No se puede fijar al declararla porque
-      // depende de qué departamentos tengan categorías abiertas, y eso solo se
-      // sabe tras consultar.
-      if (!tabActivo.value && departamentosCatalogo.value.length) {
-        tabActivo.value = departamentosCatalogo.value[0];
+      // depende de qué grupos tengan categorías abiertas —los vacíos ni se
+      // pintan— y eso solo se sabe tras consultar.
+      if (!tabActivo.value && gruposCatalogo.value.length) {
+        tabActivo.value = gruposCatalogo.value[0].nombre;
       }
 
       // Una categoría guardada de una sesión anterior puede haber dejado de

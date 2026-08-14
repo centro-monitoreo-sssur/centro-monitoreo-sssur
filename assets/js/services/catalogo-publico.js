@@ -12,16 +12,25 @@
 // arranca vacío y la Alcaldía abre lo que decida. Abrir una categoría es
 // comprometer a un departamento a atenderla, y esa es una decisión suya.
 //
-// ── POR QUÉ AGRUPADO POR DEPARTAMENTO ───────────────────────────────────────
-// Es la agrupación real: cada categoría pertenece a la unidad que la resuelve,
-// vía `departamento_responsable_id`. La versión anterior repartía las
-// categorías entre dos pestañas fijas —«Seguridad y Emergencias» y «Ciudad y
-// Servicios»— decidiendo a cuál iba cada una por palabras del nombre del
-// departamento. Cualquier unidad nueva caía en el cajón de sastre sin que nadie
-// lo notara.
+// ── POR QUÉ NO SE AGRUPA POR DEPARTAMENTO ───────────────────────────────────
+// Se probó y estaba mal. Un vecino no sabe —ni tiene por qué— si un bache lo
+// atiende la «Unidad Operativa de Obras Municipales» o el «Departamento
+// Distrital»: piensa en el PROBLEMA, no en el organigrama. Además salían tantas
+// pestañas como unidades con categorías abiertas, con nombres de cuatro
+// palabras que desbordan la fila en un teléfono.
+//
+// Se usan los mismos tres macro-grupos que la PWA de campo —Ciudad, Seguridad,
+// Trámites— reutilizando `utils/grupos-categorias.js`. Ese archivo ya
+// documentaba exactamente este razonamiento para los empleados, y al ciudadano
+// le aplica con más motivo.
+//
+// El departamento sigue viajando en cada categoría: sirve como dato de
+// confirmación una vez elegida, no como criterio de navegación. Y el ruteo real
+// lo hace la base con `departamento_responsable_id`, no esta pantalla.
 // ============================================================
 import { ref, computed } from '../core/vue.js';
 import { db } from '../core/supabase.js';
+import { agruparCategorias } from '../utils/grupos-categorias.js';
 
 const categorias = ref([]);
 const cargando = ref(false);
@@ -101,24 +110,16 @@ async function cargarCategoriasPublicas() {
 }
 
 /**
- * Las categorías agrupadas por departamento, listas para pintar pestañas.
+ * Las categorías repartidas en Ciudad / Seguridad / Trámites.
  *
- * Se usa `Map` y no un objeto literal porque conserva el orden de inserción:
- * las categorías vienen ordenadas por nombre y así los departamentos salen
- * siempre en el mismo orden, en vez de depender de cómo el motor ordene las
- * claves de un objeto.
+ * `agruparCategorias` decide el grupo por el prefijo del `codigo` —VIA, ALU,
+ * RIE, COM…— y **descarta los grupos que quedan vacíos**, que es justo lo que
+ * hace falta aquí: si la Alcaldía solo abrió categorías de Ciudad, no se pinta
+ * una pestaña «Trámites» que no lleva a ninguna parte.
+ *
+ * Devuelve `[{ id, nombre, descripcion, icono, color, categorias }]`.
  */
-const porDepartamento = computed(() => {
-  const grupos = new Map();
-  for (const cat of categorias.value) {
-    if (!grupos.has(cat.departamento)) grupos.set(cat.departamento, []);
-    grupos.get(cat.departamento).push(cat);
-  }
-  return grupos;
-});
-
-/** Nombres de departamento, para la barra de pestañas. */
-const departamentos = computed(() => Array.from(porDepartamento.value.keys()));
+const grupos = computed(() => agruparCategorias(categorias.value));
 
 /** Busca una categoría por id. Devuelve null si no está entre las públicas. */
 function categoriaPorId(id) {
@@ -129,7 +130,7 @@ function categoriaPorId(id) {
 export function useCatalogoPublico() {
   return {
     categorias, cargando, errorCatalogo, sinCategoriasAbiertas,
-    porDepartamento, departamentos,
+    grupos,
     cargarCategoriasPublicas, categoriaPorId,
   };
 }
