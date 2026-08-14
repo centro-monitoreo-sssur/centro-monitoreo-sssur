@@ -224,6 +224,15 @@
           </label>
         </div>
 
+        <!-- DÓNDE. Va junto a la imagen y antes de la audiencia porque forma
+             parte de redactar el aviso, no de dirigirlo: un cierre de vía sin
+             el tramo dibujado obliga al vecino a adivinar qué calle es. -->
+        <mapa-editor-noticia
+          :punto="enEdicion.punto"
+          :trazado="enEdicion.trazado"
+          @update:punto="enEdicion.punto = $event"
+          @update:trazado="enEdicion.trazado = $event" />
+
         <!-- AUDIENCIA. Lo más importante del formulario: decide quién lo ve. -->
         <div>
           <label class="block mb-1.5 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">¿Quién debe verlo? *</label>

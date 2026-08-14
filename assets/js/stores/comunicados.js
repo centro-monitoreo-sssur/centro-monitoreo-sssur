@@ -33,6 +33,8 @@ const leidos = ref(new Set());
 const COLUMNAS = `
   id, titulo, categoria, categoria_color, categoria_icono, descripcion,
   trazado_geojson, autor, autor_icono, imagen_url, audiencias,
+  lat, lng,
+  lat, lng,
   fecha_publicacion, fecha_expiracion, created_at,
   noticias_distritos ( distrito_id )
 `;

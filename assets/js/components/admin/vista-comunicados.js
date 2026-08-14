@@ -39,6 +39,12 @@ const NUEVO = () => ({
   distritos: [],
   autor: 'Alcaldía de San Salvador Sur',
   imagen_url: '',
+  /* Dónde ocurre. El portal sabía pintar las dos cosas desde el principio —un
+     punto azul, o el trazo rojo de un cierre de vía con banderas de inicio y
+     fin— y ese código no se había ejecutado nunca, porque desde aquí no había
+     forma de publicarlas. */
+  punto: null,        // { lat, lng }
+  trazado: null,      // [[lat, lng], …]
   fecha_publicacion: '',
   fecha_expiracion: '',
   activa: true,
@@ -91,6 +97,13 @@ export default {
             // devuelve PostgREST; se recorta a `AAAA-MM-DDTHH:MM`.
             fecha_publicacion: paraInput(c.fecha_publicacion),
             fecha_expiracion: paraInput(c.fecha_expiracion),
+            /* La fila trae `lat`/`lng` sueltos —columnas generadas de la v39—
+               y el editor de mapa trabaja con un objeto. La conversión va aquí
+               y no en el store para que el formulario tenga una sola forma. */
+            punto: Number.isFinite(c.lat) && Number.isFinite(c.lng)
+              ? { lat: c.lat, lng: c.lng }
+              : null,
+            trazado: Array.isArray(c.trazado_geojson) ? c.trazado_geojson : null,
           }
         : NUEVO();
       modal.value = true;

@@ -43,7 +43,12 @@ export default {
     const filtroActivo = ref('todos');
     const noticiaSeleccionada = ref(null);
     const mostrandoMapa = ref(false);
-    const mapaDetalle = ref(null);
+    /* `let` plano y NUNCA un `ref`: un objeto de Leaflet dentro de un proxy
+       reactivo de Vue es el patrón que ya produjo el
+       `TypeError: ... '_latLngToNewLayerPoint'` en la consola del Mapa en Vivo.
+       Aquí no había estallado solo porque este mapa no se abría nunca —hacía
+       falta un trazado o unas coordenadas, y no había forma de publicarlos—. */
+    let mapaDetalle = null;
 
     /* Se traduce la fila de la base a la forma que ya esperaba la plantilla
        —camelCase, `trazado`, `leida`— en vez de tocar el marcado. Es una capa
@@ -65,6 +70,16 @@ export default {
       fecha: c.fecha,
       imagen: c.imagen_url || null,
       distritos: c.distritos,
+      /* Punto de referencia del comunicado: dónde es la jornada, el evento o
+         la obra. La plantilla y el mapa lo consultaban desde el principio pero
+         NADIE lo producía, así que el botón «Ver en mapa» solo aparecía con
+         trazado y el mapa centraba siempre en el municipio.
+
+         Sale de las columnas generadas que añade la v39, y no de `ubicacion`:
+         PostgREST entrega la geography como WKB hexadecimal. */
+      coordenadas: Number.isFinite(c.lat) && Number.isFinite(c.lng)
+        ? { lat: c.lat, lng: c.lng }
+        : null,
       // La columna guarda un arreglo de pares [lat, lng], que es justo lo que
       // consume `L.polyline`.
       trazado: Array.isArray(c.trazado_geojson) ? c.trazado_geojson : null,
@@ -132,9 +147,9 @@ export default {
     // Volver al feed
     const volverAlFeed = () => {
       noticiaSeleccionada.value = null;
-      if (mapaDetalle.value) {
-        mapaDetalle.value.remove();
-        mapaDetalle.value = null;
+      if (mapaDetalle) {
+        mapaDetalle.remove();
+        mapaDetalle = null;
       }
     };
 
@@ -147,7 +162,7 @@ export default {
 
     // Inicializar mapa de detalle
     const initMapaDetalle = () => {
-      if (mapaDetalle.value) return;
+      if (mapaDetalle) return;
       const noticia = noticiaSeleccionada.value;
       if (!noticia) return;
 
@@ -159,7 +174,7 @@ export default {
         ? [noticia.coordenadas.lat, noticia.coordenadas.lng]
         : [13.61229, -89.17036];
 
-      mapaDetalle.value = L.map(mapEl, {
+      mapaDetalle = L.map(mapEl, {
         zoomControl: true,
         attributionControl: false,
         scrollWheelZoom: true
@@ -168,7 +183,7 @@ export default {
       // Tile base Google Maps
       L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
         maxZoom: 20
-      }).addTo(mapaDetalle.value);
+      }).addTo(mapaDetalle);
 
       // Si hay trazado de cierre de calle: dibujar polyline
       if (noticia.trazado && noticia.trazado.length > 0) {
@@ -179,7 +194,7 @@ export default {
           dashArray: '10, 8',
           lineCap: 'round',
           lineJoin: 'round'
-        }).addTo(mapaDetalle.value);
+        }).addTo(mapaDetalle);
 
         // Marcadores de inicio/fin del cierre
         const iconoCierre = L.divIcon({
@@ -202,14 +217,14 @@ export default {
         });
 
         L.marker(noticia.trazado[0], { icon: iconoCierre })
-          .addTo(mapaDetalle.value)
+          .addTo(mapaDetalle)
           .bindPopup('Inicio del cierre');
         L.marker(noticia.trazado[noticia.trazado.length - 1], { icon: iconoCierre })
-          .addTo(mapaDetalle.value)
+          .addTo(mapaDetalle)
           .bindPopup('Fin del cierre');
 
         // Ajustar zoom para que se vea todo el trazo
-        mapaDetalle.value.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+        mapaDetalle.fitBounds(polyline.getBounds(), { padding: [30, 30] });
 
       } else if (noticia.coordenadas) {
         // Solo un punto de ubicación
@@ -233,12 +248,12 @@ export default {
         });
 
         L.marker([noticia.coordenadas.lat, noticia.coordenadas.lng], { icon: iconoNoticia })
-          .addTo(mapaDetalle.value)
+          .addTo(mapaDetalle)
           .bindPopup(noticia.titulo)
           .openPopup();
       }
 
-      setTimeout(() => mapaDetalle.value && mapaDetalle.value.invalidateSize(), 100);
+      setTimeout(() => mapaDetalle && mapaDetalle.invalidateSize(), 100);
     };
 
     // Helpers
@@ -275,9 +290,9 @@ export default {
 
     // Cleanup al desmontar
     onUnmounted(() => {
-      if (mapaDetalle.value) {
-        mapaDetalle.value.remove();
-        mapaDetalle.value = null;
+      if (mapaDetalle) {
+        mapaDetalle.remove();
+        mapaDetalle = null;
       }
     });
 

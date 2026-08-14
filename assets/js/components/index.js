@@ -44,6 +44,7 @@ import vistaCatalogo      from './admin/vista-catalogo.js';
 import vistaPoblacion     from './admin/vista-poblacion.js';
 import vistaNotificaciones from './admin/vista-notificaciones.js';
 import vistaComunicados from './admin/vista-comunicados.js';
+import mapaEditorNoticia from './admin/mapa-editor-noticia.js';
 // Piezas de la consola de monitoreo territorial
 import barraTerritorial  from './admin/mapa/barra-territorial.js';
 import tableroDistritos  from './admin/mapa/tablero-distritos.js';
@@ -110,6 +111,7 @@ export const componentes = {
   'vista-poblacion':        { comp: vistaPoblacion,        tpl: 'admin/vista-poblacion' },
   'vista-notificaciones':    { comp: vistaNotificaciones,   tpl: 'admin/vista-notificaciones' },
   'vista-comunicados':       { comp: vistaComunicados,      tpl: 'admin/vista-comunicados' },
+  'mapa-editor-noticia':     { comp: mapaEditorNoticia,    tpl: 'admin/mapa-editor-noticia' },
 
   // ── ADMIN · piezas de la consola de monitoreo territorial ──
   'barra-territorial':      { comp: barraTerritorial,      tpl: 'admin/mapa/barra-territorial' },

@@ -1,0 +1,90 @@
+<div class="space-y-2">
+
+  <div class="flex flex-wrap items-center gap-2">
+    <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mr-auto">
+      Lugar en el mapa
+    </label>
+
+    <!-- Los tres modos, no un interruptor: «ninguno» es una decisión tan
+         legítima como las otras dos y debe poder elegirse, no solo alcanzarse
+         borrando lo que ya se puso. -->
+    <div class="inline-flex rounded-xl border border-gray-200 dark:border-gray-600 p-0.5 bg-gray-50 dark:bg-gray-900/40">
+      <button v-for="m in [
+                { id: 'ninguno', rotulo: 'Sin lugar', icono: 'fa-ban' },
+                { id: 'punto',   rotulo: 'Un sitio',  icono: 'fa-location-dot' },
+                { id: 'trazado', rotulo: 'Cierre de vía', icono: 'fa-road-barrier' }
+              ]"
+              :key="m.id" type="button" @click="cambiarModo(m.id)"
+              :class="modo === m.id
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-300 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
+              class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors">
+        <i :class="'fa-solid ' + m.icono + ' mr-1 text-[10px]'"></i>{{ m.rotulo }}
+      </button>
+    </div>
+  </div>
+
+  <!-- El mapa se mantiene MONTADO en modo «sin lugar» y solo se atenúa.
+       Destruirlo y recrearlo al cambiar de pestaña obliga a Leaflet a volver a
+       medir el contenedor y a recargar las teselas cada vez. -->
+  <div class="relative rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-600">
+    <div id="mapa-editor-noticia" class="w-full" style="height: 260px;"></div>
+
+    <!-- z-[1000]: los paneles internos de Leaflet llegan a 700 y sus controles
+         a 800, y el contenedor del mapa no crea contexto de apilamiento propio.
+         Con un valor menor, la capa quedaría por debajo de los marcadores. -->
+    <div v-if="modo === 'ninguno'"
+         class="absolute inset-0 z-[1000] flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-[1px]">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 px-4 text-center">
+        Elige «Un sitio» o «Cierre de vía» para marcar en el mapa.
+      </p>
+    </div>
+
+    <!-- Barra de acciones. Por encima de los controles de Leaflet (800). -->
+    <div v-if="modo === 'trazado'"
+         class="absolute bottom-2 right-2 z-[900] flex gap-1.5">
+      <button type="button" @click="deshacerPunto" :disabled="!puntosTrazado.length"
+              class="px-2.5 py-1.5 rounded-lg bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-600
+                     text-[11px] font-bold text-gray-700 dark:text-gray-200 shadow-sm
+                     disabled:opacity-40 disabled:cursor-not-allowed">
+        <i class="fa-solid fa-rotate-left mr-1 text-[10px]"></i>Deshacer
+      </button>
+      <button type="button" @click="limpiar" :disabled="!puntosTrazado.length"
+              class="px-2.5 py-1.5 rounded-lg bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-600
+                     text-[11px] font-bold text-red-600 dark:text-red-400 shadow-sm
+                     disabled:opacity-40 disabled:cursor-not-allowed">
+        <i class="fa-solid fa-trash mr-1 text-[10px]"></i>Borrar
+      </button>
+    </div>
+
+    <div v-else-if="modo === 'punto' && puntoActual"
+         class="absolute bottom-2 right-2 z-[900]">
+      <button type="button" @click="limpiar"
+              class="px-2.5 py-1.5 rounded-lg bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-600
+                     text-[11px] font-bold text-red-600 dark:text-red-400 shadow-sm">
+        <i class="fa-solid fa-trash mr-1 text-[10px]"></i>Quitar marca
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ ayuda }}</p>
+
+    <!-- Lo que se va a guardar, dicho en claro. Un trazado de un solo punto no
+         se guarda —el portal no sabría dibujarlo— y callarlo dejaría al
+         operador creyendo que publicó un cierre que nadie verá. -->
+    <p v-if="modo === 'trazado' && puntosTrazado.length === 1"
+       class="text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+      <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+      Con un solo punto no se guarda el cierre.
+    </p>
+    <p v-else-if="modo === 'trazado' && hayTrazadoUtil"
+       class="text-[11px] font-mono text-gray-400 dark:text-gray-500">
+      {{ puntosTrazado.length }} punto(s)
+    </p>
+    <p v-else-if="modo === 'punto' && puntoActual"
+       class="text-[11px] font-mono text-gray-400 dark:text-gray-500">
+      {{ puntoActual.lat.toFixed(5) }}, {{ puntoActual.lng.toFixed(5) }}
+    </p>
+  </div>
+</div>

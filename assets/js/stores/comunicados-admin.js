@@ -33,12 +33,51 @@ export const AUDIENCIAS = Object.freeze([
     ayuda: 'Solo para quien opera el panel.' },
 ]);
 
+/* `lat` y `lng` en lugar de `ubicacion`: son columnas generadas por la v39
+   precisamente porque PostgREST entrega la geography como WKB hexadecimal, que
+   en el navegador no sirve para nada. Se ESCRIBE `ubicacion` y se LEE lat/lng. */
 const COLUMNAS = `
   id, titulo, categoria, categoria_color, categoria_icono, descripcion,
   autor, autor_icono, imagen_url, audiencias,
+  lat, lng, trazado_geojson,
   fecha_publicacion, fecha_expiracion, activa, created_at,
   noticias_distritos ( distrito_id )
 `;
+
+/**
+ * Pasa un punto { lat, lng } al texto que PostGIS acepta en una columna
+ * geography.
+ *
+ * EWKT y no GeoJSON porque va como un valor de texto más dentro del cuerpo que
+ * manda PostgREST; PostGIS lo convierte al recibirlo. **El orden es POINT(lng
+ * lat)**, al revés de como se escribe una coordenada en el habla corriente y al
+ * revés de como se guarda el trazado: es el error clásico con PostGIS y planta
+ * el punto en medio del océano Índico sin dar ningún aviso.
+ */
+function puntoAEwkt(punto) {
+  if (!punto) return null;
+  const lat = Number(punto.lat);
+  const lng = Number(punto.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return `SRID=4326;POINT(${lng} ${lat})`;
+}
+
+/**
+ * Deja el trazado en la forma que exige el CHECK de la v39: un arreglo de al
+ * menos dos pares [lat, lng] numéricos.
+ *
+ * Un tramo de un solo punto no es un tramo. Se descarta aquí en vez de dejar
+ * que lo rechace la base, porque el mensaje de un CHECK no le dice nada a quien
+ * está redactando un comunicado.
+ */
+function normalizarTrazado(trazado) {
+  if (!Array.isArray(trazado)) return null;
+  const pares = trazado
+    .filter((p) => Array.isArray(p) && p.length === 2)
+    .map((p) => [Number(p[0]), Number(p[1])])
+    .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+  return pares.length >= 2 ? pares : null;
+}
 
 /** Una escritura bloqueada por RLS responde 200 con cero filas, no un error. */
 function verificarAfectadas(data, accion) {
@@ -120,6 +159,7 @@ async function guardarComunicado(datos) {
 
   guardando.value = true;
   try {
+    const trazadoLimpio = normalizarTrazado(datos.trazado);
     const payload = {
       titulo,
       descripcion,
@@ -130,6 +170,14 @@ async function guardarComunicado(datos) {
       autor: (datos.autor || '').trim() || 'Alcaldía de San Salvador Sur',
       autor_icono: 'fa-building-columns',
       imagen_url: (datos.imagen_url || '').trim() || null,
+      /* Dónde ocurre. Un comunicado señala un sitio o un tramo, nunca los dos:
+         el portal dibuja el trazado con preferencia, así que guardar ambos
+         dejaría un punto invisible que reaparecería al volver a editar.
+         Se manda explícitamente `null` en el que no toca para que al editar un
+         comunicado se pueda BORRAR lo que tenía; omitir la clave lo dejaría
+         como estaba. */
+      ubicacion: trazadoLimpio ? null : puntoAEwkt(datos.punto),
+      trazado_geojson: trazadoLimpio,
       // Los `datetime-local` vacíos llegan como '' y la columna es timestamptz:
       // un '' la haría fallar con un error de tipo, no de validación.
       fecha_publicacion: datos.fecha_publicacion || null,
