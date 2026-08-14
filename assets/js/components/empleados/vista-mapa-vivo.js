@@ -13,6 +13,7 @@ import { leerVistaMapa, restaurarVistaMapa, vigilarVistaMapa } from '../../utils
 import { crearTesela, normalizarTesela } from '../../services/mapa/teselas.js';
 import { CAPAS } from '../../services/mapa/capas-territoriales.js';
 import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
+import { useUbicacion } from '../../services/ubicacion.js';
 
 export default {
   setup() {
@@ -54,10 +55,21 @@ export default {
     const ubicacionActiva = ref(false);
     const precisionUbicacion = ref(null);
     const errorUbicacion = ref('');
-    // Modo seguir: el mapa se recentra solo mientras la cuadrilla se desplaza.
-    // Es lo que evita tener que pulsar "Mi ubicación" en cada esquina.
-    const siguiendo = ref(false);
-    let _watchId = null;
+
+    /* El GPS lo lleva `services/ubicacion.js`, que ya empezó a buscar al abrir
+       la aplicación. Antes esta vista lo pedía por su cuenta DESPUÉS de crear
+       el mapa, así que la espera del primer arreglo —hasta 15 s bajo techo— se
+       sumaba a la carga en vez de solaparse con ella.
+
+       `siguiendo` viene del servicio y ya no es un ref local: el seguimiento
+       es del dispositivo, no de esta pantalla, y tenerlo duplicado permitía
+       que la vista creyera estar siguiendo cuando el watch ya se había caído. */
+    const {
+      posicion: posicionActual,
+      errorUbicacion: errorGps,
+      siguiendo,
+      obtenerPosicion, iniciarSeguimiento, detenerSeguimiento,
+    } = useUbicacion();
 
     const { tiposDenuncia } = useCatalogos();
 
@@ -266,68 +278,51 @@ export default {
      */
     function alternarSeguimiento() {
       if (siguiendo.value) { detenerSeguimiento(); return; }
-      if (!navigator.geolocation || !mapa.value) return;
+      if (!mapa.value) return;
 
-      siguiendo.value = true;
-      _watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          pintarPosicion(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, true);
-          cargandoUbicacion.value = false;
-        },
-        (err) => {
-          // Un error puntual del GPS no apaga el seguimiento: en campo es
-          // normal perder el arreglo un momento al pasar bajo techo.
-          if (err.code === 1) { detenerSeguimiento(); errorUbicacion.value = 'Permiso de ubicación denegado.'; }
-          else console.warn('GPS (seguimiento):', err.message);
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-      );
+      // Si ya hay una posición reciente del precalentamiento, se pinta de
+      // inmediato en vez de esperar al primer aviso de `watchPosition`, que
+      // puede tardar varios segundos.
+      const previa = posicionActual.value;
+      if (previa) pintarPosicion(previa.lat, previa.lng, previa.precision, true);
+
+      iniciarSeguimiento((p) => {
+        if (!mapa.value) return;
+        pintarPosicion(p.lat, p.lng, p.precision, true);
+        cargandoUbicacion.value = false;
+      });
 
       // Si la persona arrastra el mapa a mano, quiere mirar otra cosa: seguir
       // recentrando encima sería pelearse con ella.
       mapa.value.once('dragstart', detenerSeguimiento);
     }
 
-    function detenerSeguimiento() {
-      if (_watchId !== null) { navigator.geolocation.clearWatch(_watchId); _watchId = null; }
-      siguiendo.value = false;
-    }
-
-    function obtenerUbicacion() {
+    /**
+     * Centra el mapa en la posición del empleado.
+     *
+     * Pasa por `services/ubicacion.js`, que ya empezó a buscar al abrir la
+     * aplicación: si el arreglo llegó mientras se dibujaba el mapa, esto
+     * responde al instante en vez de encender el GPS otra vez.
+     *
+     * El error, si lo hay, NO devuelve el mapa a las coordenadas por defecto:
+     * quien estaba mirando una zona la perdía por un fallo de GPS que no había
+     * provocado. El mapa se queda donde está y solo se avisa.
+     */
+    async function obtenerUbicacion() {
       if (!mapa.value) return;
-      if (!navigator.geolocation) {
-        errorUbicacion.value = 'Este dispositivo no permite geolocalización.';
-        return;
-      }
 
       cargandoUbicacion.value = true;
       errorUbicacion.value = '';
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          const accuracy = pos.coords.accuracy;
-          
-          pintarPosicion(lat, lng, accuracy, true);
-          cargandoUbicacion.value = false;
-        },
-        (err) => {
-          cargandoUbicacion.value = false;
-          // Antes se devolvía el mapa a las coordenadas por defecto: quien
-          // estaba mirando una zona la perdía por un fallo de GPS que no había
-          // provocado. Ahora el mapa se queda donde está y solo se avisa.
-          errorUbicacion.value =
-            err.code === 1 ? 'Permiso de ubicación denegado. Actívalo en los ajustes del navegador.'
-            : err.code === 3 ? 'El GPS tardó demasiado. Inténtalo de nuevo en un punto despejado.'
-            : 'No se pudo obtener la ubicación.';
-          console.warn('GPS Error:', err);
-        },
-        // 15 s en vez de 5: en campo, con señal débil y bajo techo, el primer
-        // arreglo de GPS rara vez llega en cinco segundos y el timeout corto
-        // hacía fallar la petición justo cuando más falta hace.
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
-      );
+      const p = await obtenerPosicion({ maxEdadMs: 30000 });
+
+      cargandoUbicacion.value = false;
+      // El mapa puede haberse destruido mientras se esperaba —el empleado
+      // cambió de pantalla—, y pintar sobre él reventaría.
+      if (!mapa.value) return;
+
+      if (!p) { errorUbicacion.value = errorGps.value || 'No se pudo obtener la ubicación.'; return; }
+      pintarPosicion(p.lat, p.lng, p.precision, true);
     }
 
     function limpiarErrorUbicacion() { errorUbicacion.value = ''; }

@@ -10,6 +10,7 @@ import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
 import { useCatalogoPublico } from '../../services/catalogo-publico.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useCiudadano } from '../../stores/ciudadano.js';
+import { useUbicacion } from '../../services/ubicacion.js';
 import { comprimirImagen } from '../../utils/image-compressor.js';
 import { validarDenunciaDuplicada, generarResumenSimilares } from '../../utils/validacion-duplicados.js';
 
@@ -44,6 +45,9 @@ export default {
     // Para centrar el mapa en el distrito de quien reporta.
     const { distritos: distritosCatalogo, cargarDistritos } = useCatalogos();
     const { perfil: perfilCiudadano, cargarPerfil } = useCiudadano();
+    // Posición ya buscada al abrir la aplicación; sirve para encuadrar el mapa
+    // de entrada, no para fijar el punto de la denuncia.
+    const { posicion: posicionGps } = useUbicacion();
 
     const tabActivo = ref('');
 
@@ -137,6 +141,18 @@ export default {
           'Santo Tomás': [13.643984, -89.140564]
         };
         const CENTRO_MUNICIPIO = [13.61229, -89.17036];
+
+        /* Si el precalentamiento del GPS ya trajo una posición, se abre ahí.
+           Es mucho mejor punto de partida que el centroide de un distrito de
+           varios kilómetros, y hace que el mapa aparezca ya encuadrado en vez
+           de saltar unos segundos después.
+
+           No sustituye a `obtenerUbicacion`: esa sigue buscando el arreglo
+           preciso —con sus reintentos si la precisión no baja de 50 m— porque
+           para clavar el punto de una denuncia la exactitud sí importa. Esto
+           solo evita que el vecino mire un mapa equivocado mientras tanto. */
+        const p = posicionGps.value;
+        if (p) return [p.lat, p.lng];
 
         const id = perfilCiudadano.value?.distrito_id;
         if (id == null) return CENTRO_MUNICIPIO;

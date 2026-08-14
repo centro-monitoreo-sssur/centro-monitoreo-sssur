@@ -12,6 +12,7 @@ import { usePwa } from '../../stores/pwa.js';
 import { usePermisos } from '../../stores/permisos.js';
 import { CONTEXTO, CONTEXTOS } from '../../core/app-contexto.js';
 import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
+import { useUbicacion } from '../../services/ubicacion.js';
 import { obtenerContexto } from '../../utils/demo-data.js';
 
 export default {
@@ -25,6 +26,7 @@ export default {
     const { cargarIntervenciones } = useIntervenciones();
     const { cargarKpis } = useDashboard();
     const { registrarSW, mostrarModalInstalacion, instalarPWA, posponerInstalacion } = usePwa();
+    const { precalentar: precalentarUbicacion } = useUbicacion();
     const { cargarAlcance, cargarPermisosModulo } = usePermisos();
 
     // Estado del modal de logout
@@ -143,6 +145,23 @@ export default {
     onMounted(async () => {
       // PWA Setup
       registrarSW();
+
+      /* El GPS, cuanto antes.
+
+         El primer arreglo tarda entre 3 y 15 segundos, más bajo techo o con
+         señal débil. Cada vista lo pedía DESPUÉS de crear su mapa, así que esa
+         espera se sumaba a la carga en vez de solaparse con ella. Arrancando
+         aquí, para cuando el mapa está dibujado la posición suele estar lista.
+
+         Solo en las dos PWA: el Centro de Monitoreo se usa en un escritorio,
+         donde la ubicación sale de la IP y no aporta nada.
+
+         No se espera el resultado —no lleva `await`— porque nada de la pantalla
+         depende de él. Y solo actúa si el permiso YA estaba concedido: ver el
+         encabezado de services/ubicacion.js sobre por qué no se pide de entrada. */
+      if (CONTEXTO === CONTEXTOS.EMPLEADOS || CONTEXTO === CONTEXTOS.POBLACION) {
+        precalentarUbicacion();
+      }
 
       // El contexto ya está resuelto; aquí solo se aplica la vista que impone.
       const contexto = aplicarContextoInicial();

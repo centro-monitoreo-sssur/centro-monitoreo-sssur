@@ -21,6 +21,7 @@ import { subirEvidencias, evidenciasConfiguradas } from '../../services/evidenci
 import { crearTesela, normalizarTesela } from '../../services/mapa/teselas.js';
 import { CAPAS } from '../../services/mapa/capas-territoriales.js';
 import { usePreferenciasCampo } from '../../stores/preferencias-campo.js';
+import { useUbicacion } from '../../services/ubicacion.js';
 import { almacen } from '../../core/almacen.js';
 import { useOfflineQueue } from '../../stores/offline-queue.js';
 import { useConexion } from '../../services/conexion.js';
@@ -38,6 +39,9 @@ export default {
     const { agregarOperacion, TIPOS_OPERACION } = useOfflineQueue();
     const { estaOnline } = useConexion();
     const { tiposDenuncia, areaDeTipo } = useCatalogos();
+    // Posición precalentada al abrir la aplicación: encuadra el mapa de
+    // entrada, no fija el punto del reporte.
+    const { posicion: posicionGps } = useUbicacion();
 
     const formulario = ref({
       categoriaId: almacen.leerTexto(CLAVE_CATEGORIA),
@@ -327,12 +331,23 @@ export default {
         return;
       }
 
-      const centro = [13.61229, -89.17036];
+      /* Si el GPS que se precalentó al abrir la aplicación ya trajo posición,
+         el mapa abre encima del empleado en vez de en el centro del municipio.
+         En campo eso ahorra el arrastre inicial, que es justo lo que estorba
+         cuando se está de pie frente al incidente.
+
+         No sustituye a `obtenerUbicacion`: esa sigue buscando el arreglo
+         preciso, con sus reintentos, porque el punto del reporte debe ser
+         exacto. Esto solo evita mirar un mapa equivocado mientras llega. */
+      const gps = posicionGps.value;
+      const centro = gps ? [gps.lat, gps.lng] : [13.61229, -89.17036];
+      const zoomInicial = gps ? 17 : 13;
+
       mapa.value = L.map('map-levantar-denuncia', {
         zoomControl: true,
         zoomAnimation: false,
         markerZoomAnimation: false
-      }).setView(centro, 13);
+      }).setView(centro, zoomInicial);
 
       capaBase.value = construirTile(estiloTile.value).addTo(mapa.value);
       cargarLimitesMunicipio();
