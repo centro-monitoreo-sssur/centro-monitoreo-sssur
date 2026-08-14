@@ -9,21 +9,6 @@
   <!-- PWA & Mobile Install -->
   <link rel="manifest" href="/manifest.json">
   <script>
-    // Un manifest POR APLICACIÓN, elegido según la RUTA.
-    //
-    // Antes las tres se distinguían por `?contexto=`, y eso bastaba para
-    // arrancar en la correcta pero no para poder instalarlas: el `scope` de un
-    // manifiesto se compara solo por ruta y la cadena de consulta se ignora.
-    // Los tres resolvían a `scope: "/"`, así que la primera aplicación que se
-    // instalaba se apropiaba del origen y en las otras el navegador ofrecía
-    // «Abrir en la aplicación» en vez de «Instalar».
-    //
-    // Ahora cada una vive bajo su propia ruta —/panel/, /campo/, /ciudadano/—
-    // que el .htaccess reescribe a este mismo index.html.
-    //
-    // Va aquí, en línea y justo detrás del <link>, porque el navegador lee el
-    // manifiesto muy pronto —antes de que se evalúe ningún módulo ES— para
-    // decidir si ofrece instalar.
     (function () {
       var porRuta = { campo: 'empleados', ciudadano: 'poblacion' };
       var primerTramo = location.pathname.split('/')[1];
@@ -44,47 +29,25 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // ============================================================
-    // ESCALA DE DISEÑO (Fase 0)
-    // Tailwind por CDN sí admite extender el tema: basta declararlo antes de
-    // que se use ninguna clase. Sin esto, la identidad municipal solo existía
-    // como variables CSS en tokens.css —invisibles para las utilidades— y cada
-    // plantilla terminaba escribiendo `bg-blue-600`, que no es el azul de la
-    // alcaldía.
-    //
-    // Las variables de tokens.css NO se sustituyen: siguen siendo la fuente de
-    // la paleta operativa configurable por el administrador. Esto es la capa
-    // estática (identidad + superficies), que no cambia en tiempo de ejecución.
-    // ============================================================
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            // Azul institucional San Salvador Sur. El 600 es el color oficial;
-            // el resto es la escala derivada para estados y fondos tenues.
             brand: {
               50:  '#eef2ff', 100: '#dde4ff', 200: '#bcc9ff', 300: '#93a5fb',
               400: '#6076ef', 500: '#3048d2', 600: '#001ba0', 700: '#001785',
               800: '#00126a', 900: '#0d1a5c', 950: '#0a1240',
             },
-            // Acento institucional (Protección Civil).
             gold: {
               50: '#fffbeb', 100: '#fff3c4', 200: '#ffe680', 300: '#ffd94d',
               400: '#ffcc00', 500: '#e6b800', 600: '#b38f00', 700: '#806600',
             },
             gray: {
-              // Tailwind no trae el 750 y cuatro plantillas ya lo usaban en
-              // `dark:hover:bg-gray-750`: la clase no existía, así que el hover
-              // en modo oscuro simplemente no ocurría. Se define en lugar de
-              // borrar los usos, porque el escalón intermedio hace falta de
-              // verdad entre el 700 (#374151) y el 800 (#1f2937).
               750: '#2a323f',
             },
           },
           boxShadow: {
-            // Sombras suaves de tarjeta. Sustituyen al `shadow-sm` genérico,
-            // que en modo oscuro desaparece por completo.
             card:       '0 1px 3px 0 rgb(16 24 40 / 0.08), 0 1px 2px -1px rgb(16 24 40 / 0.06)',
             'card-hover':'0 8px 24px -4px rgb(16 24 40 / 0.12), 0 2px 6px -2px rgb(16 24 40 / 0.07)',
             popover:    '0 12px 32px -8px rgb(16 24 40 / 0.20)',
@@ -94,7 +57,6 @@
             mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
           },
           fontSize: {
-            // Escala de títulos: evita que cada vista invente su propio tamaño.
             'title-sm': ['1.125rem', { lineHeight: '1.6rem',  fontWeight: '600' }],
             'title-md': ['1.5rem',   { lineHeight: '2rem',    fontWeight: '700' }],
             'title-lg': ['1.875rem', { lineHeight: '2.375rem',fontWeight: '700' }],
@@ -103,7 +65,6 @@
       },
     }
   </script>
-  <!-- Anti-FOUC para Dark Mode -->
   <script>
     if (localStorage.getItem('color-theme') === 'dark') {
       document.documentElement.classList.add('dark');
@@ -121,9 +82,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
   <script src="https://unpkg.com/vue-virtual-scroller@2.0.0-beta.8/dist/vue-virtual-scroller.min.js"></script>
-  <!-- Supabase SDK. Se cargaba dos veces (el paquete y su bundle UMD); el
-       segundo pisaba al primero, así que era una descarga tirada. Se conserva
-       el UMD, que es el que define `window.supabase`. -->
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
   <script src="/assets/js/services/geo-json/limites-municipio.js"></script>
@@ -143,8 +101,6 @@
      ESTILOS MODULARES (orden de cascada: tokens → base → componentes)
      ============================================================ -->
   <link rel="stylesheet" href="/assets/css/tokens.css">
-  <!-- Tema oscuro y comodidad táctil de la PWA de campo. Acotado por
-       [data-contexto="empleados"], que pone core/app-contexto.js. -->
   <link rel="stylesheet" href="/assets/css/pwa-oscuro.css">
   <link rel="stylesheet" href="/assets/css/base.css">
   <link rel="stylesheet" href="/assets/css/skeleton.css">
@@ -154,15 +110,7 @@
 </head>
 
 <body>
-  <!-- El shell completo se renderiza por Vue a partir de las plantillas
-     modulares en assets/templates/. app.js carga todo y monta aquí. -->
   <div id="app" v-cloak></div>
-
-  <!-- Los GeoJSON del municipio y de los distritos ya se cargan en el <head>,
-       antes de validacion-limites.js, que es quien los consume. Aquí estaban
-       repetidos: ~290 KB descargados dos veces en cada arranque, que en un
-       teléfono con datos móviles en territorio no es un detalle. -->
-  <!-- Bootstrap de la aplicación (módulos ES). Debe servirse por HTTP. -->
   <script type="module" src="/assets/js/app.js"></script>
 </body>
 

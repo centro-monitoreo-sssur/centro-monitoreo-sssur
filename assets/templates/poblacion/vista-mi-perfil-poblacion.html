@@ -43,15 +43,48 @@
       {{ avisoPerfil }}
     </div>
 
+    <!-- El error de la foto ocurre FUERA del modal —se cambia pulsando el
+         avatar—, así que necesita su propio aviso aquí. Dentro del modal se
+         muestra el mismo `errorPerfil` para lo que falle al guardar. -->
+    <div v-if="errorPerfil && !mostrarModalEditarPerfil"
+         class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+      <i class="fa-solid fa-triangle-exclamation mt-0.5" aria-hidden="true"></i>
+      {{ errorPerfil }}
+    </div>
+
     <!-- Ficha -->
     <div class="bg-white rounded-3xl shadow-lg shadow-gray-200/50 p-6 border border-gray-100">
       <div class="flex items-center space-x-4 mb-6">
-        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg shrink-0">
-          <span class="text-white text-2xl font-bold">{{ nombreCompleto.charAt(0) }}</span>
-        </div>
+        <!-- La foto se cambia pulsando el avatar. Es un gesto suelto: meterlo
+             en el formulario obligaría a abrirlo y guardarlo para algo que ya
+             quedó resuelto al elegir el archivo. -->
+        <label class="relative w-20 h-20 shrink-0 group"
+               :class="fotoConfigurada && !subiendoFoto ? 'cursor-pointer' : 'cursor-default'">
+          <img v-if="fotoUrl" :src="fotoUrl" alt="Tu foto de perfil"
+               class="w-20 h-20 rounded-full object-cover shadow-lg bg-gray-100">
+          <div v-else
+               class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+            <span class="text-white text-2xl font-bold">{{ iniciales }}</span>
+          </div>
+
+          <span v-if="fotoConfigurada"
+                class="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center text-gray-600">
+            <i class="fa-solid text-[11px]"
+               :class="subiendoFoto ? 'fa-circle-notch fa-spin' : 'fa-camera'" aria-hidden="true"></i>
+          </span>
+
+          <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only"
+                 :disabled="!fotoConfigurada || subiendoFoto"
+                 @change="cambiarFoto"
+                 aria-label="Cambiar mi foto de perfil">
+        </label>
+
         <div class="min-w-0">
           <h2 class="text-xl font-bold text-gray-900 break-words">{{ nombreCompleto }}</h2>
           <p class="text-sm text-gray-500">Ciudadano</p>
+          <p v-if="fotoConfigurada" class="text-[11px] text-gray-400 mt-0.5">
+            Toca la foto para cambiarla
+          </p>
         </div>
       </div>
 

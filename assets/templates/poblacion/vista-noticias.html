@@ -108,26 +108,6 @@
           </div>
         </div>
 
-        <!-- Respuestas oficiales -->
-        <div v-if="noticiaSeleccionada.respuestas.length > 0" class="space-y-3">
-          <div class="h-px bg-gray-100"></div>
-          <div v-for="(resp, i) in noticiaSeleccionada.respuestas" :key="i"
-            class="flex items-start gap-3">
-            <div class="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-              <i class="fa-solid fa-building-columns text-white text-xs"></i>
-            </div>
-            <div class="flex-1 bg-blue-50 rounded-2xl rounded-tl-sm px-4 py-3">
-              <div class="flex items-center gap-1.5 mb-1.5">
-                <p class="text-xs font-bold text-blue-900">{{ resp.autor }}</p>
-                <span class="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                  <i class="fa-solid fa-check text-white text-[8px]"></i>
-                </span>
-                <span class="text-[10px] text-blue-400 ml-auto">{{ formatearFechaRelativa(resp.fecha) }}</span>
-              </div>
-              <p class="text-xs text-blue-800 leading-relaxed">{{ resp.texto }}</p>
-            </div>
-          </div>
-        </div>
 
       </div>
     </div>
@@ -175,14 +155,34 @@
     <main class="flex-1 overflow-y-auto pb-32">
 
       <!-- Sin resultados -->
-      <div v-if="noticiasFiltradas.length === 0"
+      <!-- Los tres estados se veían igual —una lista vacía— y ninguno se
+           explicaba: pidiendo, fallo de consulta, y nada que mostrar. -->
+      <div v-if="cargando" class="flex flex-col items-center justify-center py-20 px-8 text-center gap-3">
+        <i class="fa-solid fa-circle-notch fa-spin text-blue-400 text-3xl" aria-hidden="true"></i>
+        <p class="text-sm text-gray-400">Cargando comunicados...</p>
+      </div>
+
+      <div v-else-if="errorComunicados"
+        class="flex flex-col items-center justify-center py-20 px-8 text-center gap-4">
+        <div class="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center">
+          <i class="fa-solid fa-triangle-exclamation text-amber-400 text-3xl" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="font-bold text-gray-700">{{ errorComunicados }}</p>
+          <p class="text-sm text-gray-400 mt-1">Revisa tu conexión e inténtalo de nuevo.</p>
+        </div>
+      </div>
+
+      <div v-else-if="noticiasFiltradas.length === 0"
         class="flex flex-col items-center justify-center py-20 px-8 text-center gap-4">
         <div class="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center">
           <i class="fa-solid fa-newspaper text-gray-300 text-3xl"></i>
         </div>
         <div>
-          <p class="font-bold text-gray-700">Sin noticias</p>
-          <p class="text-sm text-gray-400 mt-1">No hay avisos para este filtro en tu zona.</p>
+          <p class="font-bold text-gray-700">Sin comunicados</p>
+          <p class="text-sm text-gray-400 mt-1">
+            {{ filtroActivo === 'todos' ? 'La Alcaldía todavía no ha publicado avisos.' : 'No hay avisos para este filtro.' }}
+          </p>
         </div>
       </div>
 
@@ -257,10 +257,6 @@
               </div>
             </div>
             <div class="flex items-center gap-3 text-gray-400">
-              <span class="flex items-center gap-1 text-[11px]">
-                <i class="fa-regular fa-comment text-[11px]"></i>
-                {{ noticia.respuestas.length }}
-              </span>
               <i class="fa-solid fa-chevron-right text-[11px]"></i>
             </div>
           </div>

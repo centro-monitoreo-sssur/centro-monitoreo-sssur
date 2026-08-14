@@ -1,19 +1,34 @@
-﻿// Vista: Noticias Municipales (Ciudadanos)
-// DEMO: Datos simulados — reemplazar con API real
+﻿// Vista: Comunicados de la municipalidad (portal ciudadano)
+//
+// Mostraba cuatro avisos escritos a mano en `utils/noticias-demo.js`, con
+// fechas de julio. Ahora sale de la tabla `noticias`, y lo que cada quien ve lo
+// decide la RLS por el arreglo `audiencias` de la v36: al vecino solo le llegan
+// los marcados como `publico`.
+//
+// El catálogo de categorías y el formateador de fechas se siguen importando de
+// `noticias-demo.js` porque no son datos de demostración: son presentación, y
+// no tienen dónde vivir mejor por ahora.
 import { ref, computed, onMounted, onUnmounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { L } from '../../core/libs.js';
-import { noticiasDemo, categoriasNoticias, formatearFechaRelativa } from '../../utils/noticias-demo.js';
+import { categoriasNoticias, formatearFechaRelativa } from '../../utils/noticias-demo.js';
+import { useComunicados } from '../../stores/comunicados.js';
+import { useCiudadano } from '../../stores/ciudadano.js';
 
 export default {
   setup() {
     const { irA } = useNavegacion();
+    const {
+      comunicados, cargando, errorComunicados,
+      estaLeido, sinLeer, cargarComunicados, marcarLeido,
+    } = useComunicados();
+    const { perfil, cargarPerfil } = useCiudadano();
 
-    // Obtener distrito del usuario registrado
-    const distritoUsuario = computed(() => {
-      const datos = localStorage.getItem('ciudadano_datos');
-      return datos ? (JSON.parse(datos).distrito || '') : '';
-    });
+    // El distrito sale de la ficha del ciudadano. Antes se leía de
+    // `localStorage.ciudadano_datos`, la clave del registro simulado que desde
+    // el bloque 2 no escribe nadie, así que el filtro «Mi zona» no funcionaba.
+    // Es un ID, no un nombre: `noticias_distritos` guarda claves foráneas.
+    const distritoUsuario = computed(() => perfil.value?.distrito_id ?? null);
 
     // Estado reactivo
     const filtroActivo = ref('todos');
@@ -21,8 +36,31 @@ export default {
     const mostrandoMapa = ref(false);
     const mapaDetalle = ref(null);
 
-    // DEMO: noticias como ref para poder marcarlas como leídas
-    const noticias = ref(noticiasDemo.map(n => ({ ...n })));
+    /* Se traduce la fila de la base a la forma que ya esperaba la plantilla
+       —camelCase, `trazado`, `leida`— en vez de tocar el marcado. Es una capa
+       fina y deja el cambio acotado a este archivo.
+
+       `respuestas` NO se traduce: eran respuestas oficiales del demo y la
+       tabla no tiene dónde guardarlas. Se retira de la plantilla en vez de
+       fingir que existen. */
+    const noticias = computed(() => comunicados.value.map((c) => ({
+      id: c.id,
+      titulo: c.titulo,
+      descripcion: c.descripcion,
+      categoria: c.categoria,
+      categoriaColor: c.categoria_color || 'gray',
+      categoriaIcono: c.categoria_icono || 'fa-bullhorn',
+      autor: c.autor || 'Alcaldía de San Salvador Sur',
+      autorIcono: c.autor_icono || 'fa-building-columns',
+      autorColor: 'blue',
+      fecha: c.fecha,
+      imagen: c.imagen_url || null,
+      distritos: c.distritos,
+      // La columna guarda un arreglo de pares [lat, lng], que es justo lo que
+      // consume `L.polyline`.
+      trazado: Array.isArray(c.trazado_geojson) ? c.trazado_geojson : null,
+      leida: estaLeido(c.id),
+    })));
 
     // Noticias filtradas por categoría y distrito (Senior: prioridad a la zona)
     const noticiasFiltradas = computed(() => {
@@ -50,17 +88,18 @@ export default {
     });
 
     // Cantidad de no leídas (para badge en tab)
-    const noLeidasCount = computed(() =>
-      noticias.value.filter(n => !n.leida).length
-    );
+    // El contador sale del store: la marca de leído vive en la base y es de la
+    // persona, no de esta pantalla. Antes se contaba sobre el arreglo de
+    // demostración y volvía a su valor inicial en cada recarga.
+    const noLeidasCount = sinLeer;
 
-    // Abrir detalle de noticia
     const abrirDetalle = (noticia) => {
-      // Marcar como leída
-      const idx = noticias.value.findIndex(n => n.id === noticia.id);
-      if (idx !== -1) noticias.value[idx].leida = true;
-      noticiaSeleccionada.value = noticias.value[idx];
+      noticiaSeleccionada.value = noticia;
       mostrandoMapa.value = false;
+      // Sin `await`: la marca se refleja al instante en la interfaz y el store
+      // deshace el cambio si la escritura falla. Hacer esperar a alguien para
+      // abrir algo que ya tiene delante no aporta nada.
+      marcarLeido(noticia.id);
     };
 
     // Volver al feed
@@ -215,6 +254,14 @@ export default {
       }
     });
 
+    onMounted(async () => {
+      // La ficha primero: de ella sale el distrito con el que se ordena y se
+      // filtra «Mi zona». Sin ella el feed sigue funcionando, solo pierde la
+      // prioridad territorial.
+      if (!perfil.value) await cargarPerfil();
+      await cargarComunicados();
+    });
+
     return {
       categoriasNoticias,
       filtroActivo,
@@ -223,6 +270,10 @@ export default {
       mostrandoMapa,
       noLeidasCount,
       distritoUsuario,
+      // Estado de la carga: sin esto, «no hay comunicados» y «todavía estoy
+      // pidiéndolos» se veían igual —una lista vacía— y ninguno se explicaba.
+      cargando,
+      errorComunicados,
       abrirDetalle,
       volverAlFeed,
       verEnMapa,

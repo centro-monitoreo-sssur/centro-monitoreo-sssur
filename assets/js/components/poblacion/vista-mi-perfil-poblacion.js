@@ -21,6 +21,10 @@ import { ref, computed, onMounted } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useCiudadano } from '../../stores/ciudadano.js';
+// El mismo endpoint de cPanel que usa la PWA de campo. Sirve tal cual: nombra
+// el archivo con el `sub` del token y no exige pertenecer a `usuarios`, así que
+// un ciudadano autenticado es un remitente igual de válido.
+import { subirFotoPerfil, almacenamientoConfigurado } from '../../services/fotos-perfil.js';
 
 export default {
   setup() {
@@ -108,6 +112,54 @@ export default {
       mostrarModalEditarPerfil.value = false;
     };
 
+    /* ─── Foto ───────────────────────────────────────────────────────────
+       Va aparte del modal a propósito: cambiar la foto es un gesto suelto
+       —se pulsa el avatar y se elige— y meterlo dentro del formulario
+       obligaría a abrirlo y guardarlo para algo que ya se resolvió al subir.
+
+       La imagen no viaja a Supabase: el endpoint de cPanel la comprime y la
+       guarda, y en la base solo queda la URL. Es lo que mantiene el plan
+       gratuito lejos de su límite de disco. */
+    const subiendoFoto = ref(false);
+    const fotoUrl = computed(() => perfil.value?.foto_url || '');
+    const fotoConfigurada = almacenamientoConfigurado;
+
+    const cambiarFoto = async (evento) => {
+      const archivo = evento.target?.files?.[0];
+      // Se limpia el input SIEMPRE: si no, elegir la misma foto dos veces
+      // seguidas no dispara `change` y parecería que el botón dejó de servir.
+      if (evento.target) evento.target.value = '';
+      if (!archivo) return;
+
+      errorPerfil.value = '';
+      avisoPerfil.value = '';
+      subiendoFoto.value = true;
+      try {
+        const subida = await subirFotoPerfil(archivo);
+        if (!subida.ok) { errorPerfil.value = subida.error; return; }
+
+        // La URL se guarda con el mismo camino que el resto del perfil, así
+        // que hereda la comprobación de filas afectadas: una escritura que la
+        // RLS deniegue responde 200 con cero filas y sin error.
+        const res = await actualizarPerfil({ foto_url: subida.url });
+        if (!res.ok) { errorPerfil.value = res.error; return; }
+
+        avisoPerfil.value = 'Foto actualizada.';
+      } catch (e) {
+        errorPerfil.value = 'No se pudo actualizar la foto.';
+        console.error('[mi-perfil] Falló el cambio de foto:', e);
+      } finally {
+        subiendoFoto.value = false;
+      }
+    };
+
+    /** Iniciales para el avatar cuando no hay foto. */
+    const iniciales = computed(() => {
+      const n = (perfil.value?.nombres || '').trim().split(/\s+/)[0] || '';
+      const a = (perfil.value?.apellidos || '').trim().split(/\s+/)[0] || '';
+      return ((n[0] || '') + (a[0] || '')).toUpperCase() || 'C';
+    });
+
     onMounted(async () => {
       if (!distritos.value.length) cargarDistritos();
       if (!perfil.value) await cargarPerfil();
@@ -118,6 +170,8 @@ export default {
       // Ficha
       nombreCompleto, correoUsuario, duiUsuario,
       telefonoUsuario, direccionUsuario, distritoUsuario,
+      // Foto
+      fotoUrl, iniciales, cambiarFoto, subiendoFoto, fotoConfigurada,
       // Edición
       formulario, distritosOpciones,
       mostrarModalEditarPerfil, abrirEdicion, guardarPerfil, cancelarEdicion,
