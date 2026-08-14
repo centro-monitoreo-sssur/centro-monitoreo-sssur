@@ -36,7 +36,7 @@ export default {
       categorias, cargando, guardando, error,
       totalCategorias, categoriasActivas, categoriasSinPrioridad,
       atencionesDeDepartamento,
-      cargarCatalogo, guardarCategoria, fijarActivoCategoria,
+      cargarCatalogo, guardarCategoria, fijarActivoCategoria, fijarVisibleCiudadano,
       declararAtencion, fijarPuedeIntervenir, retirarAtencion,
     } = useCatalogoCategorias();
 
@@ -143,6 +143,31 @@ export default {
       if (res.ok) cerrarCategoria();
       else errorFormulario.value = res.error;
     };
+
+    /* ─── Abrir o cerrar al portal ciudadano ───
+       Solo gerencia. No es un atributo más de la categoría: abrirla compromete
+       al departamento a atender lo que entre por ahí, y eso no lo decide la
+       jefatura sola. Lo hace cumplir el trigger de la v35; aquí solo se evita
+       ofrecer un interruptor que el servidor va a revertir. */
+    const errorVisibilidad = ref('');
+    const cambiandoVisibilidad = ref(null);   // id en curso, para el spinner
+
+    const alternarVisibleCiudadano = async (categoria) => {
+      if (!esGerencia.value || cambiandoVisibilidad.value) return;
+      errorVisibilidad.value = '';
+      cambiandoVisibilidad.value = categoria.id;
+      try {
+        const res = await fijarVisibleCiudadano(categoria.id, !categoria.visible_ciudadano);
+        if (!res.ok) errorVisibilidad.value = res.error;
+      } finally {
+        cambiandoVisibilidad.value = null;
+      }
+    };
+
+    /** Cuántas están abiertas al público, para el indicador de cabecera. */
+    const categoriasPublicas = computed(
+      () => categorias.value.filter((c) => c.visible_ciudadano && c.activo).length
+    );
 
     /* ─── Activar / desactivar ─── */
     const modalEstado = ref(false);
@@ -254,6 +279,10 @@ export default {
 
       // Indicadores
       totalCategorias, categoriasActivas, categoriasSinPrioridad,
+      categoriasPublicas,
+
+      // Portal ciudadano
+      alternarVisibleCiudadano, errorVisibilidad, cambiandoVisibilidad,
 
       // Competencias
       puedeCrearCategoria, puedeEditarCategoria, puedeTocarCategoria,

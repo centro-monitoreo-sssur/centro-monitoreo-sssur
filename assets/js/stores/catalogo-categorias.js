@@ -78,7 +78,7 @@ async function cargarCatalogo() {
       db.from('categorias_caso')
         .select('id, codigo, nombre, descripcion, icono, color_hex, ' +
                 'departamento_responsable_id, prioridad_default_id, requiere_ubicacion, ' +
-                'estados_flujo, estado_inicial, activo, created_at')
+                'visible_ciudadano, estados_flujo, estado_inicial, activo, created_at')
         .order('codigo'),
       db.from('departamento_categorias')
         .select('id, departamento_id, categoria_id, es_responsable_principal, puede_intervenir, activo'),
@@ -184,6 +184,60 @@ async function fijarActivoCategoria(id, activo) {
     return { ok: true };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e, 'fijarActivoCategoria') };
+  } finally {
+    guardando.value = false;
+  }
+}
+
+/**
+ * Abrir o cerrar una categoría al portal ciudadano.
+ *
+ * Acción PROPIA y no un campo más del formulario de edición, por dos razones:
+ *
+ *   · No es un atributo de la categoría al mismo nivel que su color. Abrirla
+ *     compromete al departamento a atender lo que entre por ahí, así que es una
+ *     decisión de gerencia y conviene que se tome sola, no de pasada mientras
+ *     se corrige una descripción.
+ *   · `guardarCategoria` la usa cualquier jefatura sobre lo suyo (policy
+ *     `categorias_update_jefatura`, v26). Metiendo el campo en ese payload,
+ *     cualquier jefe de área podría abrir su categoría al público.
+ *
+ * La restricción de verdad la impone el servidor —la v35 revierte el cambio si
+ * no lo hace gerencia—. Aquí solo se evita ofrecer un botón que va a fallar.
+ */
+async function fijarVisibleCiudadano(id, visible) {
+  if (!db) return { ok: false, error: 'Sin conexión a la base de datos.' };
+  guardando.value = true;
+  try {
+    const { data, error: err } = await db
+      .from('categorias_caso')
+      .update({ visible_ciudadano: !!visible })
+      .eq('id', id)
+      .select();
+    if (err) throw err;
+
+    // Una escritura denegada por RLS responde 200 con cero filas y sin error:
+    // sin esta comprobación la pantalla diría «guardado» sin haber guardado.
+    const verificado = verificarAfectadas(data, 'actualizó');
+    if (!verificado.ok) return verificado;
+
+    // Se relee del servidor en vez de dar por hecho el valor enviado: si el
+    // trigger de la v35 revirtió el cambio, la pantalla debe mostrar lo que
+    // realmente quedó, no lo que se pidió.
+    const guardado = data[0]?.visible_ciudadano;
+    const fila = categorias.value.find((c) => c.id === id);
+    if (fila) fila.visible_ciudadano = guardado;
+
+    if (guardado !== !!visible) {
+      return {
+        ok: false,
+        error: 'El servidor no aplicó el cambio. Abrir o cerrar una categoría '
+             + 'al público es competencia de la gerencia.',
+      };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e, 'fijarVisibleCiudadano') };
   } finally {
     guardando.value = false;
   }
@@ -314,7 +368,7 @@ export function useCatalogoCategorias() {
     categorias, atenciones, cargando, guardando, error,
     totalCategorias, categoriasActivas, categoriasSinPrioridad,
     categoriasDeDepartamento, atencionesDeDepartamento,
-    cargarCatalogo, guardarCategoria, fijarActivoCategoria,
+    cargarCatalogo, guardarCategoria, fijarActivoCategoria, fijarVisibleCiudadano,
     declararAtencion, fijarPuedeIntervenir, retirarAtencion,
   };
 }

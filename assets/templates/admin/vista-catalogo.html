@@ -5,7 +5,7 @@
 <div class="h-full min-h-0 flex flex-col">
 
   <!-- Indicadores -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 flex-shrink-0">
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6 flex-shrink-0">
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors flex items-center gap-4">
       <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
         <i class="fas fa-tags text-blue-600 dark:text-blue-400"></i>
@@ -37,11 +37,33 @@
         </p>
       </div>
     </div>
+    <!-- Cuántas ve el vecino. Con cero, el portal no ofrece nada y no se puede
+         reportar: es el estado de arranque tras la v34 y conviene que salte a
+         la vista en lugar de descubrirse probando la aplicación. -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+        <i class="fas fa-globe text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En el portal</p>
+        <p class="text-2xl font-extrabold" :class="categoriasPublicas ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'">
+          {{ categoriasPublicas }}
+        </p>
+        <p v-if="!categoriasPublicas" class="text-[10px] text-amber-600 dark:text-amber-400 leading-tight mt-0.5">
+          El portal ciudadano no ofrece ningún tipo de reporte
+        </p>
+      </div>
+    </div>
   </div>
 
   <div v-if="error" class="mb-4 flex-shrink-0 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-3">
     <i class="fas fa-triangle-exclamation text-red-500 mt-0.5"></i>
     <p class="text-xs text-red-700 dark:text-red-300">{{ error }}</p>
+  </div>
+
+  <div v-if="errorVisibilidad" class="mb-4 flex-shrink-0 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-start gap-3">
+    <i class="fas fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+    <p class="text-xs text-amber-700 dark:text-amber-300">{{ errorVisibilidad }}</p>
   </div>
 
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
@@ -155,6 +177,14 @@
                 <span v-if="!c.requiere_ubicacion" class="text-[10px] text-gray-400">
                   <i class="fas fa-location-dot-slash"></i> sin ubicación
                 </span>
+                <!-- Se marca lo que está ABIERTO, no lo cerrado: por defecto
+                     `visible_ciudadano` es false, así que marcar lo cerrado
+                     llenaría la lista de distintivos sin información. -->
+                <span v-if="c.visible_ciudadano"
+                  class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+                  title="Se ofrece en el portal ciudadano">
+                  <i class="fas fa-globe text-[9px]"></i> Pública
+                </span>
               </div>
 
               <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
@@ -181,6 +211,28 @@
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
+              <!--
+                Abrir o cerrar al portal ciudadano. Solo gerencia: abrir una
+                categoría compromete al departamento a atender lo que entre por
+                ahí, y esa no es una decisión de la jefatura sola. Lo hace
+                cumplir el trigger de la v35; aquí solo se refleja.
+
+                Para el resto se muestra el estado sin interruptor, en vez de
+                esconderlo: saber si tu categoría está abierta al público te
+                importa aunque no puedas cambiarlo.
+              -->
+              <button v-if="esGerencia" @click="alternarVisibleCiudadano(c)"
+                :disabled="cambiandoVisibilidad === c.id"
+                class="w-8 h-8 rounded-lg transition-colors disabled:opacity-40"
+                :class="c.visible_ciudadano
+                  ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100'
+                  : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30'"
+                :aria-label="c.visible_ciudadano ? 'Ocultar del portal ciudadano' : 'Mostrar en el portal ciudadano'"
+                :title="c.visible_ciudadano ? 'Se ofrece en el portal ciudadano. Pulsa para ocultarla.' : 'Oculta al público. Pulsa para ofrecerla en el portal ciudadano.'">
+                <i class="fas text-xs"
+                   :class="cambiandoVisibilidad === c.id ? 'fa-circle-notch fa-spin' : (c.visible_ciudadano ? 'fa-globe' : 'fa-eye-slash')"></i>
+              </button>
+
               <button v-if="puedeTocarCategoria(c)" @click="abrirCategoria(c)"
                 class="w-8 h-8 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                 aria-label="Editar categoría">
