@@ -94,18 +94,39 @@ function dibujarPin(ctx, cx, cy, radio) {
 }
 
 /**
- * Carga una imagen pidiendo CORS.
+ * Carga una imagen para dibujarla en el lienzo.
  *
- * `crossOrigin` va ANTES de `src`: asignarlo después no cambia la petición que
- * el navegador ya lanzó. Devuelve null si falla, y quien llama sigue sin foto.
+ * `crossOrigin` se pide SOLO cuando la imagen viene de otro origen. En
+ * producción la página y las fotos comparten dominio, y ahí una petición
+ * same-origin no pasa por CORS en absoluto: pedirlo no aporta nada y añade una
+ * forma más de fallar. En desarrollo —página en 127.0.0.1, fotos en el
+ * dominio— sí hace falta, y el servidor tiene que responder con
+ * `Access-Control-Allow-Origin` o la imagen ni siquiera carga.
+ *
+ * Va ANTES de `src`: asignarlo después no cambia la petición que el navegador
+ * ya lanzó. Devuelve null si falla, y quien llama sigue sin foto.
  */
 function cargarImagen(url) {
   return new Promise((resolve) => {
     if (!url) { resolve(null); return; }
+
+    let esDeOtroOrigen = false;
+    try { esDeOtroOrigen = new URL(url, location.href).origin !== location.origin; }
+    catch (e) { esDeOtroOrigen = true; }
+
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (esDeOtroOrigen) img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
+    img.onerror = () => {
+      if (esDeOtroOrigen) {
+        console.warn(
+          '[compartir] La fotografía no se pudo leer desde otro origen. ' +
+          'Falta el origen de esta página en el .htaccess de uploads-monitoreo/evidencias. ' +
+          'En producción no ocurre: página y fotos comparten dominio.'
+        );
+      }
+      resolve(null);
+    };
     img.src = url;
   });
 }

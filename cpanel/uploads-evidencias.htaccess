@@ -63,6 +63,34 @@ RemoveType    .php .phtml .php3 .php4 .php5 .php7 .php8 .phps
     Header set X-Content-Type-Options "nosniff"
 </FilesMatch>
 
+# 2b. CORS, solo para poder DIBUJAR la foto en un lienzo desde desarrollo.
+#
+#     El botón «Compartir denuncia» compone una tarjeta en un canvas con la
+#     evidencia dentro. Dibujar en un lienzo una imagen de otro origen sin CORS
+#     lo «contamina» y `toBlob` deja de funcionar, así que el navegador ni
+#     siquiera carga la imagen cuando se pide con `crossOrigin`.
+#
+#     En producción esto no interviene: la página y las fotos están en el mismo
+#     dominio y una petición same-origin no pasa por CORS. La lista existe para
+#     el servidor de desarrollo, igual que la de los endpoints PHP.
+#
+#     No amplía la exposición. Estos archivos YA son legibles por cualquiera que
+#     tenga la URL —el directorio no pide autenticación, solo tiene nombres
+#     impredecibles—, y CORS no gobierna quién puede descargarlos, sino qué
+#     script puede leer sus bytes. Se echa únicamente el origen que pidió, nunca
+#     un comodín.
+<IfModule mod_setenvif.c>
+    SetEnvIf Origin "^https://monitoreo\.sansalvadorsur\.gob\.sv$"       ORIGEN_PERMITIDO=$0
+    SetEnvIf Origin "^http://monitoreo\.sansalvadorsur\.gob\.sv$"        ORIGEN_PERMITIDO=$0
+    SetEnvIf Origin "^http://(127\.0\.0\.1|localhost):(5500|8080)$"      ORIGEN_PERMITIDO=$0
+</IfModule>
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "%{ORIGEN_PERMITIDO}e" env=ORIGEN_PERMITIDO
+    # Sin `Vary: Origin`, una caché intermedia serviría a un origen la respuesta
+    # que se preparó para otro, con su cabecera dentro.
+    Header merge Vary Origin
+</IfModule>
+
 # 3. Sin listado de directorio.
 #    Aquí importa más que en los perfiles: el listado expondría el volumen de
 #    denuncias por mes y el UUID del empleado que levantó cada una.
