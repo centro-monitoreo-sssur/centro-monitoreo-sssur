@@ -9,6 +9,7 @@ import { almacen, almacenDispositivo } from '../core/almacen.js';
 import { useDenuncias } from './denuncias.js';
 import { usePermisos } from './permisos.js';
 import { useNotificaciones } from './notificaciones.js';
+import { olvidarAvisos } from '../services/avisos-denuncia.js';
 
 // Nombres de las claves persistidas, en un solo sitio. Estaban repetidas como
 // literales en catorce llamadas distintas, y una errata en cualquiera de ellas
@@ -344,6 +345,10 @@ if (db) {
       // del token, cierre desde otro dispositivo—, no solo la voluntaria.
       desuscribirRealtime();
       desuscribirNotificaciones();
+      // Las denuncias que se seguian son de la persona que se fue, no del
+      // aparato: en un telefono compartido, el siguiente no debe heredar
+      // avisos de denuncias que no son suyas ni puede ver.
+      olvidarAvisos();
       limpiarAlcance();
       usuarioActual.value = '';
       rolUsuario.value = '';

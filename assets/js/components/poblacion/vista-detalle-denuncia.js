@@ -12,6 +12,10 @@ import { useDenunciasCiudadano } from '../../stores/denuncias-ciudadano.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { getColorClass } from '../../utils/categorias-denuncias.js';
 import { getColorClassEstado } from '../../utils/estados-denuncias.js';
+import { compartirDenuncia } from '../../services/compartir-denuncia.js';
+import {
+  seguidas, avisosSoportados, permisoAvisos, alternarAviso,
+} from '../../services/avisos-denuncia.js';
 
 export default {
   setup() {
@@ -88,6 +92,60 @@ export default {
       return ((indiceEstadoActual.value + 1) / total) * 100;
     });
 
+    // ── Avisos y compartir ───────────────────────────────────────────────────
+    // Los dos botones del pie llevaban desde el principio sin `@click`: eran
+    // decoración. Ver services/avisos-denuncia.js para el alcance exacto de lo
+    // que se promete aquí, que NO incluye avisar con la aplicación cerrada.
+    const compartiendo = ref(false);
+    const avisoAccion = ref({ tipo: '', texto: '' });
+
+    const sigueEstaDenuncia = computed(() =>
+      Boolean(fila.value) && seguidas.value.has(Number(fila.value.id))
+    );
+    const puedeAvisar = computed(() => avisosSoportados() && permisoAvisos() !== 'denied');
+
+    function anunciar(tipo, texto) {
+      avisoAccion.value = { tipo, texto };
+      if (tipo === 'ok') setTimeout(() => { avisoAccion.value = { tipo: '', texto: '' }; }, 5000);
+    }
+
+    async function alternarNotificaciones() {
+      if (!fila.value) return;
+      const r = await alternarAviso(fila.value.id);
+      if (!r.ok) { anunciar('error', r.motivo); return; }
+      anunciar('ok', r.sigue
+        ? 'Te avisaremos cuando esta denuncia cambie de estado.'
+        : 'Ya no recibirás avisos de esta denuncia.');
+    }
+
+    async function compartir() {
+      if (!fila.value || compartiendo.value) return;
+      compartiendo.value = true;
+      avisoAccion.value = { tipo: '', texto: '' };
+      try {
+        /* Se le pasa la denuncia YA PRESENTADA, no la fila cruda: el servicio
+           dibuja una tarjeta para un vecino, no serializa un registro. */
+        const r = await compartirDenuncia({
+          id: fila.value.id,
+          correlativo: fila.value.correlativo,
+          categoriaNombre: fila.value.categoria_nombre,
+          descripcion: fila.value.descripcion,
+          estado: fila.value.estado_codigo,
+          estadoNombre: estadoActual.value?.nombre || fila.value.estado_codigo,
+          direccion: fila.value.direccion_referencia,
+          distrito: fila.value.distrito_nombre,
+          coordenadas: denuncia.value?.coordenadas || '',
+          fechaTexto: formatearFecha(fila.value.created_at),
+        });
+        if (r.aviso) anunciar('ok', r.aviso);
+      } catch (e) {
+        console.error('[detalle-denuncia] Falló compartir:', e);
+        anunciar('error', 'No se pudo preparar la imagen para compartir.');
+      } finally {
+        compartiendo.value = false;
+      }
+    }
+
     const formatearFecha = (fecha) => {
       if (!fecha) return 'No disponible';
       return new Date(fecha).toLocaleDateString('es-SV', {
@@ -122,6 +180,8 @@ export default {
       cargando, errorDenuncias, volver,
       formatearFecha, irA,
       getColorClass, getColorClassEstado,
+      sigueEstaDenuncia, puedeAvisar, compartiendo, avisoAccion,
+      alternarNotificaciones, compartir,
     };
   },
 };

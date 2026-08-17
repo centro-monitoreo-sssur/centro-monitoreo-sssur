@@ -20,6 +20,7 @@
 // ============================================================
 import { ref, computed } from '../core/vue.js';
 import { db } from '../core/supabase.js';
+import { revisarCambiosDeEstado } from '../services/avisos-denuncia.js';
 
 const denuncias = ref([]);
 const cargando = ref(false);
@@ -147,6 +148,13 @@ async function cargarMisDenuncias() {
     if (error) throw error;
 
     denuncias.value = data || [];
+
+    /* El aviso de cambio de estado se dispara AQUÍ y no en una vista: así vale
+       igual se haya llegado por «Mis Denuncias», por el detalle o por volver a
+       la aplicación, sin repetir la comparación en tres sitios. Solo notifica
+       las denuncias que la persona pidió seguir. */
+    revisarCambiosDeEstado(denuncias.value);
+
     return { ok: true };
   } catch (e) {
     denuncias.value = [];
