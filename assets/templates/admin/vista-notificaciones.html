@@ -54,19 +54,19 @@
 
   <!-- RESUMEN -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4 flex-shrink-0">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card p-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-card p-4">
       <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Total</p>
       <p class="text-2xl font-bold mt-1 font-mono kpi-color--total">{{ resumen.total }}</p>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card p-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-card p-4">
       <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Sin leer</p>
       <p class="text-2xl font-bold mt-1 font-mono kpi-color--pendiente">{{ resumen.sinLeer }}</p>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card p-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-card p-4">
       <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Críticas activas</p>
       <p class="text-2xl font-bold mt-1 font-mono kpi-color--vencida">{{ resumen.criticas }}</p>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card p-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-card p-4">
       <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Leídas</p>
       <p class="text-2xl font-bold mt-1 font-mono kpi-color--resuelta">{{ resumen.leidas }}</p>
     </div>
@@ -98,7 +98,7 @@
   </ui-card>
 
   <!-- LISTA -->
-  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card flex-1 min-h-0 flex flex-col overflow-hidden">
+  <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-card flex-1 min-h-0 flex flex-col overflow-hidden">
     <div class="overflow-y-auto flex-1 min-h-0 p-2">
 
       <template v-if="cargando">
@@ -201,8 +201,8 @@
         </label>
         <textarea id="notif-mensaje" v-model="formulario.mensaje" rows="4"
                   placeholder="Detalle del aviso que verá el personal"
-                  class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white text-sm
-                         focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:outline-none"></textarea>
+                  class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 dark:text-white text-sm
+                         focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-none"></textarea>
       </div>
 
       <div class="grid grid-cols-2 gap-3">

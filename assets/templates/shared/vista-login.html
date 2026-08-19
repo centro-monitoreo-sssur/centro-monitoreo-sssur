@@ -55,7 +55,7 @@
               type="text" 
               v-model="formulario.usuario" 
               :placeholder="placeholderUsuario"
-              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 p-2.5"
               :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errores.usuario }"
               @input="limpiarError('usuario')"
               :autocomplete="autocompleteUsuario">
@@ -74,7 +74,7 @@
               :type="mostrarPassword ? 'text' : 'password'"
               v-model="formulario.password" 
               :placeholder="placeholderPassword"
-              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-10 p-2.5"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block w-full pl-10 pr-10 p-2.5"
               :class="{ 'border-red-500 focus:ring-red-500 focus:border-red-500': errores.password }"
               @input="limpiarError('password')"
               autocomplete="current-password">

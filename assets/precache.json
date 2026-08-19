@@ -1,8 +1,8 @@
 {
   "generado": "herramientas/generar-precache.mjs",
-  "huella": "e9b61f6678e1",
+  "huella": "59c2d8cbdf32",
   "totalArchivos": 265,
-  "totalBytes": 6134844,
+  "totalBytes": 6137610,
   "rutas": [
     "/",
     "/assets/css/base.css",

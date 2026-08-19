@@ -4,7 +4,7 @@
 <div class="h-full min-h-0 flex flex-col">
   <!-- KPIs de alto nivel -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 flex-shrink-0">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Ciudadanos</h3>
         <div class="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -15,7 +15,7 @@
       <div class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Ciudadanos registrados</div>
     </div>
     
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activos</h3>
         <div class="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -26,7 +26,7 @@
       <div class="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Cuenta verificada</div>
     </div>
     
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pendientes</h3>
         <div class="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center">
@@ -37,7 +37,7 @@
       <div class="mt-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium">Por verificar</div>
     </div>
     
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Distritos</h3>
         <div class="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
@@ -50,7 +50,7 @@
   </div>
 
   <!-- Tabla principal -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
+  <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
 
     <!-- Cabecera de la tabla -->
     <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50">
@@ -70,14 +70,14 @@
             v-model="filtroBusqueda"
             type="text"
             placeholder="Buscar..."
-            class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all w-[160px]"
+            class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all w-[160px]"
           >
         </div>
 
         <!-- Filtro Distrito -->
         <select
           v-model="filtroDistrito"
-          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none"
+          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all appearance-none"
         >
           <option value="">Todos los Distritos</option>
           <option v-for="distrito in distritosDisponibles" :key="distrito" :value="distrito">{{ distrito }}</option>
@@ -86,7 +86,7 @@
         <!-- Filtro Estado -->
         <select
           v-model="filtroEstado"
-          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none"
+          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all appearance-none"
         >
           <option value="">Todos los estados</option>
           <option value="activo">Activo</option>
@@ -113,7 +113,7 @@
 
     <!-- Loading -->
     <div v-else-if="cargando" class="py-16 flex items-center justify-center gap-3">
-      <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div class="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
       <span class="text-sm text-gray-500 dark:text-gray-400">Cargando población...</span>
     </div>
 
@@ -138,7 +138,7 @@
           >
             <td class="p-4">
               <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center shrink-0">
                   <span class="text-white text-xs font-bold">{{ ciudadano.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() }}</span>
                 </div>
                 <div class="min-w-0">
@@ -242,7 +242,7 @@
     <div class="p-6">
       <!-- Avatar -->
       <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
-        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 flex items-center justify-center shrink-0">
           <span class="text-white text-lg font-bold">{{ ciudadanoSeleccionado.nombre.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() }}</span>
         </div>
         <div>
@@ -351,7 +351,7 @@
           type="text"
           required
           placeholder="Ej: Juan Pérez García"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white placeholder-gray-400"
         >
       </div>
 
@@ -363,7 +363,7 @@
           type="email"
           required
           placeholder="ej: correo@ejemplo.com"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white placeholder-gray-400"
         >
       </div>
 
@@ -374,7 +374,7 @@
           v-model="ciudadanoSeleccionado.telefono"
           type="text"
           placeholder="Ej: 7890-1234"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white placeholder-gray-400"
         >
       </div>
 
@@ -385,7 +385,7 @@
           v-model="ciudadanoSeleccionado.dui"
           type="text"
           placeholder="Ej: 01234567-8"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white placeholder-gray-400"
         >
       </div>
 
@@ -394,7 +394,7 @@
         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">Estado</label>
         <select
           v-model="ciudadanoSeleccionado.estado"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white"
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white"
         >
           <option value="activo">Activo</option>
           <option value="pendiente">Pendiente</option>
@@ -420,7 +420,7 @@
         <button
           type="submit"
           :disabled="guardando"
-          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <i :class="guardando ? 'fas fa-spinner fa-spin' : 'fas fa-save'" class="mr-1.5"></i>
           {{ guardando ? 'Guardando…' : 'Guardar Cambios' }}

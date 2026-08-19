@@ -7,16 +7,16 @@
 
   <!-- Indicadores -->
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6 flex-shrink-0">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
       <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-bullhorn text-blue-600 dark:text-blue-400"></i>
+        <i class="fas fa-bullhorn text-brand-600 dark:text-brand-400"></i>
       </div>
       <div class="min-w-0">
         <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comunicados</p>
         <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ totalComunicados }}</p>
       </div>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
       <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
         <i class="fas fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
       </div>
@@ -25,7 +25,7 @@
         <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ vigentes }}</p>
       </div>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
       <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
         <i class="fas fa-clock text-amber-600 dark:text-amber-400"></i>
       </div>
@@ -36,7 +36,7 @@
     </div>
     <!-- Lo que de verdad ve el vecino. Es el número que interesa a la Alcaldía
          y el que antes no existía en ninguna pantalla. -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
       <div class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
         <i class="fas fa-users text-indigo-600 dark:text-indigo-400"></i>
       </div>
@@ -81,7 +81,7 @@
   </div>
 
   <!-- Listado -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex-1 min-h-0 flex flex-col">
+  <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden flex-1 min-h-0 flex flex-col">
     <div v-if="cargando" class="py-16 text-center text-gray-400">
       <i class="fas fa-circle-notch fa-spin text-2xl mb-3"></i>
       <p class="text-sm">Cargando comunicados...</p>
@@ -271,8 +271,8 @@
         <!-- Vista previa del alcance. Un comunicado mal dirigido no se puede
              «despublicar» de la memoria de quien ya lo leyó. -->
         <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 flex items-start gap-3">
-          <i class="fas fa-eye text-blue-500 mt-0.5"></i>
-          <p class="text-xs text-blue-800 dark:text-blue-200">{{ resumenAlcance }}</p>
+          <i class="fas fa-eye text-brand-500 mt-0.5"></i>
+          <p class="text-xs text-brand-800 dark:text-brand-200">{{ resumenAlcance }}</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

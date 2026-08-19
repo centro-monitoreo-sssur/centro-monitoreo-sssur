@@ -13,7 +13,7 @@
     <!-- Título. En móvil se va: el nombre de la vista ya está en la cabecera
          de la aplicación y aquí robaba la mitad del ancho a los indicadores. -->
     <div class="hidden sm:flex items-center gap-2 pr-5 border-r border-gray-200 dark:border-gray-700 h-full">
-      <i class="fa-solid fa-map-location-dot text-blue-600 dark:text-blue-400 text-base"></i>
+      <i class="fa-solid fa-map-location-dot text-brand-600 dark:text-brand-400 text-base"></i>
       <div>
         <div class="text-[11px] font-black text-gray-800 dark:text-white leading-none">Cartograma Analítico</div>
         <div class="text-[9px] text-gray-400 leading-none mt-0.5">San Salvador Sur · 5 Distritos</div>
@@ -25,7 +25,7 @@
     <div class="carto-tira flex items-center gap-0 flex-1 h-full">
       <div
         class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-        <i class="fa-solid fa-users text-blue-500 text-xs"></i>
+        <i class="fa-solid fa-users text-brand-500 text-xs"></i>
         <div>
           <div class="text-[11px] font-bold text-gray-800 dark:text-white leading-none">{{
             kpisGlobales.poblacion.toLocaleString('es-SV') }}</div>
@@ -97,7 +97,7 @@
       </div>
       <div
         class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-        <i class="fa-solid fa-bolt text-blue-500 text-xs"></i>
+        <i class="fa-solid fa-bolt text-brand-500 text-xs"></i>
         <div>
           <!-- El cálculo vive en el componente. Aquí estaba en línea y sobre
                `activas + resueltas`, que ignora las rechazadas: un distrito que
@@ -241,7 +241,7 @@
     <button type="button" @click="menuCapasAbierto = !menuCapasAbierto"
       title="Capas y herramientas" :aria-expanded="menuCapasAbierto ? 'true' : 'false'"
       class="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-      :class="menuCapasAbierto ? 'ring-2 ring-blue-400' : ''">
+      :class="menuCapasAbierto ? 'ring-2 ring-brand-400' : ''">
       <i class="fa-solid fa-layer-group text-gray-600 dark:text-gray-300"></i>
     </button>
 
@@ -259,13 +259,13 @@
             ? 'bg-blue-50 dark:bg-blue-900/25'
             : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'">
           <i class="fa-solid text-sm w-4 text-center" :class="[capa.icono,
-            capasActivas[capa.id] ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400']"></i>
+            capasActivas[capa.id] ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400']"></i>
           <span class="flex-1 text-xs font-medium"
             :class="capasActivas[capa.id]
-              ? 'text-blue-700 dark:text-blue-400 font-semibold'
+              ? 'text-brand-700 dark:text-brand-400 font-semibold'
               : 'text-gray-600 dark:text-gray-300'">{{ capa.nombre }}</span>
           <span class="w-8 h-4 rounded-full relative transition-colors shrink-0"
-            :class="capasActivas[capa.id] ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'">
+            :class="capasActivas[capa.id] ? 'bg-brand-600' : 'bg-gray-300 dark:bg-gray-600'">
             <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
               :class="capasActivas[capa.id] ? 'left-[18px]' : 'left-0.5'"></span>
           </span>
@@ -283,7 +283,7 @@
   <div v-if="cargando"
     class="absolute inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
     <div class="flex flex-col items-center gap-4">
-      <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      <div class="w-12 h-12 border-4 border-brand-200 border-t-brand-600 rounded-full animate-spin"></div>
       <p class="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Cargando territorio...</p>
     </div>
   </div>
@@ -372,7 +372,7 @@
             <div class="flex items-center gap-1.5">
               <div class="w-2 h-2 rounded-full flex-shrink-0" :style="{backgroundColor: z.colorOriginal}"></div>
               <span
-                class="text-[10px] font-semibold text-gray-700 dark:text-gray-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                class="text-[10px] font-semibold text-gray-700 dark:text-gray-200 truncate group-hover:text-brand-600 dark:group-hover:text-brand-400">
                 {{ z.nombre }}
               </span>
             </div>
@@ -390,7 +390,7 @@
               </span>
             </div>
           </div>
-          <i class="fa-solid fa-chevron-right text-[8px] text-gray-300 group-hover:text-blue-400 flex-shrink-0"></i>
+          <i class="fa-solid fa-chevron-right text-[8px] text-gray-300 group-hover:text-brand-400 flex-shrink-0"></i>
         </div>
       </div>
       <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-[8px] text-gray-400 text-center">
@@ -402,8 +402,8 @@
          compite por el sitio con el ranking, que sí lo es. -->
     <div class="hidden md:block bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-3 w-[200px]">
       <div class="flex items-start gap-2">
-        <i class="fa-solid fa-lightbulb text-blue-500 text-xs mt-0.5"></i>
-        <div class="text-[9px] text-blue-700 dark:text-blue-300 leading-relaxed">
+        <i class="fa-solid fa-lightbulb text-brand-500 text-xs mt-0.5"></i>
+        <div class="text-[9px] text-brand-700 dark:text-brand-300 leading-relaxed">
           Próximamente: polígonos de centros poblacionales por distrito, con zoom-in interactivo.
         </div>
       </div>
@@ -465,13 +465,13 @@
             <div class="flex justify-between items-center">
               <div class="text-[9px] text-gray-400 uppercase tracking-wide">Eficiencia de Respuesta</div>
               <!-- Cálculo en el componente, no en línea y por duplicado -->
-              <div class="text-[9px] font-bold text-blue-600">
+              <div class="text-[9px] font-bold text-brand-600">
                 {{ distritoConFiltro.eficiencia }}% · {{ distritoConFiltro.denunciasResueltas }}/{{
                 distritoConFiltro.totalCasos }}
               </div>
             </div>
             <div class="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-              <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+              <div class="bg-brand-600 h-1.5 rounded-full transition-all duration-500"
                 :style="`width: ${distritoConFiltro.eficiencia}%`"></div>
             </div>
           </div>
@@ -605,17 +605,17 @@
 
         <!-- Economía -->
         <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
-          <div class="text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-1">
             <i class="fa-solid fa-briefcase mr-1"></i>Economía Local
           </div>
-          <p class="text-[10px] text-blue-800 dark:text-blue-300">{{ distritoConFiltro.economia }}</p>
+          <p class="text-[10px] text-brand-800 dark:text-brand-300">{{ distritoConFiltro.economia }}</p>
         </div>
       </div>
 
       <!-- Acciones del panel -->
       <div class="p-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
         <button @click="irAMapaDistrito"
-          class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
+          class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-colors">
           <i class="fa-solid fa-map-marked-alt"></i>
           Ver en Mapa en Vivo
         </button>

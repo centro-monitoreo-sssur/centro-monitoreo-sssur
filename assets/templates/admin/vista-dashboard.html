@@ -139,7 +139,7 @@
   <!-- ================ TENDENCIA + DISTRIBUCIÓN ================ -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
 
-    <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-gray-200 dark:border-gray-700 p-4 flex flex-col">
+    <div class="lg:col-span-2 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 flex flex-col">
       <div class="flex items-center justify-between mb-4 gap-3">
         <h2 class="text-title-sm text-gray-900 dark:text-white">Ingresadas vs. resueltas</h2>
         <span class="text-[11px] text-gray-400 shrink-0">Últimos {{ rangoDias }} día(s)</span>
@@ -149,7 +149,7 @@
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-gray-200 dark:border-gray-700 p-4 flex flex-col">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 flex flex-col">
       <h2 class="text-title-sm text-gray-900 dark:text-white mb-4">Carga por departamento</h2>
 
       <div v-if="!porDepartamento.length" class="flex-1 flex flex-col items-center justify-center py-10 text-gray-400">
@@ -224,7 +224,7 @@
     </div>
 
     <!-- Pendientes más antiguos -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-card border border-gray-200 dark:border-gray-700 p-4 flex flex-col">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 flex flex-col">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-title-sm text-gray-900 dark:text-white">Pendientes más antiguos</h2>
         <span class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-2.5 py-0.5 rounded">

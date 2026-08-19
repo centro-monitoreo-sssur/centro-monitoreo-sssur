@@ -14,7 +14,7 @@
       class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
       :class="guardado
         ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20'">
+        : 'bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20'">
       <i :class="guardado ? 'fa-solid fa-check' : 'fa-solid fa-floppy-disk'"></i>
       {{ guardado ? 'Guardado' : 'Guardar Cambios' }}
     </button>
@@ -26,7 +26,7 @@
       @click="tabActiva = tab.id"
       class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex-1 min-w-[120px] justify-center"
       :class="tabActiva === tab.id
-        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm font-semibold'
+        ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
         : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
       <i :class="'fa-solid ' + tab.icono" class="text-[13px]"></i>
       {{ tab.label }}
@@ -41,7 +41,7 @@
   <div v-if="tabActiva === 'diagnostico'" class="space-y-5">
 
     <!-- Resumen -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm p-5">
       <div class="flex items-start justify-between flex-wrap gap-4">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
@@ -102,7 +102,7 @@
 
     <!-- Resultados agrupados -->
     <div v-for="g in porGrupo" :key="g.grupo"
-      class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30">
         <h3 class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">{{ g.grupo }}</h3>
       </div>
@@ -115,7 +115,7 @@
             <!-- `whitespace-pre-line`: la lista de usuarios sin ámbito llega
                  con saltos de línea y en una sola línea sería ilegible. -->
             <p class="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5 whitespace-pre-line leading-relaxed">{{ c.detalle }}</p>
-            <p v-if="c.accion" class="text-[11px] font-semibold text-blue-700 dark:text-blue-400 mt-1.5">
+            <p v-if="c.accion" class="text-[11px] font-semibold text-brand-700 dark:text-brand-400 mt-1.5">
               <i class="fa-solid fa-arrow-right text-[9px] mr-1"></i>{{ c.accion }}
             </p>
           </div>
@@ -143,7 +143,7 @@
   <div v-if="tabActiva === 'categorias'" class="space-y-5">
 
     <!-- ── Paletas rápidas ── -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3 flex-wrap">
         <div class="w-8 h-8 rounded-lg bg-fuchsia-50 dark:bg-fuchsia-900/30 flex items-center justify-center">
           <i class="fa-solid fa-swatchbook text-fuchsia-500 text-sm"></i>
@@ -159,7 +159,7 @@
       </div>
       <div class="p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <button v-for="p in PALETAS" :key="p.id" @click="aplicarPaleta(p)"
-          class="p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-left">
+          class="p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-brand-400 dark:hover:border-brand-500 transition-colors text-left">
           <p class="text-xs font-bold text-gray-800 dark:text-gray-200 mb-2">{{ p.nombre }}</p>
           <div class="flex gap-1">
             <span v-for="(c, i) in p.graficos.slice(0, 6)" :key="i"
@@ -174,7 +174,7 @@
     </div>
 
     <!-- ── Colores de KPI por concepto ── -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
           <i class="fa-solid fa-chart-simple text-indigo-500 text-sm"></i>
@@ -205,7 +205,7 @@
     </div>
 
     <!-- ── Semáforo territorial ── -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
           <i class="fa-solid fa-traffic-light text-amber-500 text-sm"></i>
@@ -226,7 +226,7 @@
     </div>
 
     <!-- ── Paleta de series de gráficos ── -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
           <i class="fa-solid fa-chart-pie text-teal-500 text-sm"></i>
@@ -246,10 +246,10 @@
     </div>
 
     <!-- ── Categorías ── -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-          <i class="fa-solid fa-layer-group text-blue-500 text-sm"></i>
+          <i class="fa-solid fa-layer-group text-brand-500 text-sm"></i>
         </div>
         <div>
           <h2 class="text-sm font-bold text-gray-800 dark:text-white">Tipos de Denuncia por Dependencia</h2>
@@ -313,8 +313,8 @@
 
     <!-- Info card sobre colores -->
     <div class="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 flex gap-3 text-sm">
-      <i class="fa-solid fa-circle-info text-blue-500 mt-0.5 shrink-0"></i>
-      <div class="text-blue-700 dark:text-blue-300">
+      <i class="fa-solid fa-circle-info text-brand-500 mt-0.5 shrink-0"></i>
+      <div class="text-brand-700 dark:text-brand-300">
         Los colores se aplican de forma inmediata en el Mapa en Vivo, Cartograma y Dashboard. Si Supabase está configurado, los cambios se guardan localmente y tienen prioridad sobre la BD.
       </div>
     </div>
@@ -326,7 +326,7 @@
   <div v-if="tabActiva === 'notificaciones'" class="space-y-5">
 
     <!-- Alertas sonoras -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
           <i class="fa-solid fa-volume-high text-amber-500 text-sm"></i>
@@ -338,7 +338,7 @@
         <!-- Toggle principal -->
         <div class="ml-auto">
           <div class="relative inline-block w-11 h-6 cursor-pointer" @click="config.notificaciones.sonidoActivo = !config.notificaciones.sonidoActivo">
-            <div class="w-11 h-6 rounded-full transition-colors" :class="config.notificaciones.sonidoActivo ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
+            <div class="w-11 h-6 rounded-full transition-colors" :class="config.notificaciones.sonidoActivo ? 'bg-brand-500' : 'bg-gray-300 dark:bg-gray-600'"></div>
             <div class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="config.notificaciones.sonidoActivo ? 'translate-x-5' : ''"></div>
           </div>
         </div>
@@ -366,11 +366,11 @@
                 <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all"
                   :class="(tonoPreview === nombre) ? 'bg-blue-500 scale-90' : config.notificaciones.tono === nombre ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'">
                   <i class="fa-solid text-sm"
-                    :class="tonoPreview === nombre ? 'fa-music text-white' : 'fa-play text-blue-500'"></i>
+                    :class="tonoPreview === nombre ? 'fa-music text-white' : 'fa-play text-brand-500'"></i>
                 </div>
                 <div class="min-w-0">
                   <div class="text-xs font-semibold truncate"
-                    :class="config.notificaciones.tono === nombre ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'">
+                    :class="config.notificaciones.tono === nombre ? 'text-brand-600 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'">
                     {{ TONOS[nombre].etiqueta }}
                   </div>
                   <div class="text-[10px] text-gray-400 truncate">{{ TONOS[nombre].descripcion }}</div>
@@ -389,7 +389,7 @@
               <i class="fa-solid fa-volume-xmark text-sm text-gray-400"></i>
             </div>
             <div>
-              <div class="text-xs font-semibold" :class="config.notificaciones.tono === 'none' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'">Silencio</div>
+              <div class="text-xs font-semibold" :class="config.notificaciones.tono === 'none' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300'">Silencio</div>
               <div class="text-[10px] text-gray-400">Las notificaciones no emitirán sonido</div>
             </div>
           </button>
@@ -399,12 +399,12 @@
         <div>
           <div class="flex items-center justify-between mb-2">
             <label class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Volumen</label>
-            <span class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">{{ config.notificaciones.volumen }}%</span>
+            <span class="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">{{ config.notificaciones.volumen }}%</span>
           </div>
           <div class="flex items-center gap-3">
             <i class="fa-solid fa-volume-off text-gray-400 text-sm"></i>
             <input type="range" min="0" max="100" v-model.number="config.notificaciones.volumen"
-              class="flex-1 h-2 rounded-full appearance-none cursor-pointer accent-blue-500">
+              class="flex-1 h-2 rounded-full appearance-none cursor-pointer accent-brand-500">
             <i class="fa-solid fa-volume-high text-gray-400 text-sm"></i>
           </div>
         </div>
@@ -427,7 +427,7 @@
     </div>
 
     <!-- Notificaciones del navegador -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
           <i class="fa-solid fa-desktop text-purple-500 text-sm"></i>
@@ -460,7 +460,7 @@
     <!-- ══ Estado inicial del Mapa en Vivo ══
          Define con qué configuración ARRANCA la consola. Los cambios no
          reordenan el mapa de quien lo tenga abierto: se aplican al entrar. -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <button type="button" @click="toggleSeccion('mapa-paneles')"
         :aria-expanded="seccionAbierta('mapa-paneles') ? 'true' : 'false'"
         class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
@@ -507,7 +507,7 @@
         <label v-for="p in AJUSTES_PANELES" :key="p.clave"
           class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
           <input type="checkbox" v-model="config.mapa[p.clave]"
-            class="w-4 h-4 rounded accent-blue-600 shrink-0">
+            class="w-4 h-4 rounded accent-brand-600 shrink-0">
           <div class="min-w-0">
             <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">{{ p.etiqueta }}</p>
             <p class="text-[10px] text-gray-400">{{ p.ayuda }}</p>
@@ -517,7 +517,7 @@
         <div class="pt-2">
           <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Pestaña inicial en móvil</label>
           <select v-model="config.mapa.tabMovilInicial"
-            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
+            class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
             <option value="feed">Feed de incidencias</option>
             <option value="capas">Capas del mapa</option>
           </select>
@@ -527,7 +527,7 @@
     </div>
 
     <!-- ══ Herramientas de visualización ══ -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <button type="button" @click="toggleSeccion('mapa-herramientas')"
         :aria-expanded="seccionAbierta('mapa-herramientas') ? 'true' : 'false'"
         class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
@@ -545,7 +545,7 @@
       <div v-show="seccionAbierta('mapa-herramientas')" class="p-5 space-y-2">
         <label v-for="h in AJUSTES_HERRAMIENTAS" :key="h.clave"
           class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-          <input type="checkbox" v-model="config.mapa[h.clave]" class="w-4 h-4 rounded accent-blue-600 shrink-0">
+          <input type="checkbox" v-model="config.mapa[h.clave]" class="w-4 h-4 rounded accent-brand-600 shrink-0">
           <i :class="['fas', h.icono, 'text-gray-400 w-4 text-center shrink-0']"></i>
           <div class="min-w-0">
             <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">{{ h.etiqueta }}</p>
@@ -566,7 +566,7 @@
             <span class="text-xs font-mono font-bold text-gray-700 dark:text-gray-300">{{ config.mapa.umbralHeatmap }} pts</span>
           </div>
           <input type="range" min="200" max="10000" step="100" v-model.number="config.mapa.umbralHeatmap"
-            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-500">
+            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-500">
           <p class="mt-1 text-[10px] text-gray-400">
             Por encima de esta cantidad de puntos visibles conviene el mapa de calor: dibujar marcadores
             individuales empieza a atascar el navegador.
@@ -576,7 +576,7 @@
     </div>
 
     <!-- ══ Filtros y comparativo territorial ══ -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <button type="button" @click="toggleSeccion('mapa-filtros')"
         :aria-expanded="seccionAbierta('mapa-filtros') ? 'true' : 'false'"
         class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
@@ -595,26 +595,26 @@
         <div>
           <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Estado inicial</label>
           <select v-model="config.mapa.estadoInicial"
-            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
+            class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
             <option v-for="e in ESTADOS_FILTRO_CFG" :key="e.v" :value="e.v">{{ e.l }}</option>
           </select>
         </div>
         <div>
           <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Ventana temporal</label>
           <select v-model.number="config.mapa.ventanaDiasPorDefecto"
-            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
+            class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
             <option v-for="v in VENTANAS_TIEMPO_CFG" :key="v.id" :value="v.id">{{ v.etiqueta }}</option>
           </select>
         </div>
         <div class="sm:col-span-2">
           <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Ordenar el comparativo por</label>
           <select v-model="config.mapa.ordenComparativo"
-            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
+            class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm dark:text-white">
             <option v-for="c in COLUMNAS_COMPARATIVO_CFG" :key="c.clave" :value="c.clave">{{ c.etiqueta }} — {{ c.titulo }}</option>
           </select>
         </div>
         <label class="sm:col-span-2 flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-          <input type="checkbox" v-model="config.mapa.autoAbrirComparativo" class="w-4 h-4 rounded accent-blue-600 shrink-0">
+          <input type="checkbox" v-model="config.mapa.autoAbrirComparativo" class="w-4 h-4 rounded accent-brand-600 shrink-0">
           <div class="min-w-0">
             <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">Abrir el comparativo de distritos al entrar</p>
             <p class="text-[10px] text-gray-400">
@@ -626,7 +626,7 @@
     </div>
 
     <!-- ══ Comportamiento en tiempo real ══ -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <button type="button" @click="toggleSeccion('mapa-entrantes')"
         :aria-expanded="seccionAbierta('mapa-entrantes') ? 'true' : 'false'"
         class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
@@ -643,7 +643,7 @@
       </button>
       <div v-show="seccionAbierta('mapa-entrantes')" class="p-5 space-y-4">
         <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-          <input type="checkbox" v-model="config.mapa.animarNuevas" class="w-4 h-4 rounded accent-blue-600 shrink-0">
+          <input type="checkbox" v-model="config.mapa.animarNuevas" class="w-4 h-4 rounded accent-brand-600 shrink-0">
           <div class="min-w-0">
             <p class="text-xs font-semibold text-gray-800 dark:text-gray-200">Destacar las nuevas con un destello</p>
             <p class="text-[10px] text-gray-400">Se respeta «reducir movimiento» del sistema operativo.</p>
@@ -655,12 +655,12 @@
             <span class="text-xs font-mono font-bold text-gray-700 dark:text-gray-300">{{ config.mapa.segundosResaltado }} s</span>
           </div>
           <input type="range" min="0.5" max="6" step="0.1" v-model.number="config.mapa.segundosResaltado"
-            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-500">
+            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-500">
         </div>
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <button type="button" @click="toggleSeccion('mapa-encuadre')"
         :aria-expanded="seccionAbierta('mapa-encuadre') ? 'true' : 'false'"
         class="w-full px-5 py-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
@@ -683,12 +683,12 @@
           <div>
             <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Latitud Central</label>
             <input type="number" step="0.0001" v-model.number="config.mapa.lat"
-              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all">
+              class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:focus:ring-brand-800 transition-all">
           </div>
           <div>
             <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Longitud Central</label>
             <input type="number" step="0.0001" v-model.number="config.mapa.lng"
-              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all">
+              class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 dark:focus:ring-brand-800 transition-all">
           </div>
         </div>
 
@@ -725,14 +725,14 @@
           <div class="flex items-center justify-between mb-2">
             <label class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Tamaño de Marcadores</label>
             <div class="flex items-center gap-2">
-              <div class="rounded-full bg-blue-500 transition-all border-2 border-white shadow"
+              <div class="rounded-full bg-brand-500 transition-all border-2 border-white shadow"
                 :style="{ width: config.mapa.tamanoMarcador + 'px', height: config.mapa.tamanoMarcador + 'px' }">
               </div>
-              <span class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">{{ config.mapa.tamanoMarcador }}px</span>
+              <span class="text-xs font-mono font-bold text-brand-600 dark:text-brand-400">{{ config.mapa.tamanoMarcador }}px</span>
             </div>
           </div>
           <input type="range" min="10" max="30" v-model.number="config.mapa.tamanoMarcador"
-            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-500">
+            class="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-500">
         </div>
 
         <!-- Radio de clustering -->
@@ -757,7 +757,7 @@
   <div v-if="tabActiva === 'sistema'" class="space-y-5">
 
     <!-- Apariencia -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
           <i class="fa-solid fa-palette text-violet-500 text-sm"></i>
@@ -796,7 +796,7 @@
   ════════════════════════════════════════════════════════════ -->
   <div v-if="tabActiva === 'acceso'" class="space-y-5">
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
           <i class="fa-solid fa-link text-orange-500 text-sm"></i>
@@ -883,7 +883,7 @@
        pestañas; ahora cuelga de "Sistema", que es donde corresponde.
   ════════════════════════════════════════════════════════════ -->
   <div v-if="tabActiva === 'sistema'" class="space-y-5">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
           <i class="fa-solid fa-sliders text-gray-500 text-sm"></i>
@@ -896,45 +896,45 @@
           <div>
             <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Máx. Denuncias Visibles</label>
             <input type="number" min="50" max="1000" step="50" v-model.number="config.sistema.maxDenunciasVisibles"
-              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+              class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all">
             <p class="text-[11px] text-gray-400 mt-1">Límite para el render del mapa. Mayor = más carga.</p>
           </div>
           <!-- Timeout sesión -->
           <div>
             <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Timeout de Sesión (min)</label>
             <input type="number" min="5" max="480" step="5" v-model.number="config.sistema.timeoutSesionMin"
-              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+              class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-mono text-gray-800 dark:text-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all">
             <p class="text-[11px] text-gray-400 mt-1">Minutos de inactividad antes de cerrar sesión.</p>
           </div>
           <!-- Organización -->
           <div class="sm:col-span-2">
             <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Nombre de la Organización</label>
             <input type="text" v-model="config.sistema.organizacion"
-              class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all">
+              class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all">
           </div>
         </div>
       </div>
     </div>
 
     <!-- Versión / Info -->
-    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 rounded-2xl border border-blue-200 dark:border-blue-800 p-5">
+    <div class="bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950/40 dark:to-indigo-950/40 rounded-2xl border border-brand-200 dark:border-brand-800 p-5">
       <div class="flex items-center gap-3 mb-3">
-        <div class="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
+        <div class="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
           <i class="fa-solid fa-circle-info text-white text-sm"></i>
         </div>
-        <h3 class="text-sm font-bold text-blue-800 dark:text-blue-300">Información del Sistema</h3>
+        <h3 class="text-sm font-bold text-brand-800 dark:text-brand-300">Información del Sistema</h3>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[11px]">
         <div class="bg-white/60 dark:bg-blue-900/20 rounded-lg px-3 py-2">
-          <div class="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">Versión</div>
+          <div class="font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider mb-0.5">Versión</div>
           <div class="font-mono text-gray-700 dark:text-gray-300">{{ config.sistema.version }}</div>
         </div>
         <div class="bg-white/60 dark:bg-blue-900/20 rounded-lg px-3 py-2">
-          <div class="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">Motor</div>
+          <div class="font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider mb-0.5">Motor</div>
           <div class="font-mono text-gray-700 dark:text-gray-300">Vue 3 · Leaflet 1.9</div>
         </div>
         <div class="bg-white/60 dark:bg-blue-900/20 rounded-lg px-3 py-2">
-          <div class="font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">Backend</div>
+          <div class="font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider mb-0.5">Backend</div>
           <div class="font-mono text-gray-700 dark:text-gray-300">Supabase (PG)</div>
         </div>
       </div>
@@ -946,7 +946,7 @@
   ════════════════════════════════════════════════════════════ -->
   <div v-if="tabActiva === 'multimedia'" class="space-y-5">
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center">
           <i class="fa-solid fa-camera text-cyan-500 text-sm"></i>
@@ -997,7 +997,7 @@
   <div v-if="tabActiva === 'seguridad'" class="space-y-5">
 
     <!-- Sesiones activas -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center">
           <i class="fa-solid fa-shield-halved text-rose-500 text-sm"></i>
@@ -1042,7 +1042,7 @@
     </div>
 
     <!-- Conexión Supabase -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
           <i class="fa-solid fa-database text-green-500 text-sm"></i>
@@ -1077,7 +1077,7 @@
   <div v-if="tabActiva === 'exportacion'" class="space-y-5">
 
     <!-- Exportar -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
           <i class="fa-solid fa-file-export text-indigo-500 text-sm"></i>
@@ -1097,7 +1097,7 @@
     </div>
 
     <!-- Importar -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm">
       <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center">
           <i class="fa-solid fa-file-import text-teal-500 text-sm"></i>

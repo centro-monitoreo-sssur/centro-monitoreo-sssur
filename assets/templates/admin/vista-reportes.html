@@ -19,7 +19,7 @@
 
   <!-- KPIs ─────────────────────────────────────────────────────── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 flex-shrink-0">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors">
       <div class="flex items-center gap-3">
         <!-- Mismos conceptos y mismos colores que el Dashboard: definirlos por
              concepto y no por pantalla es lo que evita que "pendiente" sea rojo
@@ -35,7 +35,7 @@
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-lg kpi-fondo--en-curso flex items-center justify-center shrink-0">
           <i class="fas fa-hard-hat kpi-color--en-curso"></i>
@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-lg kpi-fondo--resuelta flex items-center justify-center shrink-0">
           <i class="fas fa-check-circle kpi-color--resuelta"></i>
@@ -61,7 +61,7 @@
       </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-lg kpi-fondo--pendiente flex items-center justify-center shrink-0">
           <i class="fas fa-clock kpi-color--pendiente"></i>
@@ -76,10 +76,10 @@
   </div>
 
   <!-- FILTROS ─────────────────────────────────────────────────── -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6 flex-shrink-0">
+  <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 mb-6 flex-shrink-0">
     <div class="flex items-center gap-2 mb-4">
       <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-        <i class="fas fa-filter text-blue-500 text-sm"></i>
+        <i class="fas fa-filter text-brand-500 text-sm"></i>
       </div>
       <div>
         <h3 class="text-sm font-bold text-gray-800 dark:text-white">Filtros de Reporte</h3>
@@ -92,7 +92,7 @@
       <div>
         <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Estado</label>
         <select v-model="filtroEstadoReporte"
-          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all">
           <option :value="null">Todos</option>
           <option v-for="e in estadosPosibles" :key="e" :value="e">{{ etiquetaEstado(e) }}</option>
         </select>
@@ -102,7 +102,7 @@
       <div>
         <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Tipo de Denuncia</label>
         <select v-model="filtroTipoReporte"
-          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all">
           <option :value="null">Todos</option>
           <option v-for="t in tiposDenuncia" :key="t.id" :value="t.id">{{ t.nombre }}</option>
         </select>
@@ -112,14 +112,14 @@
       <div>
         <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Fecha Desde</label>
         <input type="date" v-model="fechaMinReporte"
-          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all">
       </div>
 
       <!-- Hasta -->
       <div>
         <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Fecha Hasta</label>
         <input type="date" v-model="fechaMaxReporte"
-          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+          class="w-full border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all">
       </div>
 
       <!-- Restablecer -->
@@ -135,7 +135,7 @@
   <!-- GRÁFICAS ───────────────────────────────────────────────── -->
   <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
     <!-- Gráfica Barras Horizontales (Top Tipos) -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors flex flex-col min-h-0">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors flex flex-col min-h-0">
       <div class="shrink-0 mb-4">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
@@ -153,7 +153,7 @@
     </div>
 
     <!-- Gráfica Dona por Distrito -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors flex flex-col min-h-0">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors flex flex-col min-h-0">
       <div class="shrink-0 mb-4">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
@@ -171,7 +171,7 @@
     </div>
 
     <!-- Gráfica Línea de Tiempo -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-colors flex flex-col min-h-0">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors flex flex-col min-h-0">
       <div class="shrink-0 mb-4">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center">

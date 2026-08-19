@@ -68,7 +68,7 @@
           <p class="text-xs">Sin incidencias registradas</p>
           <p v-if="filtrosActivos" class="text-[10px] mt-2">
             Hay filtros activos —
-            <button @click="limpiarFiltros" class="text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+            <button @click="limpiarFiltros" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline">
               limpiarlos
             </button>
           </p>
@@ -175,7 +175,7 @@
       <button class="mv-dock__btn" :class="{'is-active': ubicacionActiva}" @click="obtenerUbicacion"
         :title="ubicacionCargando ? 'Obteniendo ubicación…' : (ubicacionActiva ? 'Ocultar mi ubicación' : 'Mi ubicación')">
         <i v-if="!ubicacionCargando" class="fa-solid fa-location-crosshairs"></i>
-        <div v-else class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <div v-else class="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
       </button>
 
       <div class="mv-dock__sep"></div>
@@ -194,7 +194,7 @@
       <div
         class="flex justify-between items-center px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 shrink-0">
         <div class="flex items-center gap-2">
-          <i class="fa-solid fa-layer-group text-blue-600 dark:text-blue-400 text-sm"></i>
+          <i class="fa-solid fa-layer-group text-brand-600 dark:text-brand-400 text-sm"></i>
           <span class="text-[13px] font-bold text-gray-800 dark:text-white">Capas y Herramientas</span>
         </div>
         <button @click="mostrarMenuCapas = false"
@@ -210,7 +210,7 @@
           <div class="flex justify-between items-center cursor-pointer mb-3 group"
             @click="seccionesCapas.tipoMapa = !seccionesCapas.tipoMapa">
             <h4
-              class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 group-hover:text-blue-500 transition-colors">
+              class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 group-hover:text-brand-500 transition-colors">
               Tipo de mapa</h4>
             <i :class="seccionesCapas.tipoMapa ? 'fa-chevron-up' : 'fa-chevron-down'"
               class="fa-solid text-[10px] text-gray-400"></i>
@@ -218,35 +218,35 @@
           <div v-show="seccionesCapas.tipoMapa" class="grid grid-cols-4 gap-2">
             <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('cartomap')">
               <div class="w-[50px] h-[50px] rounded-xl border-2 transition-all bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
-                :class="estiloTile==='cartomap' ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
+                :class="estiloTile==='cartomap' ? 'border-brand-600 ring-2 ring-brand-200 dark:ring-brand-800' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
                 <i class="fa-solid fa-sun text-gray-400 dark:text-gray-300 text-xl"></i>
               </div>
               <span class="text-[10px] font-medium text-center"
-                :class="estiloTile==='cartomap'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Claro</span>
+                :class="estiloTile==='cartomap'?'text-brand-700 dark:text-brand-400 font-bold':'text-gray-600 dark:text-gray-400'">Claro</span>
             </div>
             <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('darkmap')">
               <div class="w-[50px] h-[50px] rounded-xl border-2 transition-all bg-gray-800 flex items-center justify-center"
-                :class="estiloTile==='darkmap' ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent group-hover:border-gray-600'">
+                :class="estiloTile==='darkmap' ? 'border-brand-600 ring-2 ring-brand-200 dark:ring-brand-800' : 'border-transparent group-hover:border-gray-600'">
                 <i class="fa-solid fa-moon text-gray-400 text-xl"></i>
               </div>
               <span class="text-[10px] font-medium text-center"
-                :class="estiloTile==='darkmap'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Oscuro</span>
+                :class="estiloTile==='darkmap'?'text-brand-700 dark:text-brand-400 font-bold':'text-gray-600 dark:text-gray-400'">Oscuro</span>
             </div>
             <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('google')">
               <div class="w-[50px] h-[50px] rounded-xl border-2 transition-all bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center"
-                :class="estiloTile==='google' ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
-                <i class="fa-solid fa-map-location-dot text-blue-500 text-xl"></i>
+                :class="estiloTile==='google' ? 'border-brand-600 ring-2 ring-brand-200 dark:ring-brand-800' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
+                <i class="fa-solid fa-map-location-dot text-brand-500 text-xl"></i>
               </div>
               <span class="text-[10px] font-medium text-center"
-                :class="estiloTile==='google'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Maps</span>
+                :class="estiloTile==='google'?'text-brand-700 dark:text-brand-400 font-bold':'text-gray-600 dark:text-gray-400'">Maps</span>
             </div>
             <div class="flex flex-col items-center gap-1.5 cursor-pointer group" @click="cambiarTile('satellite')">
               <div class="w-[50px] h-[50px] rounded-xl border-2 transition-all bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center"
-                :class="estiloTile==='satellite' ? 'border-blue-600 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
+                :class="estiloTile==='satellite' ? 'border-brand-600 ring-2 ring-brand-200 dark:ring-brand-800' : 'border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600'">
                 <i class="fa-solid fa-earth-americas text-emerald-600 dark:text-emerald-400 text-xl"></i>
               </div>
               <span class="text-[10px] font-medium text-center"
-                :class="estiloTile==='satellite'?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Satélite</span>
+                :class="estiloTile==='satellite'?'text-brand-700 dark:text-brand-400 font-bold':'text-gray-600 dark:text-gray-400'">Satélite</span>
             </div>
           </div>
         </div>
@@ -258,7 +258,7 @@
           <div class="flex justify-between items-center cursor-pointer mb-3 group"
             @click="seccionesCapas.herramientas = !seccionesCapas.herramientas">
             <h4
-              class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 group-hover:text-blue-500 transition-colors">
+              class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 group-hover:text-brand-500 transition-colors">
               Herramientas del mapa</h4>
             <i :class="seccionesCapas.herramientas ? 'fa-chevron-up' : 'fa-chevron-down'"
               class="fa-solid text-[10px] text-gray-400"></i>
@@ -270,10 +270,10 @@
               <div class="w-[50px] h-[50px] rounded-xl border-2 transition-all flex items-center justify-center"
                 :class="herramientasActivas.clustering ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent bg-gray-50 dark:bg-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-500'">
                 <i class="fa-solid fa-circle-nodes text-xl"
-                  :class="herramientasActivas.clustering ? 'text-blue-600' : 'text-gray-400'"></i>
+                  :class="herramientasActivas.clustering ? 'text-brand-600' : 'text-gray-400'"></i>
               </div>
               <span class="text-[10px] font-medium text-center leading-tight"
-                :class="herramientasActivas.clustering?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Agrupar<br>Pines</span>
+                :class="herramientasActivas.clustering?'text-brand-700 dark:text-brand-400 font-bold':'text-gray-600 dark:text-gray-400'">Agrupar<br>Pines</span>
             </div>
 
             <!-- Heatmap -->
@@ -284,7 +284,7 @@
                   :class="herramientasActivas.heatmap ? 'text-rose-500' : 'text-gray-400'"></i>
               </div>
               <span class="text-[10px] font-medium text-center leading-tight"
-                :class="herramientasActivas.heatmap?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Mapa
+                :class="herramientasActivas.heatmap?'text-brand-700 dark:text-brand-400 font-bold':'text-gray-600 dark:text-gray-400'">Mapa
                 de<br>Calor</span>
             </div>
 
@@ -293,10 +293,10 @@
               <div class="w-[50px] h-[50px] rounded-xl border-2 transition-all flex items-center justify-center"
                 :class="herramientasActivas.poligonos ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-transparent bg-gray-50 dark:bg-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-500'">
                 <i class="fa-solid fa-vector-square text-xl"
-                  :class="herramientasActivas.poligonos ? 'text-blue-600' : 'text-gray-400'"></i>
+                  :class="herramientasActivas.poligonos ? 'text-brand-600' : 'text-gray-400'"></i>
               </div>
               <span class="text-[10px] font-medium text-center leading-tight"
-                :class="herramientasActivas.poligonos?'text-blue-700 dark:text-blue-400 font-bold':'text-gray-600 dark:text-gray-400'">Dibujar<br>Polígono</span>
+                :class="herramientasActivas.poligonos?'text-brand-700 dark:text-brand-400 font-bold':'text-gray-600 dark:text-gray-400'">Dibujar<br>Polígono</span>
             </div>
           </div>
 
@@ -325,15 +325,15 @@
                   ? 'bg-blue-50 dark:bg-blue-900/25'
                   : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'">
                 <i class="fa-solid text-sm w-4 text-center" :class="[capa.icono,
-                  herramientasActivas[capa.id] ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400']"></i>
+                  herramientasActivas[capa.id] ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400']"></i>
                 <span class="flex-1 text-xs font-medium"
                   :class="herramientasActivas[capa.id]
-                    ? 'text-blue-700 dark:text-blue-400 font-semibold'
+                    ? 'text-brand-700 dark:text-brand-400 font-semibold'
                     : 'text-gray-600 dark:text-gray-300'">{{ capa.nombre }}</span>
                 <!-- Interruptor: comunica "encendido/apagado" mejor que un
                      resaltado, que se confunde con el estado de foco. -->
                 <span class="w-8 h-4 rounded-full relative transition-colors shrink-0"
-                  :class="herramientasActivas[capa.id] ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'">
+                  :class="herramientasActivas[capa.id] ? 'bg-brand-600' : 'bg-gray-300 dark:bg-gray-600'">
                   <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
                     :class="herramientasActivas[capa.id] ? 'left-[18px]' : 'left-0.5'"></span>
                 </span>
@@ -350,7 +350,7 @@
               <i class="fa-solid fa-ruler-combined text-base w-5 text-center"
                 :class="herramientasActivas.medicion ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'"></i>
               <span class="text-[11px] font-semibold flex-1"
-                :class="herramientasActivas.medicion?'text-blue-700 dark:text-blue-400':'text-gray-600 dark:text-gray-300'">Medir
+                :class="herramientasActivas.medicion?'text-brand-700 dark:text-brand-400':'text-gray-600 dark:text-gray-300'">Medir
                 distancia</span>
               <div class="mv-tog" :class="{on: herramientasActivas.medicion}" role="switch"
                 :aria-checked="herramientasActivas.medicion"></div>
@@ -364,19 +364,19 @@
                 <button @click.stop="cambiarModoMedicion('linea')"
                   title="Distancia en línea recta entre dos puntos"
                   class="flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg text-[10px] font-semibold transition-colors"
-                  :class="medicionModo === 'linea' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
+                  :class="medicionModo === 'linea' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
                   <i class="fa-solid fa-ruler"></i> Recta
                 </button>
                 <button @click.stop="cambiarModoMedicion('ruta')"
                   title="Distancia por calle. Admite varios puntos del recorrido"
                   class="flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg text-[10px] font-semibold transition-colors"
-                  :class="medicionModo === 'ruta' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
+                  :class="medicionModo === 'ruta' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
                   <i class="fa-solid fa-route"></i> Ruta vial
                 </button>
                 <button @click.stop="cambiarModoMedicion('manual')"
                   title="Trazo a mano, vértice a vértice. Para caminos rurales que OpenStreetMap no tiene"
                   class="flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-lg text-[10px] font-semibold transition-colors"
-                  :class="medicionModo === 'manual' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
+                  :class="medicionModo === 'manual' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'">
                   <i class="fa-solid fa-pen-nib"></i> Manual
                 </button>
               </div>
@@ -400,7 +400,7 @@
       <div
         class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700 shrink-0">
         <div class="flex items-center gap-2">
-          <i class="fa-solid fa-filter text-blue-600 dark:text-blue-400 text-sm"></i>
+          <i class="fa-solid fa-filter text-brand-600 dark:text-brand-400 text-sm"></i>
           <span class="text-[13px] font-bold text-gray-800 dark:text-white">Filtrar Incidencias</span>
           <span v-if="filtrosActivos"
             class="text-[9px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
@@ -418,10 +418,10 @@
         <!-- Distrito -->
         <div>
           <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-            <i class="fa-solid fa-map mr-1 text-blue-500"></i>Distrito
+            <i class="fa-solid fa-map mr-1 text-brand-500"></i>Distrito
           </label>
           <select v-model="filtros.distrito" @change="aplicarFiltros"
-            class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+            class="w-full rounded-lg border px-3 py-2.5 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs font-medium text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all">
             <option value="">Todos los distritos</option>
             <option v-for="d in distritos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
           </select>
@@ -440,7 +440,7 @@
           <div class="flex flex-col gap-1.5 max-h-[120px] overflow-y-auto pr-1 custom-scrollbar">
             <label class="flex items-center gap-2 cursor-pointer group">
               <input type="radio" name="tipoInc" value="" v-model="filtros.tipoIncidencia" @change="aplicarFiltros"
-                class="w-3 h-3 accent-blue-600">
+                class="w-3 h-3 accent-brand-600">
               <span
                 class="text-[11px] font-medium text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">
                 Todos los tipos
@@ -448,7 +448,7 @@
             </label>
             <label v-for="cat in tiposDenuncia" :key="cat.id" class="flex items-center gap-2 cursor-pointer group">
               <input type="radio" name="tipoInc" :value="cat.id" v-model="filtros.tipoIncidencia"
-                @change="aplicarFiltros" class="w-3 h-3 accent-blue-600">
+                @change="aplicarFiltros" class="w-3 h-3 accent-brand-600">
               <div class="w-2 h-2 rounded-full flex-shrink-0" :style="{background: cat.color_hex}"></div>
               <span
                 class="text-[11px] font-medium text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition truncate">
@@ -482,7 +482,7 @@
             </label>
             <button @click="filtros.historicoActivo = !filtros.historicoActivo; aplicarFiltros()"
               :class="['w-[36px] h-5 rounded-full relative transition-all duration-300 flex-shrink-0 outline-none',
-                       filtros.historicoActivo ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600 border border-transparent dark:border-gray-500']">
+                       filtros.historicoActivo ? 'bg-brand-600' : 'bg-gray-200 dark:bg-gray-600 border border-transparent dark:border-gray-500']">
               <span :class="['absolute top-[2px] left-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-300',
                              filtros.historicoActivo ? 'translate-x-[16px]' : 'translate-x-0']"></span>
             </button>
@@ -528,7 +528,7 @@
           <i class="fa-solid fa-rotate-left text-[10px]"></i>Limpiar
         </button>
         <button @click="aplicarFiltros(); mostrarPanelFiltros = false"
-          class="flex-[2] py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+          class="flex-[2] py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white transition-colors flex items-center justify-center gap-1.5 shadow-sm">
           <i class="fa-solid fa-check text-[10px]"></i>Aplicar filtros
         </button>
       </div>
@@ -552,7 +552,7 @@
         <button
           class="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors"
           :class="mobileTab==='feed'
-                  ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                  ? 'border-b-2 border-brand-500 text-brand-600 dark:text-brand-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'" @click="mobileTab='feed'">
           <span class="relative">
             <i class="fa-solid fa-rss"></i>
@@ -567,7 +567,7 @@
         <button
           class="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-bold uppercase tracking-wide transition-colors"
           :class="mobileTab==='capas'
-                  ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                  ? 'border-b-2 border-brand-500 text-brand-600 dark:text-brand-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'" @click="mobileTab='capas'">
           <i class="fa-solid fa-layer-group"></i>
           Capas
@@ -605,7 +605,7 @@
         </div>
         <div v-for="cat in categories" :key="'mc-'+cat.id"
           class="flex items-center gap-2.5 px-3 py-2 cursor-pointer border-l-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
-          :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--brand)] dark:border-blue-400' : 'border-transparent'"
+          :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--brand)] dark:border-brand-400' : 'border-transparent'"
           @click="selectAndZoom(cat.id); toggleSidebars()">
           <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{background:cat.color}"></div>
           <i :class="['fa-solid', cat.icon]" class="text-[13px] w-4 text-center shrink-0" :style="{color:cat.color}"></i>
@@ -783,7 +783,7 @@
     <div class="mv-panel__inner">
 
       <header class="mv-panel__head">
-        <i class="fa-solid fa-layer-group text-[var(--mv-brand)] dark:text-blue-400 text-xs"></i>
+        <i class="fa-solid fa-layer-group text-[var(--mv-brand)] dark:text-brand-400 text-xs"></i>
         <span class="mv-panel__title">Capas del Mapa</span>
         <button class="mv-panel__close" @click="alternarPanel('capas')" title="Cerrar capas" aria-label="Cerrar capas">
           <i class="fa-solid fa-chevron-right"></i>
@@ -802,7 +802,7 @@
         <div v-show="acordeonTipos">
           <div v-for="cat in categories" :key="cat.id"
             class="flex items-center gap-2.5 px-3 py-2 cursor-pointer border-l-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
-            :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--mv-brand)] dark:border-blue-400' : 'border-transparent'"
+            :class="selectedCat===cat.id ? 'bg-gray-50 dark:bg-gray-700 border-[var(--mv-brand)] dark:border-brand-400' : 'border-transparent'"
             @click="selectAndZoom(cat.id)">
             <div class="w-2.5 h-2.5 rounded-full shrink-0" :style="{background:cat.color}"></div>
             <i :class="['fa-solid', cat.icon]" class="text-[13px] w-4 text-center shrink-0"
@@ -1081,7 +1081,7 @@
 
       <div class="px-5 py-4 flex gap-2 border-t border-gray-100 dark:border-gray-800 mt-2">
         <button @click="verDetalleEnMapa"
-          class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm">
+          class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-colors shadow-sm">
           <i class="fa-solid fa-crosshairs text-[10px]"></i>Ver en mapa
         </button>
         <button @click="cerrarDetalle"
@@ -1113,13 +1113,13 @@
         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
           Nombre de la Zona</label>
         <input type="text" v-model="formPoligono.nombre" placeholder="Ej: Zona Verde Sector A"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:text-white placeholder-gray-400">
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white placeholder-gray-400">
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
           Tipo de Área</label>
         <select v-model="formPoligono.tipo"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white">
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white">
           <option value="area_verde">Área Verde</option>
           <option value="zona_riesgo">Zona de Riesgo</option>
           <option value="zona_comercial">Zona Comercial</option>
@@ -1143,7 +1143,7 @@
         <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5 uppercase tracking-wide">
           Descripción (Opcional)</label>
         <textarea v-model="formPoligono.descripcion" rows="2" placeholder="Detalles adicionales sobre este polígono…"
-          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-white resize-none placeholder-gray-400"></textarea>
+          class="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all dark:text-white resize-none placeholder-gray-400"></textarea>
       </div>
     </div>
     <div
@@ -1151,7 +1151,7 @@
       <button @click="cerrarModalPoligono"
         class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">Cancelar</button>
       <button @click="guardarPoligono" :disabled="!formPoligono.nombre"
-        class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+        class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
         <i class="fa-solid fa-save mr-1.5"></i> Guardar
       </button>
     </div>

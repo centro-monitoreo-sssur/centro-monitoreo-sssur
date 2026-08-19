@@ -108,7 +108,7 @@
       </div>
       <select :value="itemsPorPagina"
               aria-label="Registros por página"
-              class="text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-white rounded-lg px-2 py-1 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              class="text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 dark:text-white rounded-lg px-2 py-1 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-none"
               @change="$emit('cambiar-tamano', parseInt($event.target.value))">
         <option v-for="t in tamanosPagina" :key="t" :value="t">{{ t }}</option>
       </select>

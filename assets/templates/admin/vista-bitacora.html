@@ -21,19 +21,19 @@
 </div>
 
 <!-- FILTROS -->
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end flex-shrink-0">
+<div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end flex-shrink-0">
   <div class="flex-1 min-w-[250px]">
     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Búsqueda General</label>
     <div class="relative">
       <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
       <input type="text" v-model="busqueda" placeholder="Usuario, módulo, detalle de la acción..." 
-        class="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white transition-all">
+        class="w-full rounded-lg border py-2.5 pl-9 pr-3 border-gray-300 dark:border-gray-700 bg-transparent text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:text-white transition-all">
     </div>
   </div>
   
   <div class="w-[200px]">
     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Filtrar por Acción</label>
-    <select v-model="filtroAccion" class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm focus:ring-2 focus:ring-blue-500 dark:text-white transition-all">
+    <select v-model="filtroAccion" class="w-full rounded-lg border px-3 py-2.5 border-gray-300 dark:border-gray-700 bg-transparent text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:text-white transition-all">
       <option value="todas">Todas las acciones</option>
       <option v-for="a in accionesUnicas" :key="a" :value="a">{{ a }}</option>
     </select>
@@ -43,16 +43,16 @@
     <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Rango de Fechas</label>
     <div class="relative">
       <i class="fa-regular fa-calendar absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-      <input type="text" placeholder="Últimos 7 días" class="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-sm cursor-pointer dark:text-white" readonly>
+      <input type="text" placeholder="Últimos 7 días" class="w-full rounded-lg border py-2.5 pl-9 pr-3 border-gray-300 dark:border-gray-700 bg-transparent text-sm cursor-pointer dark:text-white" readonly>
     </div>
   </div>
 </div>
 
 <!-- TABLA DE LOGS -->
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col overflow-hidden flex-1 min-h-0">
+<div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm flex flex-col overflow-hidden flex-1 min-h-0">
   
   <div class="p-3 border-b border-gray-100 dark:border-gray-700 bg-blue-50/50 dark:bg-blue-900/10 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400">
-    <i class="fa-solid fa-lock text-blue-500"></i> 
+    <i class="fa-solid fa-lock text-brand-500"></i> 
     <span><strong>Nota de seguridad:</strong> Los registros de esta bitácora son inmutables y no pueden ser modificados ni eliminados por ningún usuario.</span>
   </div>
 

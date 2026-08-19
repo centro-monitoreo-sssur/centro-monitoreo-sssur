@@ -16,7 +16,7 @@
               ]"
               :key="m.id" type="button" @click="cambiarModo(m.id)"
               :class="modo === m.id
-                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-300 shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-300 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
               class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors">
         <i :class="'fa-solid ' + m.icono + ' mr-1 text-[10px]'"></i>{{ m.rotulo }}
