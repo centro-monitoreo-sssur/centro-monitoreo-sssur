@@ -32,6 +32,12 @@ export default {
     const zonas = ref([]);
     const distritoSeleccionado = ref(null); // objeto zona completo
     const panelAbierto = ref(false);
+    /* La hoja del ranking en móvil, plegada al entrar.
+       En escritorio la tarjeta se ve siempre y este valor no la afecta: el
+       plegado lo aplica una clase `md:block` en la plantilla. En un teléfono
+       nace cerrada porque el mapa es lo que se ha venido a ver; abrirla es un
+       toque, y taparlo de entrada no lo es. */
+    const rankingAbierto = ref(false);
 
     /* ─── Filtro de período ───────────────────────────────────────────────
        Antes esto NO filtraba: calculaba qué fracción del año abarcaba el rango
@@ -643,6 +649,10 @@ export default {
       // cambiar el período en vez de quedarse con la foto del momento del clic.
       distritoSeleccionado.value = { ...zona };
       panelAbierto.value = true;
+      /* En móvil las dos hojas nacen abajo y se pisarían. Al abrir el detalle
+         se recoge el ranking; al cerrarlo NO se vuelve a abrir solo, porque
+         quien cierra un detalle suele querer ver el mapa. */
+      rankingAbierto.value = false;
       // Volar al distrito
       if (mapa) mapa.flyTo(zona.centroid, 13, { animate: true, duration: 0.8 });
     }
@@ -912,7 +922,7 @@ export default {
     return {
       cargando, cargandoAnimacion, modoActivo, zonas,
       MODOS, rankingZonas, kpisGlobales,
-      distritoSeleccionado, distritoConFiltro, panelAbierto,
+      distritoSeleccionado, distritoConFiltro, panelAbierto, rankingAbierto,
       animarHaciaModo, getMetricaLabel, tituloRanking,
       porcentajeDe, explicacionEtiqueta, leyendaCifra,
       // Estado de la consulta de indicadores

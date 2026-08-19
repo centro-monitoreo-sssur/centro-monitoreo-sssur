@@ -2,7 +2,7 @@
      VISTA: Cartograma Analítico — Panel Ejecutivo Territorial
      San Salvador Sur · 5 Distritos · Análisis Comparativo
      ============================================================ -->
-<div class="mapa-vista">
+<div class="mapa-vista mapa-vista--carto">
 
   <!-- ══════════════════════════════════════════════════ -->
   <!-- BARRA DE KPIs GLOBALES (SUPERIOR)                  -->
@@ -10,8 +10,9 @@
   <div v-if="!cargando"
     class="absolute top-0 left-0 right-0 z-40 flex items-center gap-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm px-4"
     style="height:48px;">
-    <!-- Título -->
-    <div class="flex items-center gap-2 pr-5 border-r border-gray-200 dark:border-gray-700 h-full">
+    <!-- Título. En móvil se va: el nombre de la vista ya está en la cabecera
+         de la aplicación y aquí robaba la mitad del ancho a los indicadores. -->
+    <div class="hidden sm:flex items-center gap-2 pr-5 border-r border-gray-200 dark:border-gray-700 h-full">
       <i class="fa-solid fa-map-location-dot text-blue-600 dark:text-blue-400 text-base"></i>
       <div>
         <div class="text-[11px] font-black text-gray-800 dark:text-white leading-none">Cartograma Analítico</div>
@@ -19,8 +20,9 @@
       </div>
     </div>
 
-    <!-- KPIs globales -->
-    <div class="flex items-center gap-0 flex-1 h-full">
+    <!-- KPIs globales. Tira desplazable: ocho indicadores no caben en un
+         móvil, y comprimirlos hasta que quepan los deja ilegibles. -->
+    <div class="carto-tira flex items-center gap-0 flex-1 h-full">
       <div
         class="flex items-center gap-2 px-4 border-r border-gray-100 dark:border-gray-800 h-full hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
         <i class="fa-solid fa-users text-blue-500 text-xs"></i>
@@ -131,19 +133,6 @@
       </div>
     </div>
 
-    <!-- Selector de modo -->
-    <div class="flex items-center gap-1 pl-3 border-l border-gray-200 dark:border-gray-700 h-full">
-      <button v-for="modo in MODOS" :key="modo.id" @click="animarHaciaModo(modo.id)" :disabled="cargandoAnimacion"
-        :title="modo.desc" :class="['flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200',
-                 modoActivo === modo.id
-                   ? 'text-white shadow-md'
-                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700']"
-        :style="modoActivo === modo.id ? `background:${modo.color}` : ''">
-        <i :class="'fa-solid ' + modo.icono + ' text-[10px]'"></i>
-        <span class="hidden lg:inline">{{ modo.label }}</span>
-        <i v-if="cargandoAnimacion && modoActivo === modo.id" class="fa-solid fa-circle-notch fa-spin text-[9px]"></i>
-      </button>
-    </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════ -->
@@ -151,9 +140,14 @@
   <!-- Aplica sobre KPIs de Denuncias Activas,            -->
   <!-- Intervenciones y Eficiencia de Respuesta           -->
   <!-- ══════════════════════════════════════════════════ -->
+  <!-- Período y modos comparten barra. En escritorio van en una línea; en
+       móvil se envuelven en dos, y `--carto-top` ya cuenta con ello. -->
   <div v-if="!cargando"
-    class="absolute left-0 right-0 z-30 flex items-center gap-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 px-4 py-1.5"
+    class="absolute left-0 right-0 z-30 flex flex-wrap items-stretch bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700"
     style="top:48px;">
+
+    <!-- Fila 1 · período -->
+    <div class="carto-tira flex items-center gap-3 h-10 px-3 w-full min-w-0 md:w-auto md:flex-1">
 
     <!-- Ícono + etiqueta -->
     <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -206,16 +200,34 @@
          importa: "casos reportados en el período" y "casos cerrados en el
          período" son cifras distintas, y quien decide con esto tiene que saber
          cuál está mirando. -->
-    <p class="text-[9px] text-gray-400 italic hidden sm:block">
+    <p class="text-[9px] text-gray-400 italic hidden xl:block">
       <i class="fa-solid fa-circle-info mr-0.5 text-indigo-400"></i>
       Casos <strong class="font-semibold">reportados</strong> en el período, con su estado actual
     </p>
+    </div>
+
+    <!-- Fila 2 · modos de lectura del territorio.
+         La etiqueta ya no se esconde por debajo de `lg`: cinco iconos sin texto
+         no dicen qué se está mirando, y la tira se desplaza si no caben. -->
+    <div class="carto-tira flex items-center gap-1 h-10 px-3 w-full min-w-0 md:w-auto
+                border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700">
+      <button v-for="modo in MODOS" :key="modo.id" @click="animarHaciaModo(modo.id)" :disabled="cargandoAnimacion"
+        :title="modo.desc" :class="['flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all duration-200 whitespace-nowrap shrink-0',
+                 modoActivo === modo.id
+                   ? 'text-white shadow-md'
+                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700']"
+        :style="modoActivo === modo.id ? `background:${modo.color}` : ''">
+        <i :class="'fa-solid ' + modo.icono + ' text-[10px]'"></i>
+        <span>{{ modo.label }}</span>
+        <i v-if="cargandoAnimacion && modoActivo === modo.id" class="fa-solid fa-circle-notch fa-spin text-[9px]"></i>
+      </button>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════ -->
   <!-- MAPA LEAFLET                                        -->
   <!-- ══════════════════════════════════════════════════ -->
-  <div id="carto-map" style="position:absolute;inset:0;top:82px;width:100%;z-index:0;"></div>
+  <div id="carto-map" style="position:absolute;inset:0;top:var(--carto-top);width:100%;z-index:0;"></div>
 
   <!-- ══════════════════════════════════════════════════════════════════════
        CAPAS Y HERRAMIENTAS
@@ -225,7 +237,7 @@
        SON el cartograma, coloreados por el indicador activo, así que dibujar su
        contorno encima sería duplicarlos.
        ══════════════════════════════════════════════════════════════════════ -->
-  <div class="absolute z-30" style="top:98px; right:16px;">
+  <div class="absolute z-30" style="top:calc(var(--carto-top) + 10px); right:16px;">
     <button type="button" @click="menuCapasAbierto = !menuCapasAbierto"
       title="Capas y herramientas" :aria-expanded="menuCapasAbierto ? 'true' : 'false'"
       class="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -284,11 +296,24 @@
        el propio ranking y había que cerrar el detalle para elegir otro — justo
        lo contrario de lo que se espera de una lista comparativa. Los dos
        paneles están en lados opuestos y no se solapan. -->
-  <div v-if="!cargando" class="absolute left-3 bottom-6 z-40 flex flex-col gap-2"
-    style="top:95px; max-height: calc(100% - 115px); overflow-y:auto;">
+  <div v-if="!cargando" class="carto-ranking absolute left-3 bottom-6 z-40 flex flex-col gap-2"
+    style="top:calc(var(--carto-top) + 8px); max-height: calc(100% - var(--carto-top) - 32px); overflow-y:auto;">
+
+    <!-- Asa de la hoja inferior. Solo en móvil: ahí el ranking nace plegado
+         para no tapar el mapa, y esto es lo que lo abre. En escritorio la
+         tarjeta se ve entera y un botón de plegar sobraría. -->
+    <button type="button" @click="rankingAbierto = !rankingAbierto"
+      class="md:hidden sticky top-0 z-10 -mx-3 px-3 py-2 flex items-center gap-2
+             bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-t-2xl">
+      <span class="w-8 h-1 rounded-full bg-gray-300 dark:bg-gray-600 mx-auto absolute left-1/2 -translate-x-1/2 top-1"></span>
+      <i class="fa-solid fa-ranking-star text-amber-500 text-xs mt-1"></i>
+      <span class="text-[11px] font-bold text-gray-700 dark:text-gray-200 mt-1">Ranking y modo</span>
+      <i :class="rankingAbierto ? 'fa-chevron-down' : 'fa-chevron-up'"
+         class="fa-solid text-[10px] text-gray-400 ml-auto mt-1"></i>
+    </button>
 
     <!-- Tarjeta leyenda del modo -->
-    <div
+    <div :class="rankingAbierto ? '' : 'hidden md:block'"
       class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-[200px]">
       <div class="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-2">Modo activo</div>
       <div class="flex items-center gap-2">
@@ -323,7 +348,7 @@
     </div>
 
     <!-- Ranking de distritos -->
-    <div
+    <div :class="rankingAbierto ? '' : 'hidden md:block'"
       class="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 w-[200px]">
       <!-- El título sigue al modo activo. Decía siempre "Ranking Poblacional",
            incluso cuando la lista estaba ordenada por carga o por eficiencia. -->
@@ -373,8 +398,9 @@
       </div>
     </div>
 
-    <!-- Nota futura -->
-    <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-3 w-[200px]">
+    <!-- Nota futura. Fuera del móvil: no es información operativa y ahí
+         compite por el sitio con el ranking, que sí lo es. -->
+    <div class="hidden md:block bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl p-3 w-[200px]">
       <div class="flex items-start gap-2">
         <i class="fa-solid fa-lightbulb text-blue-500 text-xs mt-0.5"></i>
         <div class="text-[9px] text-blue-700 dark:text-blue-300 leading-relaxed">
@@ -389,7 +415,7 @@
   <!-- ══════════════════════════════════════════════════ -->
   <transition name="slide-panel">
     <div v-if="panelAbierto && distritoSeleccionado"
-      class="absolute right-0 top-[48px] bottom-0 z-40 w-[300px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+      class="carto-detalle absolute right-0 top-[48px] bottom-0 z-40 w-[300px] bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-hidden">
 
       <!-- Encabezado del panel -->
       <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800"
@@ -604,7 +630,7 @@
 
   <!-- Indicador de modo (esquina inferior derecha) -->
   <div v-if="!cargando && !panelAbierto"
-    class="absolute bottom-6 right-16 z-40 flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg text-white text-[10px] font-bold uppercase tracking-wider transition-all duration-300 pointer-events-none"
+    class="hidden md:flex absolute bottom-6 right-16 z-40 items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg text-white text-[10px] font-bold uppercase tracking-wider transition-all duration-300 pointer-events-none"
     :style="`background: ${MODOS.find(m=>m.id===modoActivo)?.color || '#3b82f6'}`">
     <i :class="'fa-solid ' + MODOS.find(m=>m.id===modoActivo)?.icono + ' text-[10px]'"></i>
     {{ MODOS.find(m=>m.id===modoActivo)?.label }}

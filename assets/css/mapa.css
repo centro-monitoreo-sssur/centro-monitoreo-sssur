@@ -1337,3 +1337,84 @@
 @media (max-width: 767.98px) {
   .carto-pct__valor { font-size: 15px; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CARTOGRAMA · alto de la cabecera y comportamiento en móvil
+   ──────────────────────────────────────────────────────────────────────────
+   El mapa y todo lo que flota sobre él se colocan DEBAJO de dos barras
+   absolutas. Sus alturas estaban escritas a mano en tres sitios distintos
+   —top:82px para el mapa, top:95px para el ranking, top:98px para el botón de
+   capas— y ninguno de los tres coincidía con el alto real. En escritorio se
+   notaba poco; en móvil, donde las barras se envuelven en varias líneas, el
+   mapa arrancaba por debajo de ellas y quedaba tapado.
+
+   Ahora hay una sola variable y los tres la usan. Cambiar el alto de una barra
+   es cambiar un número, no cazar tres.
+   ══════════════════════════════════════════════════════════════════════════ */
+.mapa-vista--carto {
+  /* 48 de la fila de indicadores + 40 de la fila de controles. */
+  --carto-top: 88px;
+}
+
+@media (max-width: 767.98px) {
+  .mapa-vista--carto {
+    /* En móvil los controles se parten en dos líneas: período y modos. */
+    --carto-top: 128px;
+  }
+}
+
+/* Tiras que se desplazan de lado en vez de comprimirse hasta ser ilegibles.
+   Un indicador recortado a la mitad no informa; uno al que hay que deslizar,
+   sí. Se oculta la barra de desplazamiento porque en un móvil ocuparía más
+   alto del que hay. */
+.carto-tira {
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* Cada bloque se detiene alineado al borde: sin esto una tira de ocho
+     indicadores se queda siempre a mitad de uno. */
+  scroll-snap-type: x proximity;
+}
+.carto-tira::-webkit-scrollbar { display: none; }
+.carto-tira > * { scroll-snap-align: start; }
+
+/* El ranking pasa de tarjeta flotante a hoja inferior. En una pantalla de
+   360 px una tarjeta de 200 px de ancho encima del mapa se come más de la
+   mitad del territorio, que es justo lo que se ha venido a mirar. */
+@media (max-width: 767.98px) {
+  .carto-ranking {
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    /* `!important` porque Tailwind se inyecta desde la CDN en tiempo de
+       ejecución y sus utilidades (`left-3`, `bottom-6`) pueden ganar por orden
+       de aparición aunque tengan la misma especificidad. */
+    bottom: 0 !important;
+    max-height: 55% !important;
+    border-radius: 16px 16px 0 0;
+    background: var(--mv-surface);
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.18);
+    padding: 0 12px 12px;
+    /* Barra de gestos del teléfono. */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .dark .carto-ranking { background: #111827; }
+
+  /* Las tarjetas internas dejan de tener ancho fijo dentro de la hoja. */
+  .carto-ranking > * { width: 100% !important; }
+
+  /* El detalle del distrito también sube desde abajo: un panel lateral de
+     300 px sobre 360 tapa la pantalla entera y no se entiende de dónde salió. */
+  .carto-detalle {
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    max-height: 78%;
+    border-left: 0 !important;
+    border-radius: 16px 16px 0 0;
+  }
+}
