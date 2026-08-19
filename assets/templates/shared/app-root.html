@@ -110,9 +110,19 @@
          que debían scrollear recibían las dos utilidades sobre el mismo
          elemento y ganaba la que el CDN de Tailwind hubiera emitido después
          — no determinista. Es la razón de que Configuración no scrollease.
-         Las vistas con lienzo propio (mapa, cartograma, reportes) gestionan su
-         scroll internamente; el resto lo delega en <main>. -->
-    <main :class="['flex-1 w-full mx-auto min-h-0', vistaActual === 'mapa' || vistaActual === 'cartograma' || vistaActual === 'reportes' ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden px-4 lg:px-8 py-6 max-w-[1600px]']">
+         Las vistas con lienzo propio —mapa y cartograma— gestionan su scroll
+         internamente; el resto lo delega en <main>.
+
+         Reportes estaba en ese grupo y no debía: no es una consola de mapa,
+         es una página con indicadores, filtros y tres gráficas. En escritorio
+         funciona como tablero de alto fijo, pero en un teléfono los
+         indicadores y los filtros ya llenan la pantalla, las gráficas
+         colapsaban a cero por el `flex-1` y el resto quedaba fuera de alcance
+         sin forma de desplazarse. Ahora se desplaza por debajo de `lg` y
+         conserva el tablero por encima. -->
+    <main :class="['flex-1 w-full mx-auto min-h-0', vistaActual === 'mapa' || vistaActual === 'cartograma' ? 'overflow-hidden'
+        : vistaActual === 'reportes' ? 'overflow-y-auto lg:overflow-hidden'
+        : 'overflow-y-auto overflow-x-hidden px-4 lg:px-8 py-6 max-w-[1600px]']">
       <vista-dashboard v-if="vistaActual==='dashboard'"></vista-dashboard>
       <vista-mapa v-else-if="vistaActual==='mapa'"></vista-mapa>
       <vista-cartograma v-else-if="vistaActual==='cartograma'"></vista-cartograma>

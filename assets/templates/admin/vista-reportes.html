@@ -1,5 +1,5 @@
 <!-- ======================= VISTA: REPORTES ======================= -->
-<div class="h-full flex flex-col p-4 lg:p-6">
+<div class="flex min-h-full flex-col p-4 lg:h-full lg:p-6">
 
   <!-- CABECERA ─────────────────────────────────────────────────── -->
   <div class="mb-6 flex items-center justify-between flex-wrap gap-3 flex-shrink-0">
@@ -133,9 +133,9 @@
   </div>
 
   <!-- GRÁFICAS ───────────────────────────────────────────────── -->
-  <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-3">
     <!-- Gráfica Barras Horizontales (Top Tipos) -->
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors flex flex-col min-h-0">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] flex h-80 flex-col p-4 transition-colors lg:h-auto lg:min-h-0">
       <div class="shrink-0 mb-4">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center">
@@ -153,7 +153,7 @@
     </div>
 
     <!-- Gráfica Dona por Distrito -->
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors flex flex-col min-h-0">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] flex h-80 flex-col p-4 transition-colors lg:h-auto lg:min-h-0">
       <div class="shrink-0 mb-4">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
@@ -171,7 +171,7 @@
     </div>
 
     <!-- Gráfica Línea de Tiempo -->
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 transition-colors flex flex-col min-h-0">
+    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] flex h-80 flex-col p-4 transition-colors lg:h-auto lg:min-h-0">
       <div class="shrink-0 mb-4">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center">

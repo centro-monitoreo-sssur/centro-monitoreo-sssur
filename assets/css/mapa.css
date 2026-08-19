@@ -1407,6 +1407,19 @@
 
   /* El detalle del distrito también sube desde abajo: un panel lateral de
      300 px sobre 360 tapa la pantalla entera y no se entiende de dónde salió. */
+  /* Los controles de zoom quedaban DEBAJO de la hoja del ranking.
+     Leaflet los coloca abajo a la derecha con z-index 800, pero ese 800 vive
+     dentro del contenedor del mapa, que en el apilamiento de la página está
+     por debajo de la hoja (z-40). Resultado: el botón de acercar asomando a
+     medias tras el panel, justo donde el pulgar va a buscarlo.
+
+     Se suben por encima y se separan del borde lo que mide el asa de la hoja
+     plegada, para que no se pisen. */
+  .mapa-vista--carto .leaflet-bottom.leaflet-right {
+    z-index: 1000;
+    margin-bottom: 56px;
+  }
+
   .carto-detalle {
     top: auto !important;
     left: 0 !important;
