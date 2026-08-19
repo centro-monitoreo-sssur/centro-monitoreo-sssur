@@ -1,8 +1,8 @@
 # Plan de rediseño TailAdmin · estado y ruta
 
 **Última actualización:** 19 de agosto de 2026
-**Rama de trabajo:** `migracion-tailadmin` (8 commits sobre `main`, árbol limpio)
-**Producción:** `main` — se publica con `git pull` desde cPanel. **Nada de este plan está en producción todavía.**
+**Rama de trabajo:** `migracion-tailadmin` — **fusionada a `main` el 2026-08-19** (merge `76aeb3a`, v1.4.0) y empujada a GitHub.
+**Producción:** `main` — cPanel la publica con *Update from Remote + Deploy HEAD Commit*.
 
 Este documento es la fuente de verdad del rediseño. Sustituye al plan de fases
 original en lo que difieran: el plan cambió dos veces por decisión de Richard
@@ -104,15 +104,19 @@ que era un `console.log`; comunicados con 163 px inalcanzables en móvil.
 
 ---
 
-## 3 · En curso — lo único que bloquea hoy
+## 3 · Despliegue del 2026-08-19 (v1.4.0)
 
-| # | Acción | Responsable |
-|---|---|---|
-| 1 | **Ejecutar `database/migration_v42_resumen_dashboard_y_busqueda.sql`** en el SQL Editor de Supabase. La consola de hoy (2026-08-19) muestra el 404 esperado de `resumen_dashboard`; el panel degrada al camino antiguo y lo avisa. Verificación: el NOTICE final imprime cifras reales; si el 404 persistiera una recarga, `notify pgrst, 'reload schema';` | Richard |
-| 2 | **Validar con datos reales** (el banco no puede): ① tarjeta Vencidas con número y panel «X h fuera de objetivo»; ② rango de fechas de Bitácora corta de verdad; ③ abrir un caso, copiar la URL, pegarla en otra pestaña, y Atrás en el móvil cierra el modal; ④ búsqueda con >200 casos muestra el banner azul «coincidencias en toda la base»; ⑤ las listas móviles (usuarios, denuncias, roles→permisos) con registros. | Richard |
-| 3 | **Merge a `main` + despliegue** cuando ② pase: `git merge --no-ff migracion-tailadmin`, `git pull` en cPanel, y subir versión de `sw.js` si se quiere forzar actualización de las PWA. Reversión completa: `git revert -m 1`. | Richard |
-
----
+- **v42 ejecutada en Supabase** ✓ (confirmado por Richard).
+- **Merge a `main` y push a GitHub** ✓ — reversión completa del lanzamiento:
+  `git revert -m 1 76aeb3a`.
+- **Publicación en cPanel** — Git™ Version Control → *Update from Remote* →
+  *Deploy HEAD Commit* (el `.cpanel.yml` copia los PHP y los `.htaccess`).
+- **Verificación post-despliegue** (2 minutos): ① la topbar del panel muestra
+  **v1.4.0** tras un par de recargas (el SW nuevo descarta la caché vieja);
+  ② el Dashboard carga sin el 404 de `resumen_dashboard` y la tarjeta
+  Vencidas trae número; ③ desde un teléfono: Denuncias muestra tarjetas, un
+  caso abierto sobrevive a F5 con su `#/denuncias/:id`, y Atrás cierra el
+  modal; ④ Bitácora corta por fechas.
 
 ## 4 · Pendiente por prioridad
 
