@@ -6,9 +6,14 @@
 // dark:border-gray-700 p-4` — y no siempre igual: convivían `rounded-lg` y
 // `rounded-2xl`, `p-4` y `p-6`, con y sin borde en oscuro.
 //
-// `shadow-sm` se sustituye por `shadow-card`: la sombra genérica de Tailwind es
-// invisible sobre fondo oscuro, así que en modo noche las tarjetas se fundían
-// con el fondo y solo las separaba el borde.
+// ── AHORA SEPARA POR BORDE, NO POR SOMBRA (TailAdmin) ───────────────────────
+// Antes: `shadow-card` sin borde en claro y con borde en oscuro. El problema no
+// era la sombra sino la incoherencia: dos tratamientos distintos del mismo
+// componente según el tema, y en oscuro la sombra no se ve — de ahí el parche.
+//
+// TailAdmin resuelve las dos cosas con una regla sola: borde de 1 px siempre, y
+// en modo noche el fondo es un blanco al 3 % sobre el lienzo oscuro en vez de un
+// gris opaco. Se lee igual en los dos temas y no hace falta el caso especial.
 // ============================================================
 import { computed } from '../../../core/vue.js';
 
@@ -24,7 +29,7 @@ export default {
   },
   setup(props, { slots }) {
     const clases = computed(() => [
-      'bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card',
+      'rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
       props.ajustable ? 'flex flex-col min-h-0' : '',
     ].join(' '));
 

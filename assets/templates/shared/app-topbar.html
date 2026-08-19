@@ -1,47 +1,71 @@
-<header class="sticky top-0 z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-  <div class="px-4 lg:px-8 py-3 flex items-center justify-between gap-4">
+<!-- ============================================================
+     CABECERA · lenguaje de TailAdmin
+     ------------------------------------------------------------
+     Blanca y opaca, separada por un borde de 1 px en vez de por sombra, y con
+     los controles como botones cuadrados de 11 unidades con borde propio. Es
+     la misma regla que la barra lateral: la interfaz se estructura con bordes,
+     no con capas de sombra.
+
+     Se quita el `backdrop-blur` sobre fondo translúcido: costaba una capa de
+     composición en cada desplazamiento —se nota en los teléfonos de campo— y
+     bajo una barra opaca no aporta nada.
+     ============================================================ -->
+<header class="sticky top-0 z-20 border-b border-gray-200 bg-white transition-colors
+               dark:border-gray-800 dark:bg-gray-900">
+  <div class="flex items-center justify-between gap-4 px-4 py-3 lg:px-6">
 
     <!-- IZQUIERDA: menú móvil + migas + título -->
-    <div class="flex items-center gap-3 min-w-0">
+    <div class="flex min-w-0 items-center gap-3">
       <button @click="toggleSidebar" type="button"
               :aria-label="sidebarColapsado ? 'Mostrar menú' : 'Ocultar menú'"
-              class="toque-comodo lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xl transition-colors">
+              class="toque-comodo grid h-10 w-10 shrink-0 place-items-center rounded-lg border
+                     border-gray-200 text-gray-500 transition-colors hover:bg-gray-50
+                     dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5 lg:hidden">
         <i class="fas fa-bars" aria-hidden="true"></i>
       </button>
 
       <div class="min-w-0">
         <!-- Migas: con 31 vistas, el título solo no dice en qué sección estás. -->
-        <nav aria-label="Ubicación" class="hidden sm:flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 mb-0.5">
+        <nav aria-label="Ubicación" class="mb-0.5 hidden items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 sm:flex">
           <span>Centro de Monitoreo</span>
           <template v-for="(m, i) in migas" :key="'miga-' + i">
             <i class="fa-solid fa-chevron-right text-[8px] opacity-60" aria-hidden="true"></i>
             <span :class="i === migas.length - 1 ? 'text-gray-600 dark:text-gray-300 font-medium' : ''">{{ m.texto }}</span>
           </template>
         </nav>
-        <h1 class="text-lg font-bold text-gray-900 dark:text-white truncate">{{ tituloVista }}</h1>
+        <h1 class="truncate text-lg font-bold text-gray-800 dark:text-white/90">{{ tituloVista }}</h1>
       </div>
     </div>
 
     <!-- DERECHA -->
-    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+    <div class="flex shrink-0 items-center gap-2 sm:gap-3">
 
-      <!-- Buscador global -->
+      <!-- Buscador. La tecla rápida va en una pastilla dentro del propio campo,
+           como en TailAdmin: dice que existe sin ocupar una línea aparte. -->
       <button @click="abrirBuscador" type="button" aria-label="Buscar (Ctrl+K)"
-              class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-400 hover:border-brand-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+              class="hidden h-11 items-center gap-2 rounded-lg border border-gray-200 bg-transparent
+                     py-2.5 pl-4 pr-2.5 text-sm text-gray-400 shadow-theme-xs transition-colors
+                     hover:border-brand-300 hover:text-gray-600
+                     dark:border-gray-800 dark:hover:text-gray-300 md:flex xl:w-[280px]">
         <i class="fa-solid fa-search text-xs" aria-hidden="true"></i>
-        <span class="text-xs">Buscar…</span>
-        <kbd class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">Ctrl K</kbd>
+        <span class="flex-1 text-left">Buscar…</span>
+        <kbd class="rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] font-mono text-[11px]
+                    text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">Ctrl K</kbd>
       </button>
       <button @click="abrirBuscador" type="button" aria-label="Buscar"
-              class="toque-comodo md:hidden text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2 transition-colors">
-        <i class="fa-solid fa-search text-lg" aria-hidden="true"></i>
+              class="toque-comodo grid h-10 w-10 place-items-center rounded-lg border border-gray-200
+                     text-gray-500 transition-colors hover:bg-gray-50
+                     dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5 md:hidden">
+        <i class="fa-solid fa-search" aria-hidden="true"></i>
       </button>
 
       <button @click="toggleDarkMode" type="button"
               :aria-label="isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
-              class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
-        <i class="fa-solid fa-sun text-lg" v-if="isDarkMode" aria-hidden="true"></i>
-        <i class="fa-solid fa-moon text-lg" v-else aria-hidden="true"></i>
+              class="toque-comodo grid h-11 w-11 place-items-center rounded-lg border border-gray-200
+                     text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700
+                     dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white">
+        <i class="fa-solid fa-sun" v-if="isDarkMode" aria-hidden="true"></i>
+        <i class="fa-solid fa-moon" v-else aria-hidden="true"></i>
       </button>
 
       <!-- El reloj institucional estaba bajo el título; ahí van ahora las migas.
@@ -49,11 +73,13 @@
            la referencia para anotar la hora de un aviso. -->
       <span class="hidden xl:block text-xs text-gray-500 dark:text-gray-400 font-mono">{{ fechaHoraActual }}</span>
 
-      <span class="hidden xl:inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700">
+      <span class="hidden items-center rounded-full border border-gray-200 px-2.5 py-1 font-mono
+                   text-[11px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400 xl:inline-flex">
         {{ versionApp }}
       </span>
-      <span class="hidden lg:inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span> En línea
+      <span class="hidden items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium
+                   text-success-600 dark:bg-success-500/15 dark:text-success-500 lg:inline-flex">
+        <span class="h-1.5 w-1.5 rounded-full bg-success-500" aria-hidden="true"></span> En línea
       </span>
 
       <!-- Unica via de entrada a los avisos: el item de menu se retiro cuando
@@ -63,8 +89,10 @@
               :aria-label="notificacionesNoLeidas
                 ? 'Notificaciones, ' + notificacionesNoLeidas + ' sin leer'
                 : 'Notificaciones'"
-              class="relative text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
-        <i class="fa-solid fa-bell text-lg" aria-hidden="true"></i>
+              class="toque-comodo relative grid h-11 w-11 place-items-center rounded-lg border border-gray-200
+                     text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700
+                     dark:border-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white">
+        <i class="fa-solid fa-bell" aria-hidden="true"></i>
         <span v-if="notificacionesNoLeidas"
               class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center
                      bg-rose-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800"
@@ -79,7 +107,7 @@
                 :aria-expanded="menuPerfilAbierto ? 'true' : 'false'"
                 aria-haspopup="true"
                 :aria-label="'Perfil de ' + nombreMostrado"
-                class="flex items-center gap-2 rounded-full pr-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
+                class="flex items-center gap-2 rounded-full pr-1 transition-colors hover:bg-gray-50 dark:hover:bg-white/5
                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
           <span class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
                 style="background:var(--brand)">{{ iniciales }}</span>

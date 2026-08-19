@@ -66,11 +66,30 @@ export default {
         gray: {
           750: '#2a323f',
         },
+
+        /* Paleta semántica de TailAdmin. NO sustituye a los tokens operativos
+           de `tokens.css` —`--kpi-pendiente`, el semáforo del tablero— que son
+           configurables desde el panel y significan estados del MUNICIPIO.
+           Estos son los de la interfaz: un aviso de guardado, un campo con
+           error, una variación al alza. Confundirlos es como acabas con
+           «pendiente» en dos rojos distintos según la pantalla. */
+        success: {
+          50: '#ecfdf3', 100: '#d1fadf', 500: '#12b76a', 600: '#039855', 700: '#027a48',
+        },
+        error: {
+          50: '#fef3f2', 100: '#fee4e2', 500: '#f04438', 600: '#d92d20', 700: '#b42318',
+        },
+        warning: {
+          50: '#fffaeb', 100: '#fef0c7', 500: '#f79009', 600: '#dc6803', 700: '#b54708',
+        },
       },
       boxShadow: {
         card:        '0 1px 3px 0 rgb(16 24 40 / 0.08), 0 1px 2px -1px rgb(16 24 40 / 0.06)',
         'card-hover':'0 8px 24px -4px rgb(16 24 40 / 0.12), 0 2px 6px -2px rgb(16 24 40 / 0.07)',
         popover:     '0 12px 32px -8px rgb(16 24 40 / 0.20)',
+        // La sombra de TailAdmin: casi imperceptible. Su interfaz separa por
+        // BORDE, no por sombra, y esta solo despega el control del fondo.
+        'theme-xs':  '0 1px 2px 0 rgb(16 24 40 / 0.05)',
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
