@@ -50,9 +50,15 @@ const AGENTE = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
 /**
  * Recursos, con la VERSIÓN FIJADA en la URL.
  *
- * Nada de rangos: `@2` o `@6` traen lo último de esa rama y convierten una
+ * Nada de rangos: un `@2` trae lo último de esa rama y convierte una
  * actualización de terceros en un despliegue que nadie hizo. Aquí cada línea
  * dice exactamente qué se descargó.
+ *
+ * OJO AL FIJAR: la versión tiene que ser LA QUE YA ESTABA CORRIENDO, no una
+ * cualquiera de la misma rama. En la primera pasada puse supabase-js en 2.45.4
+ * mientras `@2` estaba sirviendo 2.112.3 — sesenta y siete versiones atrás,
+ * elegida a dedo. Congelar es bueno; congelar en un punto que nadie ha probado
+ * es cambiar de dependencia sin decirlo.
  */
 const RECURSOS = [
   // ── Núcleo de la aplicación ──────────────────────────────────────────────
@@ -62,7 +68,7 @@ const RECURSOS = [
     destino: 'vue-virtual-scroller/vue-virtual-scroller.min.js' },
   { url: 'https://unpkg.com/vue-virtual-scroller@2.0.0-beta.8/dist/vue-virtual-scroller.css',
     destino: 'vue-virtual-scroller/vue-virtual-scroller.css', opcional: true },
-  { url: 'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
+  { url: 'https://unpkg.com/@supabase/supabase-js@2.112.3/dist/umd/supabase.js',
     destino: 'supabase/supabase.js' },
 
   // ── Mapas ────────────────────────────────────────────────────────────────
