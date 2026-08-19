@@ -1,0 +1,19 @@
+<div class="mb-4 shrink-0 lg:mb-6">
+  <!-- La barra plegable solo existe en móvil y tableta; en escritorio la
+       rejilla siempre está visible y este botón desaparece. -->
+  <button v-if="plegable" type="button"
+          class="flex h-11 w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 shadow-theme-xs transition-colors hover:bg-gray-50 focus:outline-none focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-200 dark:hover:bg-white/5 lg:hidden"
+          :aria-expanded="abierta ? 'true' : 'false'"
+          @click="abierta = !abierta">
+    <span class="flex items-center gap-2.5">
+      <i class="fa-solid fa-chart-simple text-gray-400" aria-hidden="true"></i>
+      {{ etiqueta }}
+    </span>
+    <i class="fa-solid fa-chevron-down text-xs text-gray-400 transition-transform"
+       :class="abierta ? 'rotate-180' : ''" aria-hidden="true"></i>
+  </button>
+
+  <div :class="clasesRejilla">
+    <slot></slot>
+  </div>
+</div>

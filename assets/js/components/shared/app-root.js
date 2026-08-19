@@ -197,6 +197,15 @@ export default {
         destinoOptimista = resolverVistaDestino();
         vistaActual.value = destinoOptimista;
 
+        /* Enlace profundo: alguien entró con la dirección de un caso pegada
+           en la barra (#/denuncias/123). Se aterriza en Gestión de Denuncias
+           y la propia vista abre el caso al montarse. Solo en el Centro: las
+           PWA tienen su propia navegación. */
+        if (CONTEXTO === CONTEXTOS.MONITOREO && /^#\/denuncias\/\d+$/.test(window.location.hash)) {
+          destinoOptimista = 'denuncias';
+          vistaActual.value = 'denuncias';
+        }
+
         // Cargar datos. Los catálogos van ANTES que los casos: el mapeo de un
         // caso resuelve el nombre de su distrito contra `catalogos.distritos`,
         // y si el catálogo llega después el nombre queda vacío para siempre.

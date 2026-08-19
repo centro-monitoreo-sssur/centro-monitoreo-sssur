@@ -2,59 +2,29 @@
      VISTA: Catálogo de Categorías
      Tipos de incidencia por unidad y competencias declaradas.
      ============================================================ -->
-<div class="h-full min-h-0 flex flex-col">
+<ui-contenedor-pagina>
 
-  <!-- Indicadores -->
-  <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 xl:grid-cols-4 flex-shrink-0">
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-tags text-brand-600 dark:text-brand-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categorías</p>
-        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ totalCategorias }}</p>
-      </div>
-    </div>
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activas</p>
-        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ categoriasActivas }}</p>
-      </div>
-    </div>
+  <ui-cabecera-pagina titulo="Catálogo de Categorías"
+                      subtitulo="Tipos de incidencia por unidad y competencias declaradas"></ui-cabecera-pagina>
+
+
+  <!-- Indicadores, plegados en móvil. -->
+  <ui-franja-kpi :columnas="4">
+    <ui-tarjeta-kpi etiqueta="Categorías" :valor="totalCategorias" icono="fas fa-tags" estado="total"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Activas" :valor="categoriasActivas" icono="fas fa-circle-check" estado="resuelta"></ui-tarjeta-kpi>
     <!-- Sin prioridad por defecto, el caso nace con la de respaldo y el tiempo
          objetivo definido en el catálogo de prioridades queda inerte. -->
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-gauge-high text-amber-600 dark:text-amber-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sin prioridad</p>
-        <p class="text-2xl font-extrabold" :class="categoriasSinPrioridad ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'">
-          {{ categoriasSinPrioridad }}
-        </p>
-      </div>
-    </div>
-    <!-- Cuántas ve el vecino. Con cero, el portal no ofrece nada y no se puede
-         reportar: es el estado de arranque tras la v34 y conviene que salte a
-         la vista en lugar de descubrirse probando la aplicación. -->
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-globe text-brand-600 dark:text-brand-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En el portal</p>
-        <p class="text-2xl font-extrabold" :class="categoriasPublicas ? 'text-brand-600 dark:text-brand-400' : 'text-amber-600 dark:text-amber-400'">
-          {{ categoriasPublicas }}
-        </p>
-        <p v-if="!categoriasPublicas" class="text-[10px] text-amber-600 dark:text-amber-400 leading-tight mt-0.5">
+    <ui-tarjeta-kpi etiqueta="Sin prioridad" :valor="categoriasSinPrioridad" icono="fas fa-gauge-high" estado="en-curso"></ui-tarjeta-kpi>
+    <!-- Cuántas ve el vecino. Con cero, el portal no ofrece nada que reportar. -->
+    <ui-tarjeta-kpi etiqueta="En el portal" :valor="categoriasPublicas" icono="fas fa-globe"
+                    :estado="categoriasPublicas ? 'total' : 'en-curso'">
+      <template #pie>
+        <span v-if="!categoriasPublicas" class="text-warning-600 dark:text-warning-500">
           El portal ciudadano no ofrece ningún tipo de reporte
-        </p>
-      </div>
-    </div>
-  </div>
+        </span>
+      </template>
+    </ui-tarjeta-kpi>
+  </ui-franja-kpi>
 
   <div v-if="error" class="mb-4 flex-shrink-0 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-3">
     <i class="fas fa-triangle-exclamation text-red-500 mt-0.5"></i>
@@ -569,4 +539,4 @@
       </div>
     </div>
   </div>
-</div>
+</ui-contenedor-pagina>

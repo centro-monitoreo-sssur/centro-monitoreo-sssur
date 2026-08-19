@@ -25,6 +25,20 @@ import uiModal  from './shared/ui/ui-modal.js';
 import uiTabla  from './shared/ui/ui-tabla.js';
 import uiEditorTexto from './shared/ui/ui-editor-texto.js';
 import uiGaleriaEvidencias from './shared/ui/ui-galeria-evidencias.js';
+// Fase 2 de la migración TailAdmin: la librería que sustituye al marcado a mano.
+import uiContenedorPagina  from './shared/ui/ui-contenedor-pagina.js';
+import uiCabeceraPagina    from './shared/ui/ui-cabecera-pagina.js';
+import uiFranjaKpi         from './shared/ui/ui-franja-kpi.js';
+import uiTarjetaKpi        from './shared/ui/ui-tarjeta-kpi.js';
+import uiEstadoVacio       from './shared/ui/ui-estado-vacio.js';
+import uiEstadoCarga       from './shared/ui/ui-estado-carga.js';
+import uiCampoBusqueda     from './shared/ui/ui-campo-busqueda.js';
+import uiBarraFiltros      from './shared/ui/ui-barra-filtros.js';
+import uiTextarea          from './shared/ui/ui-textarea.js';
+import uiInterruptor       from './shared/ui/ui-interruptor.js';
+import uiCasilla           from './shared/ui/ui-casilla.js';
+import uiControlSegmentado from './shared/ui/ui-control-segmentado.js';
+import uiLista             from './shared/ui/ui-lista.js';
 import modalComunicadoInterno from './shared/modal-comunicado-interno.js';
 
 // ── ADMIN ────────────────────────────────────────────────────
@@ -93,6 +107,19 @@ export const componentes = {
   'ui-select':              { comp: uiSelect,              tpl: 'shared/ui/ui-select' },
   'ui-modal':               { comp: uiModal,               tpl: 'shared/ui/ui-modal' },
   'ui-tabla':               { comp: uiTabla,               tpl: 'shared/ui/ui-tabla' },
+  'ui-contenedor-pagina':   { comp: uiContenedorPagina,   tpl: 'shared/ui/ui-contenedor-pagina' },
+  'ui-cabecera-pagina':     { comp: uiCabeceraPagina,     tpl: 'shared/ui/ui-cabecera-pagina' },
+  'ui-franja-kpi':          { comp: uiFranjaKpi,          tpl: 'shared/ui/ui-franja-kpi' },
+  'ui-tarjeta-kpi':         { comp: uiTarjetaKpi,         tpl: 'shared/ui/ui-tarjeta-kpi' },
+  'ui-estado-vacio':        { comp: uiEstadoVacio,        tpl: 'shared/ui/ui-estado-vacio' },
+  'ui-estado-carga':        { comp: uiEstadoCarga,        tpl: 'shared/ui/ui-estado-carga' },
+  'ui-campo-busqueda':      { comp: uiCampoBusqueda,      tpl: 'shared/ui/ui-campo-busqueda' },
+  'ui-barra-filtros':       { comp: uiBarraFiltros,       tpl: 'shared/ui/ui-barra-filtros' },
+  'ui-textarea':            { comp: uiTextarea,           tpl: 'shared/ui/ui-textarea' },
+  'ui-interruptor':         { comp: uiInterruptor,        tpl: 'shared/ui/ui-interruptor' },
+  'ui-casilla':             { comp: uiCasilla,            tpl: 'shared/ui/ui-casilla' },
+  'ui-control-segmentado':  { comp: uiControlSegmentado,  tpl: 'shared/ui/ui-control-segmentado' },
+  'ui-lista':               { comp: uiLista,              tpl: 'shared/ui/ui-lista' },
 
   // ── ADMIN ──────────────────────────────────────────────────
   'vista-dashboard':        { comp: vistaDashboard,        tpl: 'admin/vista-dashboard' },

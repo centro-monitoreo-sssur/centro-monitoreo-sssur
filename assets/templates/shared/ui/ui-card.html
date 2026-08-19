@@ -1,22 +1,21 @@
 <div :class="clases">
   <div v-if="hayCabecera"
-       class="flex items-start justify-between gap-3 px-4 pt-4"
-       :class="sinRelleno ? 'pb-4 border-b border-gray-100 dark:border-gray-700' : ''">
+       class="flex items-start justify-between gap-3 px-5 py-4 sm:px-6 sm:py-5">
     <div class="min-w-0">
       <h2 v-if="titulo" class="text-title-sm text-gray-900 dark:text-white truncate">{{ titulo }}</h2>
-      <p v-if="subtitulo" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ subtitulo }}</p>
+      <p v-if="subtitulo" class="text-theme-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ subtitulo }}</p>
     </div>
     <div class="shrink-0 flex items-center gap-2">
       <slot name="acciones"></slot>
     </div>
   </div>
 
-  <div :class="[sinRelleno ? '' : 'p-4', ajustable ? 'flex-1 min-h-0' : '', hayCabecera && !sinRelleno ? 'pt-3' : '']">
+  <div :class="clasesCuerpo">
     <slot></slot>
   </div>
 
   <div v-if="$slots.pie"
-       class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 rounded-b-2xl">
+       class="px-5 py-4 sm:px-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 rounded-b-2xl">
     <slot name="pie"></slot>
   </div>
 </div>

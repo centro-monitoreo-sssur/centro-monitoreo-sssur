@@ -1,19 +1,24 @@
 {
   "name": "centro-monitoreo-sssur",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "private": true,
   "description": "Centro de Monitoreo Territorial · Alcaldía de San Salvador Sur",
   "type": "module",
   "scripts": {
-    "build": "npm run css && npm run precache",
+    "build": "npm run css && npm run precache && node herramientas/conformidad.mjs --en-build",
     "css": "tailwindcss -i assets/css/tailwind-fuente.css -o assets/css/tailwind.css --minify",
     "css:watch": "tailwindcss -i assets/css/tailwind-fuente.css -o assets/css/tailwind.css --watch",
     "precache": "node herramientas/generar-precache.mjs",
     "vendor": "node herramientas/vendorizar.mjs",
     "marca": "node herramientas/traer-marca.mjs",
-    "servidor": "python herramientas/servidor-dev.py"
+    "servidor": "python herramientas/servidor-dev.py",
+    "banco": "node herramientas/banco-visual.mjs",
+    "banco:comparar": "node herramientas/comparar-capturas.mjs",
+    "css:comparar": "node herramientas/comparar-hoja.mjs",
+    "conformidad": "node herramientas/conformidad.mjs"
   },
   "devDependencies": {
+    "puppeteer-core": "^25.8.0",
     "sharp": "^0.35.3",
     "tailwindcss": "3.4.17"
   }

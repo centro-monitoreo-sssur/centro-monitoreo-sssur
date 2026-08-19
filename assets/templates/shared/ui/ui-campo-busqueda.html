@@ -1,0 +1,19 @@
+<div class="relative w-full">
+  <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400"
+     aria-hidden="true"></i>
+  <input
+    type="search"
+    :value="valorLocal"
+    :placeholder="marcador"
+    :aria-label="etiquetaAccesible"
+    :class="clasesCampo"
+    autocomplete="off"
+    @input="alEscribir"
+    @keydown.enter.prevent="alEnter">
+  <button v-if="valorLocal" type="button"
+          class="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-200"
+          aria-label="Limpiar búsqueda"
+          @click="limpiar">
+    <i class="fa-solid fa-xmark text-xs" aria-hidden="true"></i>
+  </button>
+</div>

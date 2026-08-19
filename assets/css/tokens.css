@@ -59,3 +59,6 @@
 .kpi-fondo--en-curso  { background: color-mix(in srgb, var(--kpi-en-curso)  14%, transparent); }
 .kpi-fondo--resuelta  { background: color-mix(in srgb, var(--kpi-resuelta)  14%, transparent); }
 .kpi-fondo--vencida   { background: color-mix(in srgb, var(--kpi-vencida)   14%, transparent); }
+/* Completa la simetría con .kpi-color: lo usa ui-tarjeta-kpi cuando el
+   indicador no pertenece a ningún estado del semáforo. */
+.kpi-fondo--neutro    { background: color-mix(in srgb, var(--kpi-neutro)    14%, transparent); }

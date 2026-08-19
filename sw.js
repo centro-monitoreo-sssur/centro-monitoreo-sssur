@@ -2,7 +2,7 @@
 // rutas a doscientas sesenta y dos. Es lo que hace que la PWA de campo pueda
 // abrir sin señal, que hasta ahora no podía por mucho service worker que
 // hubiera: sin Vue no hay aplicación, y Vue venía de unpkg.
-const CACHE_VERSION = 'v1.3.0';
+const CACHE_VERSION = 'v1.4.0';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
 // ── Caché de teselas del mapa ───────────────────────────────────────────────

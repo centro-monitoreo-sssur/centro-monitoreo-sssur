@@ -13,6 +13,19 @@ export default {
     const filtroBusqueda = ref('');
     const filtroDistrito = ref('');
     const filtroEstado = ref('');
+
+    const OPCIONES_ESTADO = [
+      { id: 'activo',    nombre: 'Activo' },
+      { id: 'pendiente', nombre: 'Pendiente' },
+      { id: 'inactivo',  nombre: 'Inactivo' },
+    ];
+    const COLUMNAS_TABLA = [
+      { clave: 'nombre',        titulo: 'Ciudadano',      ordenable: true },
+      { clave: 'distrito',      titulo: 'Distrito',       ordenable: true,  ancho: '160px' },
+      { clave: 'estado',        titulo: 'Estado',         ordenable: true,  ancho: '110px' },
+      { clave: 'fechaRegistro', titulo: 'Registro',       ordenable: false, ancho: '140px' },
+      { clave: 'acciones',      titulo: '',               ordenable: false, ancho: '110px', alineacion: 'centro' },
+    ];
     const ciudadanoSeleccionado = ref(null);
     const modalEditar = ref(false);
     const modalEliminar = ref(false);
@@ -151,6 +164,7 @@ export default {
       
       // Funciones
       limpiarFiltros,
+      OPCIONES_ESTADO, COLUMNAS_TABLA,
       abrirModalVerDetalles,
       abrirModalEditar,
       abrirModalEliminar,

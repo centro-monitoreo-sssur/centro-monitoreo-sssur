@@ -3,49 +3,27 @@
      Avisos que la municipalidad publica hacia la ciudadanía, el personal de
      campo o el propio Centro de Monitoreo.
      ============================================================ -->
-<div class="p-4 sm:p-6 h-full flex flex-col">
+<!-- Fase 3: esta raíz sumaba `p-4 sm:p-6` encima del relleno de <main> —
+     doble canal— y sin `min-h-0`, que es la causa de los 163px de contenido
+     inalcanzable que midió el banco en móvil. El contenedor trae ambas cosas. -->
+<ui-contenedor-pagina>
 
-  <!-- Indicadores -->
-  <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 xl:grid-cols-4 flex-shrink-0">
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-bullhorn text-brand-600 dark:text-brand-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comunicados</p>
-        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ totalComunicados }}</p>
-      </div>
-    </div>
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Publicados</p>
-        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ vigentes }}</p>
-      </div>
-    </div>
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-clock text-amber-600 dark:text-amber-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Programados</p>
-        <p class="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{{ programados }}</p>
-      </div>
-    </div>
-    <!-- Lo que de verdad ve el vecino. Es el número que interesa a la Alcaldía
-         y el que antes no existía en ninguna pantalla. -->
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-users text-indigo-600 dark:text-indigo-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">En el portal</p>
-        <p class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">{{ paraPublico }}</p>
-      </div>
-    </div>
-  </div>
+  <ui-cabecera-pagina titulo="Comunicados"
+                      subtitulo="Avisos hacia la ciudadanía, el personal de campo y el Centro">
+    <template #acciones>
+      <ui-boton icono="fa-solid fa-plus" @click="abrir()">Nuevo comunicado</ui-boton>
+    </template>
+  </ui-cabecera-pagina>
+
+
+  <!-- Indicadores, plegados en móvil. -->
+  <ui-franja-kpi :columnas="4">
+    <ui-tarjeta-kpi etiqueta="Comunicados" :valor="totalComunicados" icono="fas fa-bullhorn" estado="total"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Publicados" :valor="vigentes" icono="fas fa-circle-check" estado="resuelta"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Programados" :valor="programados" icono="fas fa-clock" estado="en-curso"></ui-tarjeta-kpi>
+    <!-- Lo que de verdad ve el vecino: el número que interesa a la Alcaldía. -->
+    <ui-tarjeta-kpi etiqueta="En el portal" :valor="paraPublico" icono="fas fa-users" estado="neutro"></ui-tarjeta-kpi>
+  </ui-franja-kpi>
 
   <div v-if="error" class="mb-4 flex-shrink-0 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-3">
     <i class="fas fa-triangle-exclamation text-red-500 mt-0.5"></i>
@@ -57,27 +35,27 @@
     <p class="text-xs text-emerald-700 dark:text-emerald-300">{{ aviso }}</p>
   </div>
 
-  <!-- Barra de acciones -->
-  <div class="flex flex-wrap items-center gap-3 mb-4 flex-shrink-0">
-    <div class="flex gap-1.5 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
-      <button @click="filtroAudiencia = 'todas'"
-        class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors"
-        :class="filtroAudiencia === 'todas' ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700'">
+  <!-- Filtro de audiencia. `overflow-x-auto` + `whitespace-nowrap`: las
+       cápsulas se desplazan de lado en teléfono en vez de partirse en tres
+       líneas, que es como se veía «Personal de campo» en la captura. -->
+  <div class="mb-4 shrink-0 overflow-x-auto">
+    <div class="inline-flex min-w-max items-center gap-1.5 rounded-xl bg-gray-100 p-1 dark:bg-gray-800"
+         role="tablist" aria-label="Audiencia del comunicado">
+      <button type="button" role="tab" :aria-selected="filtroAudiencia === 'todas' ? 'true' : 'false'"
+        class="whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-bold transition-colors"
+        :class="filtroAudiencia === 'todas' ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-700 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+        @click="filtroAudiencia = 'todas'">
         Todas
       </button>
-      <button v-for="a in AUDIENCIAS" :key="a.id" @click="filtroAudiencia = a.id"
-        class="px-3 py-1.5 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
-        :class="filtroAudiencia === a.id ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700'">
-        <i class="fas text-[10px]" :class="a.icono"></i>
+      <button v-for="a in AUDIENCIAS" :key="a.id" type="button" role="tab"
+        :aria-selected="filtroAudiencia === a.id ? 'true' : 'false'"
+        class="flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-bold transition-colors"
+        :class="filtroAudiencia === a.id ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-700 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+        @click="filtroAudiencia = a.id">
+        <i class="fas text-[10px]" :class="a.icono" aria-hidden="true"></i>
         {{ a.label }}
       </button>
     </div>
-
-    <button @click="abrir()"
-      class="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors">
-      <i class="fas fa-plus text-xs"></i>
-      Nuevo comunicado
-    </button>
   </div>
 
   <!-- Listado -->
@@ -337,4 +315,4 @@
       </div>
     </div>
   </div>
-</div>
+</ui-contenedor-pagina>

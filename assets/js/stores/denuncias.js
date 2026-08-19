@@ -43,6 +43,16 @@ const COLUMNAS_CASO = `
    expone para que la interfaz pueda decirlo; la solución de fondo es paginar
    por cursor o filtrar por período, y está pendiente. */
 const TOPE_CASOS = 200;
+
+// ── Búsqueda en el servidor ──────────────────────────────────────────────────
+// Cuando hay más casos en la base que en la lista cargada, filtrar en el
+// navegador MIENTE: solo busca dentro de la ventana descargada. Con filtros
+// activos y `hayMasCasos`, la vista pide aquí una búsqueda real contra la
+// base (índices trigram de la v42). `null` = búsqueda inactiva, manda la
+// lista viva de siempre.
+const resultadosBusqueda = ref(null);
+const buscandoServidor = ref(false);
+const totalCoincidencias = ref(0);
 const hayMasCasos = ref(false);
 
 /* Total REAL de casos visibles para este usuario, según la RLS. Sale del
@@ -124,6 +134,85 @@ async function cargarDenuncias() {
  * perdería. El `id` es `generated always as identity`, así que desempata
  * siempre.
  */
+/**
+ * Un caso concreto, para el enlace profundo `#/denuncias/:id`.
+ * Si ya está en la lista se devuelve tal cual; si no, se pide solo y se
+ * añade — RLS decide si quien pregunta puede verlo. Devuelve null si no
+ * existe o no le corresponde.
+ */
+async function obtenerCasoPorId(id) {
+  const enLista = denuncias.value.find((d) => d.id === id);
+  if (enLista) return enLista;
+  if (!db) return null;
+  try {
+    const { data, error } = await db
+      .from('casos')
+      .select(COLUMNAS_CASO)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const caso = mapearCasoADenuncia(data, { nombreDistrito });
+    // Al final: pertenece a otra página y no debe colarse arriba como si
+    // fuera reciente. El índice de realtime se realinea.
+    denuncias.value = [...denuncias.value, caso];
+    reconstruirIndice();
+    return caso;
+  } catch (e) {
+    console.warn('[denuncias] No se pudo traer el caso ' + id + ': ' + e.message);
+    return null;
+  }
+}
+
+/**
+ * Búsqueda real contra la base. El término entra por `or=(…ilike…)` de
+ * PostgREST, cuya sintaxis se rompe con comas y paréntesis: se sanean antes
+ * — perder esos caracteres en una búsqueda de texto libre no cambia ningún
+ * resultado razonable y evita un 400 críptico.
+ */
+async function buscarCasosServidor({ texto = '', estado = '', categoria = '' } = {}) {
+  if (!db) return;
+  buscandoServidor.value = true;
+  try {
+    let consulta = db
+      .from('casos')
+      .select(COLUMNAS_CASO, { count: 'exact' })
+      .is('deleted_at', null);
+
+    if (estado) consulta = consulta.eq('estado_codigo', estado);
+    if (categoria) consulta = consulta.eq('categoria_id', categoria);
+
+    const termino = texto.trim().replace(/[,()]/g, ' ').trim();
+    if (termino) {
+      const patron = '%' + termino + '%';
+      consulta = consulta.or(
+        `correlativo.ilike.${patron},titulo.ilike.${patron},direccion_referencia.ilike.${patron},descripcion.ilike.${patron}`
+      );
+    }
+
+    const { data, error, count } = await consulta
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(TOPE_CASOS);
+
+    if (error) throw error;
+    resultadosBusqueda.value = (data || []).map((c) => mapearCasoADenuncia(c, { nombreDistrito }));
+    totalCoincidencias.value = count ?? resultadosBusqueda.value.length;
+  } catch (e) {
+    console.warn('[denuncias] Búsqueda en servidor falló, se filtra lo cargado: ' + e.message);
+    resultadosBusqueda.value = null;
+    totalCoincidencias.value = 0;
+  } finally {
+    buscandoServidor.value = false;
+  }
+}
+
+function limpiarBusquedaServidor() {
+  resultadosBusqueda.value = null;
+  totalCoincidencias.value = 0;
+}
+
 async function cargarMasCasos() {
   if (!db || cargandoMas.value || !hayMasCasos.value) return;
 
@@ -472,6 +561,9 @@ export function useDenuncias() {
     cargandoDenuncias,
     cargarDenuncias,
     cargarMasCasos,
+    obtenerCasoPorId,
+    buscarCasosServidor, limpiarBusquedaServidor,
+    resultadosBusqueda, buscandoServidor, totalCoincidencias,
     cargandoMas,
     totalCasos,
     suscribirRealtime,

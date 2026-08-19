@@ -42,9 +42,18 @@ export default {
     tamanosPagina:  { type: Array, default: () => [10, 20, 50] },
   },
   emits: ['update:seleccion', 'cambiar-pagina', 'cambiar-tamano', 'ordenar', 'fila-click'],
-  setup(props, { emit }) {
+  setup(props, { emit, slots }) {
     const ordenPor = ref('');
     const ordenAsc = ref(true);
+
+    /* ── Modo tarjetas en móvil (decisión de Richard, 2026-08-19) ────────────
+       TailAdmin resuelve las tablas en móvil con scroll horizontal; con datos
+       reales en su teléfono, Richard lo declaró ingestionable: se ve la
+       casilla, el ID y una barra de scroll. Si la vista define el slot
+       `#tarjeta`, por debajo de `lg` cada fila se pinta como tarjeta con ese
+       slot y la tabla solo existe desde `lg`. Sin el slot, la tabla se
+       comporta como siempre — nada de lo ya migrado cambia solo. */
+    const modoTarjetas = computed(() => Boolean(slots.tarjeta));
 
     const clasesCelda = computed(() =>
       props.densidad === 'compacta' ? 'px-3 py-1.5' : 'px-5 py-3'
@@ -143,7 +152,7 @@ export default {
     const filasSkeleton = computed(() => Math.min(props.itemsPorPagina, 8));
 
     return {
-      ordenPor, ordenAsc, ordenarPor, filasOrdenadas,
+      ordenPor, ordenAsc, ordenarPor, filasOrdenadas, modoTarjetas,
       clasesCelda, alineacion,
       todasSeleccionadas, algunaSeleccionada, alternarTodas, alternarFila, estaSeleccionada,
       paginasTotales, paginasVisibles, rangoMostrado, irAPagina, filasSkeleton,

@@ -14,6 +14,15 @@
 // TailAdmin resuelve las dos cosas con una regla sola: borde de 1 px siempre, y
 // en modo noche el fondo es un blanco al 3 % sobre el lienzo oscuro en vez de un
 // gris opaco. Se lee igual en los dos temas y no hace falta el caso especial.
+//
+// ── FASE 3: EL PATRÓN DE SECCIÓN, LEÍDO DE SU FUENTE ────────────────────────
+// Cabecera `px-5 py-4 sm:px-6 sm:py-5` y cuerpo `p-5 sm:p-6` separado con
+// `border-t border-gray-100`. Son los valores contados en su repositorio (25 y
+// 11 usos de la cabecera; 10 del cuerpo), no deducidos de capturas. El escalón
+// `sm:` es EL mecanismo de adaptación de TailAdmin: en teléfono la tarjeta
+// cede relleno, no tipografía. Antes usábamos `px-4 pt-4` sin escalón y el
+// cuerpo pegado con `pt-3`: separar por borde hace que una tarjeta con
+// cabecera se lea como sección incluso cuando el cuerpo arranca con una tabla.
 // ============================================================
 import { computed } from '../../../core/vue.js';
 
@@ -37,6 +46,14 @@ export default {
       Boolean(props.titulo || props.subtitulo || slots.acciones)
     );
 
-    return { clases, hayCabecera };
+    // El borde superior solo existe si hay cabecera que separar; una tarjeta
+    // sin título no dibuja una línea suelta bajo su primer pixel.
+    const clasesCuerpo = computed(() => [
+      hayCabecera.value ? 'border-t border-gray-100 dark:border-gray-800' : '',
+      props.sinRelleno ? '' : 'p-5 sm:p-6',
+      props.ajustable ? 'flex-1 min-h-0' : '',
+    ].filter(Boolean).join(' '));
+
+    return { clases, hayCabecera, clasesCuerpo };
   },
 };

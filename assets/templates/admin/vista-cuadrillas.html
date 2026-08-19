@@ -4,52 +4,23 @@
      ============================================================ -->
 <!-- `min-h-0` es obligatorio: un ítem flex tiene min-height:auto y se niega a
      encogerse por debajo de su contenido. El padding lo pone <main>. -->
-<div class="h-full min-h-0 flex flex-col">
+<ui-contenedor-pagina>
 
-  <!-- Indicadores -->
-  <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 lg:grid-cols-4 flex-shrink-0">
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-people-group text-brand-600 dark:text-brand-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cuadrillas</p>
-        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ totalCuadrillas }}</p>
-      </div>
-    </div>
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activas</p>
-        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ cuadrillasActivas }}</p>
-      </div>
-    </div>
-    <!-- Una cuadrilla activa sin líder es un problema operativo: no hay a quién
-         llamar por radio. Por eso tiene indicador propio y no se esconde en la
-         lista. -->
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-user-slash text-amber-600 dark:text-amber-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sin líder</p>
-        <p class="text-2xl font-extrabold" :class="cuadrillasSinLider ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'">
-          {{ cuadrillasSinLider }}
-        </p>
-      </div>
-    </div>
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-helmet-safety text-violet-600 dark:text-violet-400"></i>
-      </div>
-      <div class="min-w-0">
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Personal asignado</p>
-        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ personalAsignado }}</p>
-      </div>
-    </div>
-  </div>
+  <ui-cabecera-pagina titulo="Cuadrillas de Campo"
+                      subtitulo="Equipos operativos y su composición">
+    <template #acciones>
+      <ui-boton v-if="puedeCrearCuadrilla" icono="fa-solid fa-plus" @click="abrirModalEditar(null)">Nueva cuadrilla</ui-boton>
+    </template>
+  </ui-cabecera-pagina>
+
+
+  <!-- Indicadores, plegados en móvil. -->
+  <ui-franja-kpi :columnas="4">
+    <ui-tarjeta-kpi etiqueta="Cuadrillas" :valor="totalCuadrillas" icono="fas fa-people-group" estado="total"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Activas" :valor="cuadrillasActivas" icono="fas fa-circle-check" estado="resuelta"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Sin líder" :valor="cuadrillasSinLider" icono="fas fa-user-slash" estado="en-curso"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Personal asignado" :valor="personalAsignado" icono="fas fa-helmet-safety" estado="neutro"></ui-tarjeta-kpi>
+  </ui-franja-kpi>
 
   <!-- Aviso de error de carga -->
   <div v-if="error" class="mb-4 flex-shrink-0 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-3">
@@ -57,51 +28,33 @@
     <p class="text-xs text-red-700 dark:text-red-300">{{ error }}</p>
   </div>
 
-  <!-- Lista principal -->
-  <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
-
-    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50 flex-shrink-0">
-      <div class="flex-1">
-        <h3 class="text-sm font-bold text-gray-800 dark:text-white">Cuadrillas de campo</h3>
-        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-          Mostrando <span class="font-semibold text-gray-700 dark:text-gray-300">{{ cuadrillasFiltradas.length }}</span> de {{ totalCuadrillas }}
-        </p>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="relative">
-          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <!-- El buscador alcanza también a los integrantes -->
-          <input v-model="filtroBusqueda" type="search" placeholder="Cuadrilla o integrante…"
-            class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all w-[190px]">
-        </div>
-
-        <select v-model="filtroDepartamento"
-          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all">
-          <option value="">Todos los departamentos</option>
-          <option v-for="d in departamentos" :key="d.id" :value="d.id">{{ d.nombre }}</option>
-        </select>
-
-        <select v-model="filtroEstado"
-          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all">
-          <option value="">Cualquier estado</option>
-          <option value="activo">Activas</option>
-          <option value="inactivo">Inactivas</option>
-          <option value="sin_lider">Sin líder</option>
-        </select>
-
-        <button v-if="hayFiltros" @click="limpiarFiltros"
-          class="px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-          <i class="fas fa-eraser mr-1"></i> Limpiar
-        </button>
-
-        <button v-if="puedeCrearCuadrilla" @click="abrirModalEditar(null)"
-          class="px-3 py-1.5 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors shadow-sm">
-          <i class="fas fa-plus mr-1"></i> Nueva cuadrilla
-        </button>
-      </div>
+  <ui-barra-filtros>
+    <div class="w-full sm:w-64">
+      <ui-campo-busqueda v-model="filtroBusqueda" marcador="Cuadrilla o integrante…" tamano="compacto"
+                         etiqueta-accesible="Buscar cuadrilla o integrante"></ui-campo-busqueda>
     </div>
+    <div class="w-full sm:w-60">
+      <ui-select v-model="filtroDepartamento" :opciones="departamentos"
+                 texto-vacio="Todos los departamentos"></ui-select>
+    </div>
+    <div class="w-full sm:w-44">
+      <ui-select v-model="filtroEstado"
+                 :opciones="[{ id: 'activo', nombre: 'Activas' }, { id: 'inactivo', nombre: 'Inactivas' }, { id: 'sin_lider', nombre: 'Sin líder' }]"
+                 texto-vacio="Cualquier estado"></ui-select>
+    </div>
+    <template #derecha>
+      <span class="text-theme-xs text-gray-500 dark:text-gray-400">
+        {{ cuadrillasFiltradas.length }} de {{ totalCuadrillas }}
+      </span>
+      <ui-boton v-if="hayFiltros" variante="fantasma" tamano="sm" icono="fa-solid fa-eraser"
+                @click="limpiarFiltros">Limpiar</ui-boton>
+    </template>
+  </ui-barra-filtros>
 
+  <!-- Lista de cuadrillas. Cada fila ya es una tarjeta rica (composición con
+       chips que envuelven), así que funciona igual en teléfono; el scroll vive
+       aquí para que los filtros no se vayan con él. -->
+  <ui-card sin-relleno ajustable class="flex-1">
     <!-- Cuerpo -->
     <div class="flex-1 min-h-0 overflow-y-auto">
 
@@ -198,7 +151,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </ui-card>
 
   <!-- ══════════════════════════════════════════════════════════════════════
        MODAL · alta y edición
@@ -447,4 +400,4 @@
       </div>
     </div>
   </div>
-</div>
+</ui-contenedor-pagina>

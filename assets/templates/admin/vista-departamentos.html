@@ -5,179 +5,107 @@
      encogerse por debajo de su contenido. Sin esto la tarjeta de abajo desborda
      y, como lleva `overflow-hidden`, recorta la lista sin dejar barra de scroll.
      El padding lo pone <main> en app-root.html; repetirlo aquí lo duplicaba. -->
-<div class="h-full min-h-0 flex flex-col">
+<!-- Fase 3: la vista no tenía <h1> — el título solo existía en la topbar,
+     que en móvil lo trunca. La cabecera de página es ahora la primitiva. -->
+<ui-contenedor-pagina>
 
-  <!-- KPIs rápidos -->
-  <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3 md:gap-6 flex-shrink-0">
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-building text-brand-600 dark:text-brand-400"></i>
-      </div>
-      <div>
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Departamentos</p>
-        <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ totalDepartamentos }}</p>
-      </div>
+  <ui-cabecera-pagina titulo="Departamentos"
+                      subtitulo="Direcciones y unidades administrativas de la municipalidad">
+    <template #acciones>
+      <ui-boton icono="fa-solid fa-plus" @click="abrirModalEditar()">Nuevo departamento</ui-boton>
+    </template>
+  </ui-cabecera-pagina>
+
+
+  <!-- Indicadores, plegados en móvil. -->
+  <ui-franja-kpi :columnas="3">
+    <ui-tarjeta-kpi etiqueta="Total departamentos" :valor="totalDepartamentos" icono="fas fa-building" estado="total"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Activos" :valor="departamentosActivos" icono="fas fa-circle-check" estado="resuelta"></ui-tarjeta-kpi>
+    <ui-tarjeta-kpi etiqueta="Inactivos" :valor="departamentosInactivos" icono="fas fa-circle-xmark" estado="vencida"></ui-tarjeta-kpi>
+  </ui-franja-kpi>
+
+  <ui-barra-filtros>
+    <div class="w-full sm:w-60">
+      <ui-campo-busqueda v-model="filtroBusqueda" marcador="Nombre o código…" tamano="compacto"
+                         etiqueta-accesible="Buscar departamento"></ui-campo-busqueda>
     </div>
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-check-circle text-emerald-600 dark:text-emerald-400"></i>
-      </div>
-      <div>
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activos</p>
-        <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ departamentosActivos }}</p>
-      </div>
+    <div class="w-full sm:w-64">
+      <ui-select v-model="filtroDireccion" :opciones="direccionesDisponibles"
+                 texto-vacio="Todas las Direcciones"></ui-select>
     </div>
-    <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors flex items-center gap-4">
-      <div class="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-        <i class="fas fa-times-circle text-red-600 dark:text-red-400"></i>
-      </div>
-      <div>
-        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Inactivos</p>
-        <p class="text-2xl font-extrabold text-red-600 dark:text-red-400">{{ departamentosInactivos }}</p>
-      </div>
+    <div class="w-full sm:w-44">
+      <ui-select v-model="filtroEstado"
+                 :opciones="[{ id: 'activo', nombre: 'Activo' }, { id: 'inactivo', nombre: 'Inactivo' }]"
+                 texto-vacio="Todos los estados"></ui-select>
     </div>
-  </div>
+    <template #derecha>
+      <span class="text-theme-xs text-gray-500 dark:text-gray-400">
+        {{ departamentosFiltrados.length }} de {{ totalDepartamentos }}
+      </span>
+    </template>
+  </ui-barra-filtros>
 
-  <!-- Tabla principal -->
-  <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden transition-colors flex-1 min-h-0 flex flex-col">
+  <!-- Lista de unidades. El scroll vive aquí y no en <main>: con 82
+       departamentos, los filtros deben quedarse a la vista. Es una lista y no
+       una tabla porque cada registro es una sola línea de identidad; en
+       teléfono la misma fila funciona, solo que con las acciones SIEMPRE
+       visibles — el hover no existe en una pantalla táctil. -->
+  <ui-card sin-relleno ajustable class="flex-1">
+    <ui-estado-carga v-if="cargando" texto="Cargando departamentos…"></ui-estado-carga>
 
-    <!-- Cabecera de la tabla -->
-    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-50/50 dark:bg-gray-800/50 flex-shrink-0">
-      <div class="flex-1">
-        <h3 class="text-sm font-bold text-gray-800 dark:text-white">Lista de Departamentos</h3>
-        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-          Mostrando <span class="font-semibold text-gray-700 dark:text-gray-300">{{ departamentosFiltrados.length }}</span> de {{ totalDepartamentos }} registros
-        </p>
-      </div>
-
-      <!-- Filtros + Acción -->
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- Búsqueda -->
-        <div class="relative">
-          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input
-            v-model="filtroBusqueda"
-            type="text"
-            placeholder="Buscar..."
-            class="pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all w-[160px]"
-          >
-        </div>
-
-        <!-- Filtro Dirección -->
-        <select
-          v-model="filtroDireccion"
-          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all appearance-none"
-        >
-          <option value="">Todas las Direcciones</option>
-          <option v-for="direccion in direccionesDisponibles" :key="direccion" :value="direccion">{{ direccion }}</option>
-        </select>
-
-        <!-- Filtro Estado -->
-        <select
-          v-model="filtroEstado"
-          class="pl-3 pr-7 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 outline-none transition-all appearance-none"
-        >
-          <option value="">Todos los estados</option>
-          <option value="activo">Activo</option>
-          <option value="inactivo">Inactivo</option>
-        </select>
-
-        <!-- Limpiar -->
-        <button
-          @click="limpiarFiltros"
-          title="Limpiar filtros"
-          class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <i class="fas fa-sync-alt text-xs"></i>
-        </button>
-
-        <!-- Nuevo departamento -->
-        <button
-          @click="abrirModalEditar()"
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--brand)] hover:bg-brand-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
-        >
-          <i class="fas fa-plus"></i> Nuevo Departamento
-        </button>
-      </div>
-    </div>
-
-    <!-- Estado vacío -->
-    <div v-if="departamentos.length === 0 && !cargando" class="py-16 text-center">
-      <i class="fas fa-building text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">No hay departamentos registrados</p>
-    </div>
-
-    <!-- Loading -->
-    <div v-else-if="cargando" class="py-16 flex items-center justify-center gap-3">
-      <div class="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-      <span class="text-sm text-gray-500 dark:text-gray-400">Cargando departamentos...</span>
-    </div>
-
-    <!-- Lista de departamentos — el scroll vive aquí, no en <main>: así la
-         cabecera con los filtros queda fija con 82 departamentos en la lista. -->
-    <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 flex-1 min-h-0 overflow-y-auto">
+    <div v-else class="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto dark:divide-gray-800">
       <div
         v-for="departamento in departamentosFiltrados"
         :key="departamento.id"
-        class="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors cursor-pointer group"
+        class="group flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-gray-50 active:bg-gray-50 dark:hover:bg-white/5 sm:px-5"
         @click="abrirModalEditar(departamento)"
       >
-        <!-- Avatar + Info -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
-            <i class="fas fa-building text-brand-600 dark:text-brand-400 text-sm"></i>
+        <div class="flex min-w-0 items-center gap-3">
+          <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-50 dark:bg-brand-900/40">
+            <i class="fas fa-building text-sm text-brand-600 dark:text-brand-400" aria-hidden="true"></i>
           </div>
           <div class="min-w-0">
-            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ departamento.nombre }}</p>
-            <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+            <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ departamento.nombre }}</p>
+            <p class="truncate text-[11px] text-gray-500 dark:text-gray-400">
               {{ departamento.direcciones_administrativas?.nombre || '' }} · {{ departamento.codigo }}
             </p>
+            <!-- En teléfono el badge baja aquí para no competir con las acciones. -->
+            <ui-badge :tono="departamento.estado === 'activo' ? 'exito' : 'peligro'" tamano="sm" punto class="mt-1 lg:hidden">
+              {{ departamento.estado === 'activo' ? 'Activo' : 'Inactivo' }}
+            </ui-badge>
           </div>
         </div>
 
-        <!-- Estado + Acciones -->
-        <div class="flex items-center gap-3 shrink-0">
-          <!-- Estado badge -->
-          <span :class="[
-            'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
-            departamento.estado === 'activo'
-              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-          ]">
-            <span :class="['w-1.5 h-1.5 rounded-full', departamento.estado === 'activo' ? 'bg-emerald-500' : 'bg-red-500']"></span>
+        <div class="flex shrink-0 items-center gap-2">
+          <ui-badge :tono="departamento.estado === 'activo' ? 'exito' : 'peligro'" tamano="sm" punto class="hidden lg:inline-flex">
             {{ departamento.estado === 'activo' ? 'Activo' : 'Inactivo' }}
-          </span>
+          </ui-badge>
 
-          <!-- Acciones -->
-          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              @click.stop="abrirModalEditar(departamento)"
-              title="Editar departamento"
-              class="w-7 h-7 flex items-center justify-center rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
-            >
-              <i class="fas fa-edit text-xs"></i>
+          <!-- Visibles siempre en táctil; el desvanecido por hover solo desde lg. -->
+          <div class="flex items-center gap-1 lg:opacity-0 lg:transition-opacity lg:group-hover:opacity-100">
+            <button type="button" @click.stop="abrirModalEditar(departamento)"
+                    :aria-label="'Editar ' + departamento.nombre"
+                    class="flex h-10 w-10 items-center justify-center rounded-lg text-brand-600 transition-colors hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/30 lg:h-8 lg:w-8">
+              <i class="fas fa-edit text-xs" aria-hidden="true"></i>
             </button>
-            <button
-              v-if="departamento.estado === 'activo'"
-              @click.stop="abrirModalEliminar(departamento)"
-              title="Desactivar departamento"
-              class="w-7 h-7 flex items-center justify-center rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
-            >
-              <i class="fas fa-ban text-xs"></i>
+            <button v-if="departamento.estado === 'activo'" type="button"
+                    @click.stop="abrirModalEliminar(departamento)"
+                    :aria-label="'Desactivar ' + departamento.nombre"
+                    class="flex h-10 w-10 items-center justify-center rounded-lg text-warning-600 transition-colors hover:bg-warning-50 dark:hover:bg-amber-900/30 lg:h-8 lg:w-8">
+              <i class="fas fa-ban text-xs" aria-hidden="true"></i>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Sin resultados de filtro -->
-      <div v-if="departamentosFiltrados.length === 0" class="py-12 text-center">
-        <i class="fas fa-filter text-3xl text-gray-300 dark:text-gray-600 mb-2"></i>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Sin resultados para los filtros aplicados</p>
-        <button @click="limpiarFiltros" class="mt-3 text-xs font-semibold text-[var(--brand)] hover:underline">Limpiar filtros</button>
-      </div>
+      <ui-estado-vacio v-if="!departamentosFiltrados.length"
+                       icono="fa-solid fa-building-circle-xmark"
+                       titulo="Sin departamentos para los filtros aplicados">
+        <ui-boton variante="secundario" tamano="sm" @click="limpiarFiltros">Limpiar filtros</ui-boton>
+      </ui-estado-vacio>
     </div>
-  </div>
-</div>
+  </ui-card>
+</ui-contenedor-pagina>
 
 <!-- ─── Modal Editar / Crear ─── -->
 <div v-if="modalEditar" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">

@@ -1,13 +1,9 @@
 <!-- ======================= VISTA: GESTIÓN DE DENUNCIAS ======================= -->
-<div class="h-full min-h-0 flex flex-col">
+<ui-contenedor-pagina>
 
-  <!-- CABECERA -->
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
-    <div class="min-w-0">
-      <h1 class="text-title-md text-gray-900 dark:text-white">Gestión de Denuncias</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Administración y seguimiento de todas las incidencias registradas</p>
-    </div>
-    <div class="flex gap-2">
+  <ui-cabecera-pagina titulo="Gestión de Denuncias"
+                      subtitulo="Administración y seguimiento de todas las incidencias registradas">
+    <template #acciones>
       <ui-boton variante="secundario" icono="fa-solid fa-file-export"
                 :deshabilitado="!denunciasFiltradas.length" @click="exportarCSV">
         Exportar
@@ -17,8 +13,8 @@
       <ui-boton variante="primario" icono="fa-solid fa-plus" :deshabilitado="true">
         Nueva Denuncia
       </ui-boton>
-    </div>
-  </div>
+    </template>
+  </ui-cabecera-pagina>
 
   <!-- FILTROS -->
   <ui-card class="mb-6 flex-shrink-0">
@@ -50,7 +46,22 @@
     casos, cuando puede haber cientos por detrás. Los filtros y la exportación
     a CSV trabajan sobre lo mismo, así que también se quedarían cortos.
   -->
-  <div v-if="hayMasCasos"
+  <!-- Búsqueda contra la base entera (v42): los resultados no salen de la
+       ventana cargada sino del total, y aquí se dice cuántos son. -->
+  <div v-if="resultadosBusqueda !== null"
+       class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3
+              dark:border-blue-500/30 dark:bg-blue-500/10">
+    <i class="fa-solid" :class="buscandoServidor ? 'fa-circle-notch fa-spin text-blue-500' : 'fa-database text-blue-500'" aria-hidden="true"></i>
+    <p class="min-w-0 flex-1 text-sm text-blue-800 dark:text-blue-200">
+      <template v-if="buscandoServidor">Buscando en la base completa…</template>
+      <template v-else>
+        <strong>{{ totalCoincidencias }}</strong> coincidencia(s) en toda la base<template v-if="totalCoincidencias > denunciasFiltradas.length">;
+        se muestran las <strong>{{ denunciasFiltradas.length }}</strong> más recientes</template>.
+      </template>
+    </p>
+  </div>
+
+  <div v-else-if="hayMasCasos"
        class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3
               dark:border-amber-500/30 dark:bg-amber-500/10">
     <i class="fa-solid fa-circle-info text-amber-500" aria-hidden="true"></i>
@@ -129,6 +140,33 @@
         <i class="fa-solid fa-eye text-xs" aria-hidden="true"></i>
       </button>
     </template>
+
+    <!-- La denuncia como tarjeta, para gestionarla desde un teléfono: en la
+         tabla con scroll horizontal solo se veían la casilla y el ID. -->
+    <template #tarjeta="{ fila }">
+      <div class="flex items-start gap-3">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+             :style="{ backgroundColor: getCategoria(fila.tipo_id).color_hex + '20', color: getCategoria(fila.tipo_id).color_hex }">
+          <i :class="['fa-solid', getCategoria(fila.tipo_id).icono]" aria-hidden="true"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-mono text-xs font-bold text-gray-500">{{ formatearId(fila.id) }}</span>
+            <span class="text-[10px] text-gray-400">{{ formatearFecha(fila.created_at) }}</span>
+          </div>
+          <p class="mt-0.5 truncate text-sm font-semibold text-gray-900 dark:text-white">
+            {{ getCategoria(fila.tipo_id).nombre }}
+          </p>
+          <p class="mt-0.5 flex items-center gap-1 text-theme-xs text-gray-500 dark:text-gray-400">
+            <i class="fa-solid fa-location-dot shrink-0 text-gray-400" aria-hidden="true"></i>
+            <span class="truncate">{{ fila.direccion }}</span>
+          </p>
+          <div class="mt-1.5">
+            <ui-badge tono="ninguno" tamano="sm" :class="badgeEstado(fila.estado)">{{ etiquetaEstado(fila.estado) }}</ui-badge>
+          </div>
+        </div>
+      </div>
+    </template>
   </ui-tabla>
 
   <!-- MODAL DETALLE Y GESTIÓN -->
@@ -139,7 +177,7 @@
     :icono="denunciaSeleccionada ? 'fa-solid ' + getCategoria(denunciaSeleccionada.tipo_id).icono : ''"
     :color-icono="denunciaSeleccionada ? getCategoria(denunciaSeleccionada.tipo_id).color_hex : ''"
     tamano="lg"
-    @cerrar="cerrarDetalle">
+    @cerrar="pedirCierre">
 
     <div v-if="denunciaSeleccionada" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
@@ -374,4 +412,4 @@
     </template>
   </ui-modal>
 
-</div>
+</ui-contenedor-pagina>

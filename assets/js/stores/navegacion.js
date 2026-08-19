@@ -504,6 +504,7 @@ const titulos = {
   'vista-notificaciones': 'Gestión de Notificaciones',
   'vista-comunicados': 'Comunicados de la Municipalidad',
   cartograma: 'Cartograma Territorial',   // faltaba: la topbar mostraba el genérico
+  catalogo: 'Catálogo de Categorías', cuadrillas: 'Cuadrillas de Campo',
 };
 const tituloVista = computed(() => titulos[vistaActual.value] || 'Centro de Monitoreo');
 
