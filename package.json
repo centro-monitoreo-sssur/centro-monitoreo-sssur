@@ -12,7 +12,9 @@
     "vendor": "node herramientas/vendorizar.mjs",
     "marca": "node herramientas/traer-marca.mjs",
     "servidor": "python herramientas/servidor-dev.py",
-    "banco": "node herramientas/banco-visual.mjs"
+    "banco": "node herramientas/banco-visual.mjs",
+    "banco:comparar": "node herramientas/comparar-capturas.mjs",
+    "css:comparar": "node herramientas/comparar-hoja.mjs"
   },
   "devDependencies": {
     "puppeteer-core": "^25.8.0",

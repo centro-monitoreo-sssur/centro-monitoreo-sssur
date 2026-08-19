@@ -256,6 +256,33 @@ async function main() {
         else r.continue();
       });
 
+      /* ── Congelar el reloj ────────────────────────────────────────────
+         La cabecera muestra la hora y el tablero la fecha larga. Entre la
+         pasada «base» y la «fase1» pasaron cinco minutos, y eso bastó para que
+         las TREINTA capturas de escritorio salieran distintas: no solo cambia
+         el texto, es que «12:57 p. m.» es un carácter más ancho que «1:02
+         p. m.», y en una fila `justify-between` eso desplaza la miga de pan y
+         el buscador seis píxeles. Comparar fases con el reloj vivo es comparar
+         ruido, y una diferencia real se escondería entre treinta falsas.
+
+         Se fija un instante conocido antes de que cargue nada. Es una fecha
+         real y anodina —lunes laborable, media mañana— para que ningún cálculo
+         de «hace X» ni ninguna franja horaria dé un resultado raro. */
+      await pagina.evaluateOnNewDocument(() => {
+        const INSTANTE = new Date('2026-03-16T10:30:00-06:00').getTime();
+        const DateReal = Date;
+        function DateCongelada(...args) {
+          if (!(this instanceof DateCongelada)) return new DateReal(INSTANTE).toString();
+          return args.length ? new DateReal(...args) : new DateReal(INSTANTE);
+        }
+        DateCongelada.prototype = DateReal.prototype;
+        DateCongelada.now = () => INSTANTE;
+        DateCongelada.parse = DateReal.parse;
+        DateCongelada.UTC = DateReal.UTC;
+        window.Date = DateCongelada;
+        // `performance.now` se deja intacto: lo usan las animaciones y Leaflet.
+      });
+
       const arranque = Date.now();
       await pagina.goto(BASE_URL + '/panel/', { waitUntil: 'networkidle2', timeout: 30000 });
       await pagina.evaluate((t) => {
