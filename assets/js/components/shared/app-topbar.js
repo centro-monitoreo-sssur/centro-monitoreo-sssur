@@ -18,6 +18,7 @@ import { useNavegacion } from '../../stores/navegacion.js';
 import { usePwa } from '../../stores/pwa.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
+import { useNotificaciones } from '../../stores/notificaciones.js';
 import { ahoraTexto } from '../../utils/tiempo.js';
 
 const MAX_RESULTADOS_CASOS = 6;
@@ -33,6 +34,11 @@ export default {
     const { versionApp } = usePwa();
     const { denuncias } = useDenuncias();
     const { nombreDepartamento, nombreDistrito } = useCatalogos();
+    /* El punto rojo de la campana estaba escrito a mano en la plantilla:
+       encendido siempre, hubiera avisos o no. Un distintivo que nunca se apaga
+       no informa de nada y, peor, hace invisible el aviso de verdad cuando
+       llega. Ahora sale del contador real. */
+    const { notificacionesNoLeidas } = useNotificaciones();
 
     const fechaHoraActual = ref(ahoraTexto());
     let timer = null;
@@ -196,6 +202,7 @@ export default {
       tituloVista, migas, fechaHoraActual,
       sidebarAbierto, sidebarColapsado, toggleSidebar,
       isDarkMode, toggleDarkMode, versionApp, irA,
+      notificacionesNoLeidas,
       // perfil
       menuPerfilAbierto, nombreMostrado, iniciales, rolUsuario, ambito, salir,
       // buscador

@@ -177,7 +177,12 @@ const marcarComoLeida = async (id) => {
 
   try {
     if (db) {
-      const { error } = await db.from('notificaciones').update({ leida: true }).eq('id', id);
+      /* Por RPC y no con un UPDATE directo. Desde la v40 el aviso puede ir
+         dirigido a una unidad, y su jefatura NO tiene permiso de escritura
+         sobre la tabla —solo gerencia lo tiene—: un update directo le devolvia
+         cero filas sin error y la marca se deshacia al recargar. El RPC
+         comprueba el ambito y toca solo la columna `leida`. */
+      const { error } = await db.rpc('marcar_notificacion_leida', { p_id: id });
       if (error) throw error;
     }
     eventBus.emit(EVENTOS_NOTIFICACIONES.NOTIFICACION_LEIDA, notificacion);
@@ -206,11 +211,15 @@ const marcarTodasComoLeidas = async () => {
 
   try {
     if (db) {
-      // Esta función NO tocaba la base: marcaba en memoria y al recargar volvía
-      // todo a "sin leer". El contador del topbar y la realidad no coincidían.
-      const { error } = await db.from('notificaciones')
-        .update({ leida: true }).in('id', pendientes);
-      if (error) throw error;
+      /* Una llamada por aviso, en paralelo. El RPC de la v40 comprueba el
+         ambito de cada uno, asi que no hay una version en lote: un `in (...)`
+         de treinta ids con permisos distintos no se puede autorizar en bloque.
+         Son treinta peticiones como mucho y solo al pulsar el boton. */
+      const respuestas = await Promise.all(
+        pendientes.map((id) => db.rpc('marcar_notificacion_leida', { p_id: id }))
+      );
+      const fallo = respuestas.find((r) => r.error);
+      if (fallo) throw fallo.error;
     }
     return { ok: true };
   } catch (e) {

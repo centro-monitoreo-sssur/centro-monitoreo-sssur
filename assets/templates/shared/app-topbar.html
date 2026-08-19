@@ -56,10 +56,21 @@
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true"></span> En línea
       </span>
 
-      <button @click="irA('vista-notificaciones')" type="button" aria-label="Notificaciones"
+      <!-- Unica via de entrada a los avisos: el item de menu se retiro cuando
+           Comunicados sustituyo a la antigua Notificaciones. El contador es
+           real; antes era un punto fijo que estaba encendido siempre. -->
+      <button @click="irA('vista-notificaciones')" type="button"
+              :aria-label="notificacionesNoLeidas
+                ? 'Notificaciones, ' + notificacionesNoLeidas + ' sin leer'
+                : 'Notificaciones'"
               class="relative text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2 transition-colors">
         <i class="fa-solid fa-bell text-lg" aria-hidden="true"></i>
-        <div class="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-gray-800" aria-hidden="true"></div>
+        <span v-if="notificacionesNoLeidas"
+              class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center
+                     bg-rose-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-gray-800"
+              aria-hidden="true">
+          {{ notificacionesNoLeidas > 99 ? '99+' : notificacionesNoLeidas }}
+        </span>
       </button>
 
       <!-- Perfil: hace visible el ámbito bajo el que la RLS está filtrando -->
