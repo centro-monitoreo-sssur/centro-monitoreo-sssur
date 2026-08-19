@@ -1,11 +1,8 @@
 <!-- ======================= VISTA: BITÁCORA DE AUDITORÍA ======================= -->
-<div class="h-full min-h-0 flex flex-col">
-<!-- CABECERA -->
-<div class="mb-6 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
-  <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Bitácora de Auditoría</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Registro inmutable de eventos y acciones en el sistema</p>
-  </div>
+<ui-contenedor-pagina>
+<ui-cabecera-pagina titulo="Bitácora de Auditoría"
+                    subtitulo="Registro inmutable de eventos y acciones en el sistema">
+  <template #acciones>
   <!-- Ambos botones estaban sin @click desde el primer día. Se marcan como
        deshabilitados hasta que exista la exportación real. -->
   <div class="flex gap-2">
@@ -18,7 +15,8 @@
       <i class="fa-solid fa-file-csv mr-2"></i> Exportar CSV
     </button>
   </div>
-</div>
+  </template>
+</ui-cabecera-pagina>
 
 <!-- FILTROS -->
 <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end flex-shrink-0">
@@ -105,5 +103,5 @@
     <div>Mostrando <span class="font-bold">{{ logsFiltrados.length }}</span> registros de auditoría</div>
   </div>
 </div>
-</div><!-- cierra el contenedor raíz: faltaba desde el original y solo no rompía
+</ui-contenedor-pagina><!-- cierra el contenedor raíz: faltaba desde el original y solo no rompía
            porque el compilador de Vue autocierra las etiquetas al final del template -->

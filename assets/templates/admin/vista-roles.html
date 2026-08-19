@@ -2,16 +2,14 @@
 <!-- `min-h-0` en toda la cadena: sin él los paneles con `overflow-hidden`
      pierden su tamaño mínimo automático, se encogen y recortan tanto la lista
      de roles como las últimas filas de la matriz. -->
-<div class="h-full min-h-0 flex flex-col max-w-7xl mx-auto w-full">
+<ui-contenedor-pagina ancho="lectura">
 
-  <!-- CABECERA -->
-  <div class="mb-4 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
-    <div class="min-w-0">
-      <h1 class="text-title-md text-gray-900 dark:text-white">Roles y Permisos</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Control de acceso basado en roles (RBAC)</p>
-    </div>
-    <ui-boton v-if="puedeGestionar" icono="fa-solid fa-plus" @click="abrirNuevo">Crear rol</ui-boton>
-  </div>
+  <ui-cabecera-pagina titulo="Roles y Permisos"
+                      subtitulo="Control de acceso basado en roles (RBAC)">
+    <template #acciones>
+      <ui-boton v-if="puedeGestionar" icono="fa-solid fa-plus" @click="abrirNuevo">Crear rol</ui-boton>
+    </template>
+  </ui-cabecera-pagina>
 
   <!-- Aviso de solo lectura. Se dice el motivo: un botón que desaparece sin
        explicación se reporta como función perdida. -->
@@ -227,4 +225,4 @@
     </template>
   </ui-modal>
 
-</div>
+</ui-contenedor-pagina>

@@ -1,5 +1,9 @@
 <!-- ======================= VISTA: USUARIOS DEL SISTEMA ======================= -->
-<div class="h-full min-h-0 flex flex-col">
+<ui-contenedor-pagina>
+
+  <ui-cabecera-pagina titulo="Usuarios del Sistema"
+                      subtitulo="Cuentas del personal y su acceso al panel"></ui-cabecera-pagina>
+
   <!-- KPIs de alto nivel -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 flex-shrink-0">
     <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-5 transition-colors">
@@ -207,7 +211,7 @@
       </div>
     </div>
   </div>
-</div>
+</ui-contenedor-pagina>
 
 <!-- ─── Modal Editar / Crear ─── -->
 <div v-if="modalEditar" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">

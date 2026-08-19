@@ -1,21 +1,20 @@
 <!-- ======================= VISTA: REPORTES ======================= -->
-<div class="flex min-h-full flex-col p-4 lg:h-full lg:p-6">
+<!-- Fase 3: el relleno `p-4 lg:p-6` que llevaba esta raíz se fue a <main> —
+     su rama especial de overflow ahora también lo aporta—. La raíz conserva
+     su forma híbrida a mano: página larga en móvil (min-h-full), tablero de
+     alto fijo en escritorio (lg:h-full). Ninguna variante del contenedor
+     modela eso todavía y es el único caso del sistema. -->
+<div class="flex min-h-full flex-col lg:h-full">
 
-  <!-- CABECERA ─────────────────────────────────────────────────── -->
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-3 flex-shrink-0">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Reportes y Estadísticas</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        Centro de Monitoreo Municipal · San Salvador Sur
-      </p>
-    </div>
-    <div class="flex items-center gap-2">
+  <ui-cabecera-pagina titulo="Reportes y Estadísticas"
+                      subtitulo="Centro de Monitoreo Municipal · San Salvador Sur">
+    <template #acciones>
       <button @click="exportarCSV" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors flex items-center gap-2">
         <i class="fa-solid fa-file-csv"></i>
         Exportar CSV
       </button>
-    </div>
-  </div>
+    </template>
+  </ui-cabecera-pagina>
 
   <!-- KPIs ─────────────────────────────────────────────────────── -->
   <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 lg:grid-cols-4 flex-shrink-0">

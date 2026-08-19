@@ -3,7 +3,14 @@
      Avisos que la municipalidad publica hacia la ciudadanía, el personal de
      campo o el propio Centro de Monitoreo.
      ============================================================ -->
-<div class="p-4 sm:p-6 h-full flex flex-col">
+<!-- Fase 3: esta raíz sumaba `p-4 sm:p-6` encima del relleno de <main> —
+     doble canal— y sin `min-h-0`, que es la causa de los 163px de contenido
+     inalcanzable que midió el banco en móvil. El contenedor trae ambas cosas. -->
+<ui-contenedor-pagina>
+
+  <ui-cabecera-pagina titulo="Comunicados"
+                      subtitulo="Avisos hacia la ciudadanía, el personal de campo y el Centro"></ui-cabecera-pagina>
+
 
   <!-- Indicadores -->
   <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 xl:grid-cols-4 flex-shrink-0">
@@ -337,4 +344,4 @@
       </div>
     </div>
   </div>
-</div>
+</ui-contenedor-pagina>

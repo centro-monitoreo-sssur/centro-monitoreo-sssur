@@ -3,28 +3,28 @@
      en un bloque `hidden lg:flex` y otro `lg:hidden`, con dos instancias de
      Chart.js vivas al mismo tiempo.
      ========================================================================= -->
-<div class="h-full flex flex-col p-4 md:p-6 overflow-y-auto">
+<!-- Fase 3: el relleno lo pone <main> y solo <main>. Esta raíz sumaba su
+     propio `p-4 md:p-6` encima del de main: 32 px de canal que nadie decidió.
+     El `overflow-y-auto` interno también sobraba — main ya desplaza. -->
+<ui-contenedor-pagina fluido>
 
-  <!-- CABECERA + SELECTOR DE PERIODO -->
-  <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-    <div class="min-w-0">
-      <h1 class="text-title-md md:text-title-lg text-gray-900 dark:text-white">Dashboard</h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1 text-sm">Centro de Monitoreo Municipal · {{ fechaHoraActual }}</p>
-    </div>
-
-    <div class="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 shrink-0"
-         role="group" aria-label="Periodo de análisis">
-      <button v-for="r in RANGOS" :key="r.dias"
-              @click="cambiarRango(r.dias)"
-              :aria-pressed="rangoDias === r.dias"
-              class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-              :class="rangoDias === r.dias
-                ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-white shadow-card'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'">
-        {{ r.etiqueta }}
-      </button>
-    </div>
-  </div>
+  <ui-cabecera-pagina titulo="Dashboard"
+                      :subtitulo="'Centro de Monitoreo Municipal · ' + fechaHoraActual">
+    <template #acciones>
+      <div class="flex items-center gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 shrink-0"
+           role="group" aria-label="Periodo de análisis">
+        <button v-for="r in RANGOS" :key="r.dias"
+                @click="cambiarRango(r.dias)"
+                :aria-pressed="rangoDias === r.dias"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                :class="rangoDias === r.dias
+                  ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-white shadow-card'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'">
+          {{ r.etiqueta }}
+        </button>
+      </div>
+    </template>
+  </ui-cabecera-pagina>
 
   <!-- Aviso de muestra parcial. Un panel de dirección que calcula sobre datos
        truncados sin decirlo es peor que uno vacío. -->
@@ -263,4 +263,4 @@
     </div>
   </div>
 
-</div>
+</ui-contenedor-pagina>

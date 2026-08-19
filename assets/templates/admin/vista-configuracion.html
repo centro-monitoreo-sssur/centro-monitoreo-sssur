@@ -1,14 +1,9 @@
 <!-- ======================= VISTA: CONFIGURACIÓN ======================= -->
-<div class="min-h-full">
+<ui-contenedor-pagina fluido>
 
-  <!-- CABECERA ─────────────────────────────────────────────────── -->
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Configuración del Sistema</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        Centro de Monitoreo Municipal · San Salvador Sur
-      </p>
-    </div>
+  <ui-cabecera-pagina titulo="Configuración del Sistema"
+                      subtitulo="Centro de Monitoreo Municipal · San Salvador Sur">
+    <template #acciones>
     <!-- Botón Guardar global -->
     <button @click="guardarYNotificar"
       class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
@@ -18,7 +13,8 @@
       <i :class="guardado ? 'fa-solid fa-check' : 'fa-solid fa-floppy-disk'"></i>
       {{ guardado ? 'Guardado' : 'Guardar Cambios' }}
     </button>
-  </div>
+    </template>
+  </ui-cabecera-pagina>
 
   <!-- TABS ─────────────────────────────────────────────────────── -->
   <div class="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 flex-wrap">
@@ -1156,4 +1152,4 @@
     </div>
   </div>
 
-</div>
+</ui-contenedor-pagina>

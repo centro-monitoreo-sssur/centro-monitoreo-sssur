@@ -1,15 +1,9 @@
 <!-- ======================= VISTA: GESTIÓN DE NOTIFICACIONES ======================= -->
-<div class="h-full min-h-0 flex flex-col max-w-6xl mx-auto w-full">
+<ui-contenedor-pagina ancho="lectura">
 
-  <!-- CABECERA -->
-  <div class="mb-4 flex items-start justify-between flex-wrap gap-4 flex-shrink-0">
-    <div class="min-w-0">
-      <h1 class="text-title-md text-gray-900 dark:text-white">Gestión de Notificaciones</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        Avisos del sistema y emisión de alertas al personal
-      </p>
-    </div>
-    <div class="flex flex-wrap gap-2">
+  <ui-cabecera-pagina titulo="Gestión de Notificaciones"
+                      subtitulo="Avisos del sistema y emisión de alertas al personal">
+    <template #acciones>
       <ui-boton v-if="puedeGestionar" variante="secundario" icono="fa-solid fa-check-double"
                 :deshabilitado="resumen.sinLeer === 0" @click="marcarTodas">
         Marcar todas
@@ -21,8 +15,8 @@
       <ui-boton v-if="puedeGestionar" icono="fa-solid fa-paper-plane" @click="abrirEmisor">
         Emitir aviso
       </ui-boton>
-    </div>
-  </div>
+    </template>
+  </ui-cabecera-pagina>
 
   <!-- Aviso de permisos. La policy de v5 filtra en silencio: sin este texto,
        un jefe de área vería una bandeja vacía y concluiría que no hay avisos. -->
@@ -240,4 +234,4 @@
     </template>
   </ui-modal>
 
-</div>
+</ui-contenedor-pagina>

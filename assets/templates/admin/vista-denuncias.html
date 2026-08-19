@@ -1,13 +1,9 @@
 <!-- ======================= VISTA: GESTIÓN DE DENUNCIAS ======================= -->
-<div class="h-full min-h-0 flex flex-col">
+<ui-contenedor-pagina>
 
-  <!-- CABECERA -->
-  <div class="mb-6 flex items-center justify-between flex-wrap gap-4 flex-shrink-0">
-    <div class="min-w-0">
-      <h1 class="text-title-md text-gray-900 dark:text-white">Gestión de Denuncias</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Administración y seguimiento de todas las incidencias registradas</p>
-    </div>
-    <div class="flex gap-2">
+  <ui-cabecera-pagina titulo="Gestión de Denuncias"
+                      subtitulo="Administración y seguimiento de todas las incidencias registradas">
+    <template #acciones>
       <ui-boton variante="secundario" icono="fa-solid fa-file-export"
                 :deshabilitado="!denunciasFiltradas.length" @click="exportarCSV">
         Exportar
@@ -17,8 +13,8 @@
       <ui-boton variante="primario" icono="fa-solid fa-plus" :deshabilitado="true">
         Nueva Denuncia
       </ui-boton>
-    </div>
-  </div>
+    </template>
+  </ui-cabecera-pagina>
 
   <!-- FILTROS -->
   <ui-card class="mb-6 flex-shrink-0">
@@ -374,4 +370,4 @@
     </template>
   </ui-modal>
 
-</div>
+</ui-contenedor-pagina>

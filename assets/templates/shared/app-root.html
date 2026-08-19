@@ -119,10 +119,20 @@
          indicadores y los filtros ya llenan la pantalla, las gráficas
          colapsaban a cero por el `flex-1` y el resto quedaba fuera de alcance
          sin forma de desplazarse. Ahora se desplaza por debajo de `lg` y
-         conserva el tablero por encima. -->
+         conserva el tablero por encima.
+
+         ── FASE 3: AQUÍ VIVE EL RELLENO, Y SOLO AQUÍ ─────────────────────
+         `p-4 md:p-6` es el canal de TailAdmin y la ÚNICA fuente de relleno
+         de página. Antes competían tres: este main con `px-4 lg:px-8 py-6`,
+         el dashboard y comunicados sumando su propio `p-4 md:p-6` encima
+         (32 px de canal sin que nadie lo decidiera), e intervenciones
+         anulándolo con `sm:px-0 sm:pt-0`. Reportes lo recibe ahora en su
+         rama —antes no lo recibía y lo traía puesto—. El ancho máximo pasa
+         de un `max-w-[1600px]` arbitrario a `max-w-screen-2xl` (1536), el
+         token de TailAdmin. -->
     <main :class="['flex-1 w-full mx-auto min-h-0', vistaActual === 'mapa' || vistaActual === 'cartograma' ? 'overflow-hidden'
-        : vistaActual === 'reportes' ? 'overflow-y-auto lg:overflow-hidden'
-        : 'overflow-y-auto overflow-x-hidden px-4 lg:px-8 py-6 max-w-[1600px]']">
+        : vistaActual === 'reportes' ? 'overflow-y-auto lg:overflow-hidden p-4 md:p-6 max-w-screen-2xl'
+        : 'overflow-y-auto overflow-x-hidden p-4 md:p-6 max-w-screen-2xl']">
       <vista-dashboard v-if="vistaActual==='dashboard'"></vista-dashboard>
       <vista-mapa v-else-if="vistaActual==='mapa'"></vista-mapa>
       <vista-cartograma v-else-if="vistaActual==='cartograma'"></vista-cartograma>

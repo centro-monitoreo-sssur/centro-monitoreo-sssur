@@ -5,7 +5,13 @@
      encogerse por debajo de su contenido. Sin esto la tarjeta de abajo desborda
      y, como lleva `overflow-hidden`, recorta la lista sin dejar barra de scroll.
      El padding lo pone <main> en app-root.html; repetirlo aquí lo duplicaba. -->
-<div class="h-full min-h-0 flex flex-col">
+<!-- Fase 3: la vista no tenía <h1> — el título solo existía en la topbar,
+     que en móvil lo trunca. La cabecera de página es ahora la primitiva. -->
+<ui-contenedor-pagina>
+
+  <ui-cabecera-pagina titulo="Departamentos"
+                      subtitulo="Direcciones y unidades administrativas de la municipalidad"></ui-cabecera-pagina>
+
 
   <!-- KPIs rápidos -->
   <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-3 md:gap-6 flex-shrink-0">
@@ -177,7 +183,7 @@
       </div>
     </div>
   </div>
-</div>
+</ui-contenedor-pagina>
 
 <!-- ─── Modal Editar / Crear ─── -->
 <div v-if="modalEditar" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
