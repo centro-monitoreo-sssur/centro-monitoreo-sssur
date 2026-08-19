@@ -7,6 +7,7 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from
 import { useNavegacion } from '../../stores/navegacion.js';
 import { useTerritorio } from '../../stores/territorio.js';
 import { usePerfilDistritos } from '../../stores/perfil-distritos.js';
+import { useCatalogos } from '../../stores/catalogos.js';
 import { cargarLimitesSSSur } from '../../services/geo-json/cargador.js';
 import { crearGestorDeCapas } from '../../services/mapa/capas-territoriales.js';
 import { HERRAMIENTAS } from '../../config/mapa/herramientas-mapa.js';
@@ -123,7 +124,45 @@ export default {
        sobre el polígono oficial (`st_area`), porque la que estaba escrita a
        mano —198,67 km² en total— se apartaba un 9 % de la superficie real y esa
        diferencia se propagaba al modo de densidad. */
-    const { perfilDe, fuentePoblacion, cargarPerfiles } = usePerfilDistritos();
+    const { perfiles, perfilDe, fuentePoblacion, cargarPerfiles } = usePerfilDistritos();
+    /* `distritos` del catálogo, solo para traducir NOMBRE → id. El GeoJSON
+       identifica cada polígono por su nombre y el perfil está indexado por id;
+       sin este puente no hay forma de saber de qué color es cada distrito.
+       Se renombra la carga porque aquí ya existe una `cargarDistritos()` que
+       hace otra cosa —leer la cartografía—. */
+    const { distritos, cargarDistritos: cargarDistritosCatalogo } = useCatalogos();
+
+    /* Quita tildes y mayúsculas para comparar. El nombre viaja por tres sitios
+       —el GeoJSON oficial, la tabla `distritos` y la vista de KPIs— y basta con
+       que uno escriba «Santo Tomas» sin tilde para que el distrito se quede sin
+       color y nadie sepa por qué. */
+    const clave = (t) => String(t || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .trim().toLowerCase();
+
+    const idPorNombre = computed(() => {
+      const m = new Map();
+      for (const d of distritos.value || []) m.set(clave(d.nombre), d.id);
+      return m;
+    });
+
+    /* EL COLOR SALE DEL PERFIL, NO DE LOS KPIs.
+       Antes se leía de `datosPorNombre`, que se construye recorriendo las filas
+       de `kpis_distrito_periodo`. Dos consecuencias, las dos visibles:
+
+         · Al entrar, los KPIs todavía no han llegado —`cargarKpisPeriodo()` no
+           se aguarda— así que el índice está vacío y los cinco distritos salen
+           grises. Al cambiar de vista y volver, el store ya tiene los datos y
+           por fin se pintan. Ese era el síntoma reportado.
+         · Un distrito SIN casos en el período no aparece en esas filas, así que
+           se quedaba gris para siempre, aunque todo hubiera cargado bien.
+
+       El color es identidad del distrito y vive en su perfil, que existe tenga
+       o no tenga casos. */
+    const colorDeDistrito = (nombre) => {
+      const id = idPorNombre.value.get(clave(nombre));
+      return (id != null && perfilDe(id)?.color_hex) || '#6b7280';
+    };
 
     // Perfil + indicadores de un distrito, indexado por NOMBRE porque es la
     // clave con la que llegan los polígonos del GeoJSON.
@@ -515,6 +554,40 @@ export default {
     // las etiquetas se quedarían con el porcentaje del primer cálculo.
     watch([periodoDelAmbito, zonas], () => pintarEtiquetas(modoActivo.value));
 
+    /* Repintado del color base.
+       Leer el color en el momento de crear el polígono no basta: el perfil y el
+       catálogo son dos peticiones independientes y cualquiera de las dos puede
+       llegar después. Con esto da igual el orden — cuando el dato aparezca, el
+       mapa se corrige solo. Es lo que faltaba para que no hubiera que salir de
+       la vista y volver.
+
+       Solo toca el relleno en modo geográfico: los otros tres modos pintan
+       todos los distritos del color del modo, y sobrescribirlo aquí borraría
+       esa lectura. El `colorOriginal` sí se actualiza siempre, para que al
+       volver a «Geográfico» ya esté bien. */
+    function repintarColorBase() {
+      if (!zonas.value.length) return;
+      let algunCambio = false;
+
+      for (const zona of zonas.value) {
+        const nuevo = colorDeDistrito(zona.nombre);
+        if (nuevo === zona.colorOriginal) continue;
+
+        zona.colorOriginal = nuevo;
+        zona.color = nuevo;
+        algunCambio = true;
+
+        if (modoActivo.value === 'geo') {
+          const poly = capas.get(zona.id);
+          if (poly) poly.setStyle({ fillColor: nuevo, color: nuevo });
+        }
+      }
+
+      if (algunCambio) pintarEtiquetas(modoActivo.value);
+    }
+
+    watch([perfiles, distritos], repintarColorBase);
+
     function animarHaciaModo(modo) {
       if (cargandoAnimacion.value || !mapa) return;
       cargandoAnimacion.value = true;
@@ -672,10 +745,10 @@ export default {
         } else if (geom.type === 'MultiPolygon') {
           coordsReal = geom.coordinates.map(poly => poly[0].map(pt => { sumLng += pt[0]; sumLat += pt[1]; totalPoints++; return [pt[1], pt[0]]; }));
         }
-        // El color identitario del distrito sale del perfil. Gris si el perfil
-        // aún no ha cargado: un color inventado haría que dos distritos
-        // compartieran tono y el mapa dejaría de ser legible.
-        const colorOriginal = datosPorNombre.value.get(name)?.perfil?.color_hex || '#6b7280';
+        // Gris solo si el perfil aún no ha cargado: un color inventado haría
+        // que dos distritos compartieran tono y el mapa dejaría de ser legible.
+        // El `watch` de más abajo lo corrige en cuanto llegue.
+        const colorOriginal = colorDeDistrito(name);
         return {
           id: 'z' + (idx + 1), nombre: name,
           colorOriginal,
@@ -744,6 +817,9 @@ export default {
       // Los perfiles se piden aquí y se AGUARDAN abajo, antes de pintar: de
       // ellos sale el color de cada distrito.
       const perfilesListos = cargarPerfiles();
+      // El catálogo traduce nombre → id para el color. Si ya está cargado,
+      // el store no repite la consulta.
+      if (!distritos.value?.length) cargarDistritosCatalogo();
       cargarKpisPeriodo();
 
       nextTick(async () => {
