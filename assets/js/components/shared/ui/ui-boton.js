@@ -12,10 +12,10 @@
 import { computed } from '../../../core/vue.js';
 
 const VARIANTES = {
-  primario:   'bg-brand-600 text-white hover:bg-brand-700 focus-visible:outline-brand-600 shadow-card disabled:hover:bg-brand-600',
-  secundario: 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 focus-visible:outline-brand-600 shadow-card',
-  peligro:    'bg-rose-600 text-white hover:bg-rose-700 focus-visible:outline-rose-600 shadow-card disabled:hover:bg-rose-600',
-  fantasma:   'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-750 focus-visible:outline-brand-600',
+  primario:   'bg-brand-600 text-white shadow-theme-xs hover:bg-brand-700 focus-visible:outline-brand-600 disabled:hover:bg-brand-600',
+  secundario: 'border border-gray-300 bg-white text-gray-700 shadow-theme-xs hover:bg-gray-50 focus-visible:outline-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/5',
+  peligro:    'bg-error-500 text-white shadow-theme-xs hover:bg-error-600 focus-visible:outline-error-500 disabled:hover:bg-error-500',
+  fantasma:   'bg-transparent text-gray-600 hover:bg-gray-100 focus-visible:outline-brand-600 dark:text-gray-300 dark:hover:bg-white/5',
 };
 
 const TAMANOS = {
@@ -40,7 +40,7 @@ export default {
   emits: ['click'],
   setup(props, { emit }) {
     const clases = computed(() => [
-      'inline-flex items-center justify-center font-semibold rounded-xl transition-colors',
+      'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
       'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
       'disabled:opacity-40 disabled:cursor-not-allowed',
       VARIANTES[props.variante] || VARIANTES.primario,

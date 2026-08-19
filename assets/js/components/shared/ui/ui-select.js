@@ -39,13 +39,13 @@ export default {
     ));
 
     const clasesCampo = computed(() => [
-      'w-full px-3 py-2 rounded-xl border text-sm transition-all',
-      'bg-gray-50 dark:bg-gray-900 dark:text-white',
-      'focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:outline-none',
+      'h-11 w-full rounded-lg border bg-transparent px-3 text-sm shadow-theme-xs transition-colors',
+      'text-gray-800 dark:text-white/90 dark:bg-gray-900',
+      'focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-none',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       props.error
-        ? 'border-rose-400 focus:ring-rose-500'
-        : 'border-gray-200 dark:border-gray-700',
+        ? 'border-error-500 focus:ring-error-500/10'
+        : 'border-gray-300 dark:border-gray-700',
     ].join(' '));
 
     const alCambiar = (evento) => emit('update:modelValue', evento.target.value);

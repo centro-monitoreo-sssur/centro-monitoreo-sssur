@@ -16,12 +16,12 @@
 import { computed } from '../../../core/vue.js';
 
 const TONOS = {
-  neutro:  'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-  info:    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  exito:   'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  alerta:  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  peligro: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-  marca:   'bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-200',
+  neutro:  'bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-300',
+  info:    'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
+  exito:   'bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-500',
+  alerta:  'bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-500',
+  peligro: 'bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-500',
+  marca:   'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300',
   // Sin color propio: la vista pasa sus clases por el atributo `class`. Hace
   // falta porque `utils/badge.js` ya es la fuente única de color por estado, y
   // si además se aplicara un tono los dos juegos de clases competirían por
@@ -39,7 +39,7 @@ export default {
   },
   setup(props) {
     const clases = computed(() => [
-      'inline-flex items-center gap-1.5 font-semibold rounded-full whitespace-nowrap',
+      'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full font-medium',
       props.tamano === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
       props.color ? '' : (TONOS[props.tono] ?? TONOS.neutro),
     ].join(' '));

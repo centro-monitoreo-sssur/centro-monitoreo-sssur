@@ -34,14 +34,18 @@ export default {
     const idAyuda = `${id}-ayuda`;
 
     const clasesCampo = computed(() => [
-      'w-full py-2 rounded-xl border text-sm transition-all',
-      'bg-gray-50 dark:bg-gray-900 dark:text-white',
-      'focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:outline-none',
+      // Altura 11 (44 px): el objetivo táctil mínimo cómodo. La consola se
+      // opera también desde tabletas, y un campo de 36 px obliga a apuntar.
+      'h-11 w-full rounded-lg border bg-transparent text-sm shadow-theme-xs transition-colors',
+      'text-gray-800 placeholder:text-gray-400 dark:text-white/90 dark:placeholder:text-white/30',
+      // Anillo de 3 px al 10 %: marca el foco sin repintar el borde entero,
+      // que es lo que hacía que el campo pareciera en error al enfocarlo.
+      'focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 focus:outline-none',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       props.icono ? 'pl-9 pr-3' : 'px-3',
       props.error
-        ? 'border-rose-400 focus:ring-rose-500 focus:border-rose-500'
-        : 'border-gray-200 dark:border-gray-700',
+        ? 'border-error-500 focus:border-error-500 focus:ring-error-500/10'
+        : 'border-gray-300 dark:border-gray-700',
     ].join(' '));
 
     const alEscribir = (evento) => emit('update:modelValue', evento.target.value);

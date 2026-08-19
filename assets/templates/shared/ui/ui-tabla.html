@@ -1,10 +1,10 @@
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-card flex-1 min-h-0 flex flex-col overflow-hidden">
+<div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
 
   <!-- Barra de acciones en lote: solo aparece cuando hay selección, para no
        robar espacio vertical el resto del tiempo. -->
   <div v-if="seleccionables && seleccion.length"
-       class="px-5 py-2.5 border-b border-gray-100 dark:border-gray-700 bg-brand-50 dark:bg-brand-900/30 flex items-center justify-between gap-3">
-    <span class="text-xs font-semibold text-brand-700 dark:text-brand-200">
+       class="flex items-center justify-between gap-3 border-b border-gray-200 bg-brand-50 px-5 py-2.5 dark:border-gray-800 dark:bg-brand-500/[0.12]">
+    <span class="text-xs font-medium text-brand-600 dark:text-brand-300">
       {{ seleccion.length }} seleccionado(s)
     </span>
     <div class="flex items-center gap-2">
@@ -17,9 +17,9 @@
       <thead>
         <!-- `sticky` sobre <th>: en <thead> no funciona en todos los navegadores
              con border-collapse. -->
-        <tr class="bg-gray-50 dark:bg-gray-900">
+        <tr class="border-b border-gray-200 dark:border-gray-800">
           <th v-if="seleccionables"
-              class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 w-10"
+              class="sticky top-0 z-10 w-10 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
               :class="clasesCelda">
             <input type="checkbox" aria-label="Seleccionar todas las filas visibles"
                    class="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
@@ -30,7 +30,7 @@
 
           <th v-for="col in columnas" :key="col.clave"
               scope="col"
-              class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+              class="sticky top-0 z-10 border-b border-gray-200 bg-white text-xs font-medium text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400"
               :class="[clasesCelda, alineacion(col), col.ordenable ? 'cursor-pointer select-none hover:text-gray-800 dark:hover:text-gray-200' : '']"
               :style="col.ancho ? { width: col.ancho } : null"
               :aria-sort="ordenPor === col.clave ? (ordenAsc ? 'ascending' : 'descending') : (col.ordenable ? 'none' : null)"
@@ -48,7 +48,7 @@
         </tr>
       </thead>
 
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
         <!-- Carga: mismo número de columnas y alto de fila que el contenido real.
              `v-if` y `v-for` van en elementos distintos a propósito: en Vue 3
              el `v-if` se evalúa antes que el `v-for` y ponerlos juntos es un
