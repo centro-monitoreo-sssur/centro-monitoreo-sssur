@@ -143,6 +143,16 @@ export default {
         3: '3px',
       },
 
+      /* ── transitionDuration: el segundo ring-3 ─────────────────────────────
+         El linter de conformidad encontró 18 usos de `duration-250` en la
+         barra de pestañas de las PWA con CERO reglas emitidas: la escala de
+         v3 salta de 200 a 300. Esas transiciones llevaban desde siempre el
+         defecto de 150 ms. Se define el token —la intención del autor era
+         250 ms— en vez de reescribir 18 usos a otro valor. */
+      transitionDuration: {
+        250: '250ms',
+      },
+
       /* ── zIndex: nombres para un apilamiento que hoy se resuelve por azar ──
          Hoy conviven z-[36], z-[60], z-[70], z-[100], z-[200], z-[900],
          z-[1000], z-[9999], z-[10050] y z-[10060]. El problema no es la
