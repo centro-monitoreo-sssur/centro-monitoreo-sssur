@@ -39,6 +39,52 @@ const cargandoAnalitica = ref(false);
 const analiticaTruncada = ref(false);
 const TOPE_FILAS = 5000;
 
+// ── Resumen agregado en el servidor (v42) ────────────────────────────────────
+// Cuando `resumen_dashboard` existe, TODA la analítica llega agregada en una
+// llamada: totales de ambos periodos, stock real (incluidas las vencidas, con
+// la misma regla que v_kpis_distrito), serie diaria, reparto por departamento
+// y los cinco casos más pasados de su objetivo. `null` significa que la
+// migración aún no se ejecutó y el tablero cae al camino por filas.
+const resumenServidor = ref(null);
+
+async function cargarResumen(dias) {
+  if (!db) { resumenServidor.value = null; return false; }
+  try {
+    const { data, error } = await db.rpc('resumen_dashboard', { p_dias: dias });
+    if (error) throw error;
+    if (!data || typeof data !== 'object') throw new Error('respuesta vacía');
+    resumenServidor.value = data;
+    return true;
+  } catch (e) {
+    // 42883 / PGRST202: la función no existe todavía. No es un fallo del
+    // tablero: es la v42 pendiente, y se dice por su nombre.
+    const faltaV42 = /resumen_dashboard|PGRST202|42883/i.test(e.message || '') || e.code === 'PGRST202';
+    console.warn(faltaV42
+      ? '[dashboard] Falta la v42. Ejecuta database/migration_v42_resumen_dashboard_y_busqueda.sql; mientras tanto se agrega en el navegador.'
+      : '[dashboard] resumen_dashboard falló: ' + (e.message || e));
+    resumenServidor.value = null;
+    return false;
+  }
+}
+
+/**
+ * Punto de entrada único del tablero para un rango.
+ * Primero intenta el resumen agregado; solo si no está disponible descarga
+ * filas para agregar en el navegador (el camino antiguo, con su tope y su
+ * aviso de muestra parcial).
+ */
+async function cargarPanel(dias = rangoDias.value) {
+  rangoDias.value = dias;
+  const conResumen = await cargarResumen(dias);
+  if (conResumen) {
+    filasAnalitica.value = [];
+    analiticaTruncada.value = false;
+    cargandoAnalitica.value = false;
+    return;
+  }
+  await cargarAnalitica(dias);
+}
+
 async function cargarKpis() {
   if (!db) return; // sin db los kpis vienen del store de denuncias reactivo
   cargandoKpis.value = true;
@@ -46,12 +92,16 @@ async function cargarKpis() {
     // Usar count=exact de Supabase para no traer rows completas
     const [resTotal, resPendientes, resEnCurso, resResueltas, resEmpleados] = await Promise.all([
       db.from('casos').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+      // Los códigos son los del flujo REAL (pendiente / en_revision / en_obra /
+      // resuelta / rechazada). Antes se contaban 'recibida', 'en_atencion' y
+      // 'cerrada' — estados que ninguna fila tiene — y el Centro llevaba
+      // mostrando «Pendientes: 0» con casos abiertos en pantalla.
       db.from('casos').select('*', { count: 'exact', head: true })
-        .is('deleted_at', null).eq('estado_codigo', 'recibida'),
+        .is('deleted_at', null).eq('estado_codigo', 'pendiente'),
       db.from('casos').select('*', { count: 'exact', head: true })
-        .is('deleted_at', null).eq('estado_codigo', 'en_atencion'),
+        .is('deleted_at', null).in('estado_codigo', ['en_revision', 'en_obra']),
       db.from('casos').select('*', { count: 'exact', head: true })
-        .is('deleted_at', null).in('estado_codigo', ['resuelta', 'cerrada']),
+        .is('deleted_at', null).eq('estado_codigo', 'resuelta'),
       db.from('usuarios').select('*', { count: 'exact', head: true }).eq('activo', true),
     ]);
 
@@ -186,6 +236,7 @@ export function useDashboard() {
   return {
     kpis, cargandoKpis, cargarKpis,
     rangoDias, filasAnalitica, cargandoAnalitica, analiticaTruncada, cargarAnalitica,
+    resumenServidor, cargarPanel,
     casosPrioritarios, cargandoPrioritarios, cargarCasosPrioritarios,
   };
 }

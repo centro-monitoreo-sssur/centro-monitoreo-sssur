@@ -38,7 +38,7 @@
   </div>
 
   <!-- ======================= KPIs ======================= -->
-  <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 xl:grid-cols-4">
+  <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 xl:grid-cols-5">
 
     <!-- Ingresadas (flujo del periodo) -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -118,6 +118,20 @@
         Acumulado actual · {{ metricas.enCurso }} en atención
       </p>
     </div>
+
+    <!-- Vencidas (stock): abiertas que ya superaron el tiempo objetivo de su
+         prioridad — la MISMA regla que v_kpis_distrito, calculada en la base
+         por la v42. Sin la migración se muestra un guion, no un cero falso. -->
+    <ui-tarjeta-kpi etiqueta="Vencidas"
+                    :valor="metricas.vencidas ?? '—'"
+                    icono="fas fa-triangle-exclamation"
+                    estado="vencida">
+      <template #pie>
+        <span v-if="metricas.vencidas === null || metricas.vencidas === undefined">Requiere la migración v42</span>
+        <span v-else-if="metricas.vencidas === 0">Nada fuera de objetivo</span>
+        <span v-else>Fuera de su tiempo objetivo</span>
+      </template>
+    </ui-tarjeta-kpi>
 
     <!-- Tasa de resolución del periodo -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -255,7 +269,10 @@
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ incidente.descripcion }}</p>
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ incidente.direccion }}</p>
-              <p class="text-xs text-gray-400 mt-2">{{ tiempoRelativo(incidente.created_at) }}</p>
+              <p v-if="incidente.horasExceso !== undefined" class="text-xs font-semibold mt-2 kpi-color--vencida">
+                <i class="fas fa-triangle-exclamation mr-1" aria-hidden="true"></i>{{ incidente.horasExceso }} h fuera de objetivo
+              </p>
+              <p v-else class="text-xs text-gray-400 mt-2">{{ tiempoRelativo(incidente.created_at) }}</p>
             </div>
           </div>
         </div>

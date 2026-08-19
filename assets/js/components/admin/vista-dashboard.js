@@ -84,10 +84,11 @@ export default {
       distritosDelAmbito, cargandoKpis: cargandoDistritos, errorKpis: errorDistritos,
       cargarKpisDistrito, semaforo,
     } = useTerritorio();
-    const { isDarkMode } = useNavegacion();
+    const { isDarkMode, irA } = useNavegacion();
     const {
       kpis, cargarKpis,
       rangoDias, filasAnalitica, cargandoAnalitica, analiticaTruncada, cargarAnalitica,
+      resumenServidor, cargarPanel,
       casosPrioritarios, cargarCasosPrioritarios,
     } = useDashboard();
     const { config } = useConfiguracion();
@@ -157,6 +158,25 @@ export default {
     }
 
     const metricas = computed(() => {
+      // Con la v42 los números llegan agregados del servidor: sin tope de
+      // filas, sin muestra parcial, y con las vencidas calculadas con la
+      // misma regla que v_kpis_distrito. El camino por filas queda como
+      // respaldo mientras la migración no se ejecute.
+      const r = resumenServidor.value;
+      if (r) {
+        const tasa = r.nuevos > 0 ? Math.round((r.resueltos / r.nuevos) * 100) : 0;
+        const tasaPrev = r.nuevos_prev > 0 ? Math.round((r.resueltos_prev / r.nuevos_prev) * 100) : 0;
+        return {
+          nuevos: r.nuevos, resueltos: r.resueltos, tasa,
+          deltaNuevos:    variacion(r.nuevos, r.nuevos_prev),
+          deltaResueltos: variacion(r.resueltos, r.resueltos_prev),
+          deltaTasa:      tasa - tasaPrev,
+          pendientes: r.pendientes,
+          enCurso:    r.en_curso,
+          vencidas:   r.vencidas,
+        };
+      }
+
       const nuevos = filasPeriodo.value.length;
       const nuevosPrev = filasPrevias.value.length;
       const resueltos = resueltosPeriodo.value.length;
@@ -172,21 +192,45 @@ export default {
         // Stock, no flujo: es la foto de ahora mismo y por eso no lleva delta.
         pendientes: kpis.value.pendientes,
         enCurso:    kpis.value.enCurso,
+        // Sin la v42 no hay forma barata de contarlas: null pinta un guion,
+        // que es más honesto que un cero.
+        vencidas:   null,
       };
     });
 
-    // ── Sparklines ──────────────────────────────────────────────────────────
-    const sparkNuevos = computed(() =>
-      puntosSparkline([...seriePorDia(filasPeriodo.value, rangoDias.value, 'created_at').values()])
-    );
-    const sparkResueltos = computed(() =>
-      puntosSparkline([...seriePorDia(resueltosPeriodo.value, rangoDias.value, 'fecha_cierre').values()])
-    );
+    // ── Series diarias ──────────────────────────────────────────────────────
+    // Un solo formato (Map dia→conteo) venga del resumen del servidor o de las
+    // filas: sparklines y gráfica de tendencia no saben cuál de los dos fue.
+    const serieEntradasDia = computed(() => {
+      const r = resumenServidor.value;
+      if (r?.serie) return new Map(r.serie.map((p) => [p.dia, p.nuevos]));
+      return seriePorDia(filasPeriodo.value, rangoDias.value, 'created_at');
+    });
+    const serieCierresDia = computed(() => {
+      const r = resumenServidor.value;
+      if (r?.serie) return new Map(r.serie.map((p) => [p.dia, p.resueltos]));
+      return seriePorDia(resueltosPeriodo.value, rangoDias.value, 'fecha_cierre');
+    });
+
+    const sparkNuevos = computed(() => puntosSparkline([...serieEntradasDia.value.values()]));
+    const sparkResueltos = computed(() => puntosSparkline([...serieCierresDia.value.values()]));
 
     // ── Distribución por departamento responsable ───────────────────────────
     // La pregunta que más hace una jefatura —"¿cuánto me toca a mí?"— no tenía
     // respuesta en ninguna pantalla.
     const porDepartamento = computed(() => {
+      const r = resumenServidor.value;
+      if (r?.por_departamento) {
+        const orden = r.por_departamento.map((d) => ({
+          id: d.id, total: d.total,
+          nombre: nombreDepartamento(d.id) || `Depto. ${d.id}`,
+        }));
+        if (orden.length <= 6) return orden;
+        const cabeza = orden.slice(0, 6);
+        const resto = orden.slice(6).reduce((s2, d) => s2 + d.total, 0);
+        return [...cabeza, { id: 'otros', nombre: `Otros (${orden.length - 6})`, total: resto }];
+      }
+
       const cuenta = new Map();
       filasPeriodo.value.forEach((f) => {
         const id = f.departamento_actual_id;
@@ -237,7 +281,22 @@ export default {
        abiertos, este panel mostraba los diez menos urgentes de los recientes
        en vez de los diez más urgentes del histórico. Ver el comentario de
        `cargarCasosPrioritarios` en stores/dashboard.js. */
-    const incidentesPrioritarios = casosPrioritarios;
+    const incidentesPrioritarios = computed(() => {
+      const r = resumenServidor.value;
+      if (r?.atencion?.length) {
+        // Los cinco más pasados de su tiempo objetivo, no los más antiguos:
+        // un crítico de ayer urge más que un informativo del mes pasado.
+        return r.atencion.map((a) => ({
+          id: a.id,
+          tipo_id: a.categoria_id,
+          descripcion: a.titulo || a.correlativo,
+          direccion: a.direccion || '',
+          created_at: null,
+          horasExceso: a.horas_exceso,
+        }));
+      }
+      return casosPrioritarios.value;
+    });
 
     /* Antes el panel se refrescaba solo, por derivarse de `denuncias`. Ahora es
        una consulta propia, así que hay que volver a pedirla cuando algo cambia
@@ -257,8 +316,8 @@ export default {
       if (!canvasTendencia.value) return;
       if (chartTendencia) { chartTendencia.destroy(); chartTendencia = null; }
 
-      const entradas = seriePorDia(filasPeriodo.value, rangoDias.value, 'created_at');
-      const cierres  = seriePorDia(resueltosPeriodo.value, rangoDias.value, 'fecha_cierre');
+      const entradas = serieEntradasDia.value;
+      const cierres  = serieCierresDia.value;
       const labels = [...entradas.keys()].map(etiquetaDia);
 
       const textColor = isDarkMode.value ? '#9ca3af' : '#6b7280';
@@ -348,18 +407,21 @@ export default {
 
     function cambiarRango(dias) {
       if (dias === rangoDias.value) return;
-      cargarAnalitica(dias);
+      cargarPanel(dias);
     }
 
     function verDetalle(denuncia) {
-      console.log('Ver detalle:', denuncia);
+      // La dirección del caso primero y la vista después: al montarse,
+      // Gestión de Denuncias lee el hash y abre el detalle.
+      window.location.hash = '#/denuncias/' + denuncia.id;
+      irA('denuncias');
     }
 
     onMounted(() => {
       actualizarReloj();
       relojInterval = setInterval(actualizarReloj, 60000);
       cargarKpis();
-      cargarAnalitica(rangoDias.value);
+      cargarPanel(rangoDias.value);
       cargarKpisDistrito();
       cargarCasosPrioritarios();
       // La dona traduce `departamento_actual_id` a nombre. Solo si el catálogo

@@ -2,17 +2,22 @@
 // COMPONENTE: Bitácora de Auditoría
 // Registro inmutable de eventos del sistema (lectura, escritura, borrado).
 // ============================================================
-import { ref, computed, onMounted } from '../../core/vue.js';
+import { ref, computed, onMounted, watch } from '../../core/vue.js';
 import { useAuditoria } from '../../stores/auditoria.js';
 
 export default {
   name: 'vista-bitacora',
   setup() {
-    const { logs, cargarLogs, cargando } = useAuditoria();
-    
+    const { logs, cargarLogs, cargarMasLogs, cargando, cargandoMas,
+            totalLogs, hayMasLogs, filtroDesde, filtroHasta } = useAuditoria();
+
     onMounted(() => {
       cargarLogs();
     });
+
+    // El rango recarga desde el servidor: es el corte que decide qué existe.
+    // Búsqueda y acción filtran EN LO CARGADO, y la pantalla lo dice.
+    watch([filtroDesde, filtroHasta], () => { cargarLogs(); });
 
     const busqueda = ref('');
     const filtroAccion = ref('todas');
@@ -68,7 +73,8 @@ export default {
     }
 
     return {
-      busqueda, filtroAccion, accionesUnicas, logsFiltrados, COLUMNAS_TABLA,
+      logs, busqueda, filtroAccion, accionesUnicas, logsFiltrados, COLUMNAS_TABLA,
+      cargarMasLogs, cargandoMas, totalLogs, hayMasLogs, filtroDesde, filtroHasta,
       getAccionBadge, formatearFecha, cargando
     };
   }

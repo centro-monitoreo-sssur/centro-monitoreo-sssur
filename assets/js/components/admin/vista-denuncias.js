@@ -7,7 +7,7 @@
 // (`ui-tabla`, `ui-modal`, `ui-input`, `ui-select`). La vista se queda con lo
 // que es suyo —filtrar, ordenar, paginar y exportar— y deja de repetir markup.
 // ============================================================
-import { ref, computed, watch, onMounted } from '../../core/vue.js';
+import { ref, computed, watch, onMounted, onUnmounted } from '../../core/vue.js';
 import { useDenuncias } from '../../stores/denuncias.js';
 import { useCatalogos } from '../../stores/catalogos.js';
 import { useGestionCasos } from '../../stores/gestion-casos.js';
@@ -34,7 +34,9 @@ export default {
       denuncias, cargandoDenuncias, cargarDenuncias,
       // La tabla pagina en el cliente sobre lo ya descargado, así que hace
       // falta poder decir cuánto falta y poder traerlo.
-      hayMasCasos, totalCasos, cargarMasCasos, cargandoMas,
+      hayMasCasos, totalCasos, cargarMasCasos,
+      obtenerCasoPorId, buscarCasosServidor, limpiarBusquedaServidor,
+      resultadosBusqueda, buscandoServidor, totalCoincidencias, cargandoMas,
     } = useDenuncias();
     const { tiposDenuncia, flujoDeCategoria, departamentos } = useCatalogos();
     const {
@@ -71,23 +73,31 @@ export default {
     );
 
     const denunciasFiltradas = computed(() => {
-      let lista = denuncias.value || [];
+      /* Cuando la búsqueda del servidor está activa, ELLA es la lista: ya
+         llegó filtrada contra la base entera, no contra la ventana cargada.
+         Volver a filtrar aquí solo podría quitar resultados legítimos. */
+      let lista;
+      if (resultadosBusqueda.value !== null) {
+        lista = resultadosBusqueda.value;
+      } else {
+        lista = denuncias.value || [];
 
-      if (filtroEstado.value !== 'todos') {
-        lista = lista.filter(d => d.estado === filtroEstado.value);
-      }
+        if (filtroEstado.value !== 'todos') {
+          lista = lista.filter(d => d.estado === filtroEstado.value);
+        }
 
-      if (filtroCategoria.value !== 'todas') {
-        lista = lista.filter(d => d.tipo_id === filtroCategoria.value);
-      }
+        if (filtroCategoria.value !== 'todas') {
+          lista = lista.filter(d => d.tipo_id === filtroCategoria.value);
+        }
 
-      if (busqueda.value.trim()) {
-        const q = busqueda.value.toLowerCase();
-        lista = lista.filter(d =>
-          (d.direccion && d.direccion.toLowerCase().includes(q)) ||
-          (d.descripcion && d.descripcion.toLowerCase().includes(q)) ||
-          (d.id.toString().includes(q))
-        );
+        if (busqueda.value.trim()) {
+          const q = busqueda.value.toLowerCase();
+          lista = lista.filter(d =>
+            (d.direccion && d.direccion.toLowerCase().includes(q)) ||
+            (d.descripcion && d.descripcion.toLowerCase().includes(q)) ||
+            (d.id.toString().includes(q))
+          );
+        }
       }
 
       const clave = ordenPor.value;
@@ -123,7 +133,33 @@ export default {
     // Al filtrar estando en una página alta, el resultado cabía en menos páginas
     // y la tabla se quedaba vacía sin explicación. Cualquier cambio de filtro
     // vuelve a la primera página.
-    watch([busqueda, filtroEstado, filtroCategoria], () => { paginaActual.value = 1; });
+    /* Si la base tiene más casos que la lista y hay filtros activos, filtrar
+       localmente miente por omisión: la búsqueda pasa al servidor, espaciada
+       para no disparar una consulta por tecla. Sin filtros —o con todo ya
+       cargado— manda la lista viva de siempre. */
+    let temporizadorBusqueda = null;
+    watch([busqueda, filtroEstado, filtroCategoria], () => {
+      paginaActual.value = 1;
+      clearTimeout(temporizadorBusqueda);
+
+      const hayFiltro = busqueda.value.trim() !== ''
+        || filtroEstado.value !== 'todos'
+        || filtroCategoria.value !== 'todas';
+
+      if (!hayFiltro || !hayMasCasos.value) {
+        limpiarBusquedaServidor();
+        return;
+      }
+
+      temporizadorBusqueda = setTimeout(() => {
+        buscarCasosServidor({
+          texto: busqueda.value,
+          estado: filtroEstado.value !== 'todos' ? filtroEstado.value : '',
+          categoria: filtroCategoria.value !== 'todas' ? filtroCategoria.value : '',
+        });
+      }, 350);
+    });
+    onUnmounted(() => clearTimeout(temporizadorBusqueda));
 
     function cambiarPagina(p) {
       if (p >= 1 && p <= paginasTotales.value) {
@@ -250,6 +286,9 @@ export default {
       cargarDerivaciones(denuncia.id);
       derivacion.value = { departamentoId: '', motivo: '' };
       panelDerivar.value = false;
+
+      const ruta = '#/denuncias/' + denuncia.id;
+      if (location.hash !== ruta) location.hash = ruta;
     }
 
     function cerrarDetalle() {
@@ -257,6 +296,50 @@ export default {
       historial.value = [];
       derivaciones.value = [];
     }
+
+    /* ── Enlace profundo: #/denuncias/:id ─────────────────────────────────
+       El detalle vivía solo en memoria: no se podía compartir «mira este
+       caso», el botón Atrás del teléfono cerraba la aplicación en vez del
+       modal, y un F5 perdía el contexto. El hash es la dirección del caso:
+       abrir el detalle lo escribe, Atrás lo quita (y el cambio cierra el
+       modal), y entrar con él pegado en la barra abre el caso directo. */
+    const RE_HASH_CASO = /^#\/denuncias\/(\d+)$/;
+
+    function pedirCierre() {
+      if (RE_HASH_CASO.test(location.hash)) {
+        // Atrás: dispara `hashchange`, que es quien limpia el estado. Así el
+        // historial no acumula una entrada muerta por cada caso visto.
+        history.back();
+      } else {
+        cerrarDetalle();
+      }
+    }
+
+    async function procesarHash() {
+      const m = location.hash.match(RE_HASH_CASO);
+      if (!m) {
+        if (casoAbiertoId.value !== null) cerrarDetalle();
+        return;
+      }
+      const id = Number(m[1]);
+      if (casoAbiertoId.value === id) return;
+      const caso = await obtenerCasoPorId(id);
+      if (caso) {
+        abrirDetalle(caso);
+      } else {
+        // No existe o RLS no lo deja ver: se limpia la dirección para no
+        // dejar un enlace que parece válido y no abre nada.
+        avisoGestion.value = '';
+        errorGestion.value = '';
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+    }
+
+    onMounted(() => {
+      window.addEventListener('hashchange', procesarHash);
+      procesarHash();
+    });
+    onUnmounted(() => window.removeEventListener('hashchange', procesarHash));
 
     /** Estados que ofrece el flujo de la categoría del caso abierto. */
     const estadosDelCaso = computed(() => {
@@ -413,7 +496,8 @@ export default {
       itemsPorPagina, cambiarTamanoPagina, ordenar,
       seleccion, exportarSeleccion, limpiarSeleccion,
       getCategoria, badgeEstado, etiquetaEstado, formatearFecha, formatearId,
-      denunciaSeleccionada, abrirDetalle, cerrarDetalle, exportarCSV, estadosOpciones,
+      denunciaSeleccionada, abrirDetalle, cerrarDetalle, pedirCierre, exportarCSV, estadosOpciones,
+      buscandoServidor, totalCoincidencias, resultadosBusqueda,
       // Gestión del caso
       puedeGestionar, gestion, errorGestion, avisoGestion, guardando,
       estadosDelCaso, cierraElCaso, hayCambioDeAsignacion, hayCambioDeEstado,

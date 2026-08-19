@@ -28,9 +28,16 @@
     <ui-select v-model="filtroAccion" :opciones="accionesUnicas"
                texto-vacio="Todas las acciones" valor-vacio="todas"></ui-select>
   </div>
+  <!-- El rango corta EN EL SERVIDOR: antes aquí había un campo `readonly` que
+       decía «Últimos 7 días» y no filtraba nada. -->
+  <div class="flex w-full items-center gap-2 sm:w-auto">
+    <ui-input v-model="filtroDesde" tipo="date" etiqueta-accesible="Desde" class="flex-1 sm:w-40"></ui-input>
+    <span class="text-xs text-gray-400" aria-hidden="true">—</span>
+    <ui-input v-model="filtroHasta" tipo="date" etiqueta-accesible="Hasta" class="flex-1 sm:w-40"></ui-input>
+  </div>
   <template #derecha>
     <span class="text-theme-xs text-gray-500 dark:text-gray-400">
-      {{ logsFiltrados.length }} registro(s)
+      {{ logsFiltrados.length }} de {{ totalLogs }} del rango
     </span>
   </template>
 </ui-barra-filtros>
@@ -84,5 +91,21 @@
     <p class="mt-0.5 text-theme-xs leading-relaxed text-gray-600 dark:text-gray-400">{{ fila.detalle }}</p>
   </template>
 </ui-tabla>
+
+<!-- La búsqueda y el filtro de acción trabajan sobre lo YA cargado; si el
+     rango tiene más páginas, se dice y se ofrece traerlas. El mismo contrato
+     honesto que Gestión de Denuncias. -->
+<div v-if="hayMasLogs"
+     class="mt-4 flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+  <i class="fa-solid fa-circle-info text-amber-500" aria-hidden="true"></i>
+  <p class="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-200">
+    Se cargaron <strong>{{ logs.length }}</strong> de <strong>{{ totalLogs }}</strong> eventos del rango.
+    La búsqueda y el filtro de acción solo alcanzan a los cargados.
+  </p>
+  <ui-boton tamano="sm" variante="secundario" :cargando="cargandoMas"
+            icono="fa-solid fa-arrow-down" @click="cargarMasLogs">
+    Cargar más
+  </ui-boton>
+</div>
 </ui-contenedor-pagina><!-- cierra el contenedor raíz: faltaba desde el original y solo no rompía
            porque el compilador de Vue autocierra las etiquetas al final del template -->

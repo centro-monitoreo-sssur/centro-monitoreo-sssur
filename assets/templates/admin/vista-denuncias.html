@@ -46,7 +46,22 @@
     casos, cuando puede haber cientos por detrás. Los filtros y la exportación
     a CSV trabajan sobre lo mismo, así que también se quedarían cortos.
   -->
-  <div v-if="hayMasCasos"
+  <!-- Búsqueda contra la base entera (v42): los resultados no salen de la
+       ventana cargada sino del total, y aquí se dice cuántos son. -->
+  <div v-if="resultadosBusqueda !== null"
+       class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3
+              dark:border-blue-500/30 dark:bg-blue-500/10">
+    <i class="fa-solid" :class="buscandoServidor ? 'fa-circle-notch fa-spin text-blue-500' : 'fa-database text-blue-500'" aria-hidden="true"></i>
+    <p class="min-w-0 flex-1 text-sm text-blue-800 dark:text-blue-200">
+      <template v-if="buscandoServidor">Buscando en la base completa…</template>
+      <template v-else>
+        <strong>{{ totalCoincidencias }}</strong> coincidencia(s) en toda la base<template v-if="totalCoincidencias > denunciasFiltradas.length">;
+        se muestran las <strong>{{ denunciasFiltradas.length }}</strong> más recientes</template>.
+      </template>
+    </p>
+  </div>
+
+  <div v-else-if="hayMasCasos"
        class="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3
               dark:border-amber-500/30 dark:bg-amber-500/10">
     <i class="fa-solid fa-circle-info text-amber-500" aria-hidden="true"></i>
@@ -162,7 +177,7 @@
     :icono="denunciaSeleccionada ? 'fa-solid ' + getCategoria(denunciaSeleccionada.tipo_id).icono : ''"
     :color-icono="denunciaSeleccionada ? getCategoria(denunciaSeleccionada.tipo_id).color_hex : ''"
     tamano="lg"
-    @cerrar="cerrarDetalle">
+    @cerrar="pedirCierre">
 
     <div v-if="denunciaSeleccionada" class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
