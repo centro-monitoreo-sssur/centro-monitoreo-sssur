@@ -69,14 +69,26 @@ const MINIMO = [
  * precacheado completo y lo hace en silencio. Aquí cada una va por su cuenta y
  * las que fallen se cuentan y se dicen.
  */
+// De ocho en ocho. Lanzar las 265 a la vez satura la cola del navegador —seis
+// conexiones por origen— y la aplicación, que pide sus módulos y plantillas al
+// MISMO origen, se queda esperando detrás del precacheado. En un teléfono con
+// 3G eso es la diferencia entre tardar en cargar y parecer colgado.
+const LOTE_PRECACHE = 8;
+
 async function precachear(rutas) {
   const cache = await caches.open(CACHE_NAME);
-  const resultados = await Promise.allSettled(
-    rutas.map((r) => cache.add(new Request(r, { cache: 'reload' })))
-  );
-  const fallidas = resultados
-    .map((r, i) => (r.status === 'rejected' ? rutas[i] : null))
-    .filter(Boolean);
+  const fallidas = [];
+
+  for (let i = 0; i < rutas.length; i += LOTE_PRECACHE) {
+    const lote = rutas.slice(i, i + LOTE_PRECACHE);
+    const resultados = await Promise.allSettled(
+      // `cache: 'reload'` esquiva la caché HTTP del navegador: sin él, un
+      // despliegue nuevo podría guardar en la caché del SW el archivo viejo
+      // que el navegador todavía tenía por su cuenta.
+      lote.map((r) => cache.add(new Request(r, { cache: 'reload' })))
+    );
+    resultados.forEach((r, j) => { if (r.status === 'rejected') fallidas.push(lote[j]); });
+  }
 
   console.log(`[Service Worker] Precacheadas ${rutas.length - fallidas.length}/${rutas.length}`);
   if (fallidas.length) {
