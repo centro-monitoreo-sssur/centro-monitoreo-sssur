@@ -10,7 +10,7 @@
   <div class="px-4 py-4 flex items-center transition-all duration-300"
     :class="sidebarColapsado ? 'justify-center' : 'justify-between'">
     <div class="flex items-center gap-3 overflow-hidden" v-show="!sidebarColapsado">
-      <img src="https://sansalvadorsur.gob.sv/images/logo-blanco-horizontal.png" alt="Municipalidad de San Salvador Sur"
+      <img src="/assets/img/marca/logo-blanco-horizontal.png" alt="Municipalidad de San Salvador Sur"
         class="h-8 object-contain" @error="logoError=true" v-show="!logoError">
       <div v-show="logoError" class="flex items-center gap-2">
         <i class="fas fa-shield-alt text-[var(--gold)] text-xl shrink-0"></i>

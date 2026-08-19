@@ -1,8 +1,8 @@
-// v1.2.0 — sube el segundo dígito y no el tercero porque esta entrega añade
-// funciones, no solo arregla: la evidencia fotográfica de un caso se ve por fin
-// en las cuatro pantallas, una denuncia ciudadana avisa sola al Centro de
-// Monitoreo, y un comunicado puede señalar un sitio o trazar un cierre de vía.
-const CACHE_VERSION = 'v1.2.0';
+// v1.3.0 — las dependencias dejan de venir de CDN y el precacheado pasa de ocho
+// rutas a doscientas sesenta y dos. Es lo que hace que la PWA de campo pueda
+// abrir sin señal, que hasta ahora no podía por mucho service worker que
+// hubiera: sin Vue no hay aplicación, y Vue venía de unpkg.
+const CACHE_VERSION = 'v1.3.0';
 const CACHE_NAME = `cm-sssur-cache-${CACHE_VERSION}`;
 
 // ── Caché de teselas del mapa ───────────────────────────────────────────────
@@ -39,24 +39,51 @@ const HOSTS_TESELAS = [
 const esTesela = (url) =>
   HOSTS_TESELAS.some((h) => url.hostname === h || url.hostname.endsWith('.' + h));
 
-// Recursos estáticos mínimos requeridos para la app offline.
-// Hay un manifiesto por contexto: sin ellos, un empleado que instale la PWA de
-// campo la abriría en el Centro de Monitoreo (ver el script en línea de
-// index.html).
-// Las tres rutas de aplicación se precachean porque son el punto de arranque
-// de cada PWA instalada. El servidor las reescribe al mismo index.html, así que
-// son tres entradas distintas en la caché con el mismo contenido: cuestan nada
-// y sin ellas la aplicación instalada no abre sin cobertura.
-const ASSETS_TO_CACHE = [
-  '/',
-  '/panel/',
-  '/campo/',
-  '/ciudadano/',
+// ── Qué se precachea ────────────────────────────────────────────────────────
+//
+// Antes eran OCHO rutas: las tres de aplicación, el index y los manifiestos.
+// Mientras tanto la aplicación carga cerca de doscientos archivos por `fetch()`
+// —módulos, plantillas, hojas y dependencias—, así que sin señal no arrancaba.
+// Para una PWA que existe para trabajar donde no hay cobertura, eso no era una
+// carencia: era la funcionalidad entera sin hacer.
+//
+// La lista ya no vive aquí. La genera `herramientas/generar-precache.mjs`
+// recorriendo el árbol, y se lee en la instalación. Escrita a mano se quedaría
+// corta con cada plantilla nueva, y el fallo solo se ve sin cobertura, en
+// territorio, que es donde nadie puede depurarlo.
+const RUTA_PRECACHE = '/assets/precache.json';
+
+// Respaldo mínimo por si el manifiesto no se puede leer. No hace funcionar la
+// aplicación sin conexión, pero evita que un fallo aquí deje la instalación sin
+// absolutamente nada.
+const MINIMO = [
+  '/', '/panel/', '/campo/', '/ciudadano/',
   '/index.html',
-  '/manifest.json',
-  '/manifest-empleados.json',
-  '/manifest-poblacion.json'
+  '/manifest.json', '/manifest-empleados.json', '/manifest-poblacion.json',
 ];
+
+/**
+ * Guarda una lista de rutas una por una.
+ *
+ * `cache.addAll()` es todo-o-nada: con 262 entradas, un solo 404 tira el
+ * precacheado completo y lo hace en silencio. Aquí cada una va por su cuenta y
+ * las que fallen se cuentan y se dicen.
+ */
+async function precachear(rutas) {
+  const cache = await caches.open(CACHE_NAME);
+  const resultados = await Promise.allSettled(
+    rutas.map((r) => cache.add(new Request(r, { cache: 'reload' })))
+  );
+  const fallidas = resultados
+    .map((r, i) => (r.status === 'rejected' ? rutas[i] : null))
+    .filter(Boolean);
+
+  console.log(`[Service Worker] Precacheadas ${rutas.length - fallidas.length}/${rutas.length}`);
+  if (fallidas.length) {
+    console.warn('[Service Worker] No se pudieron guardar:', fallidas.slice(0, 10),
+      fallidas.length > 10 ? `y ${fallidas.length - 10} más` : '');
+  }
+}
 
 // En desarrollo (Live Server, http-server, etc.) el SW NO cachea nada. Con la
 // estrategia anterior —`cachedResponse || fetchPromise`— cada archivo editado
@@ -83,12 +110,24 @@ self.addEventListener('install', (event) => {
     return;
   }
 
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Cacheando assets estáticos');
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
+  event.waitUntil((async () => {
+    let rutas = MINIMO;
+    try {
+      // `cache: 'reload'` para que el propio manifiesto no venga de una caché
+      // vieja: si llegara el de la versión anterior, precachearíamos la lista
+      // de archivos que ya no son.
+      const respuesta = await fetch(RUTA_PRECACHE, { cache: 'reload' });
+      if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+      const manifiesto = await respuesta.json();
+      if (Array.isArray(manifiesto.rutas) && manifiesto.rutas.length) {
+        rutas = manifiesto.rutas;
+        console.log(`[Service Worker] Manifiesto ${manifiesto.huella} · ${rutas.length} rutas`);
+      }
+    } catch (e) {
+      console.warn('[Service Worker] Sin manifiesto de precacheado, se guarda lo mínimo:', e.message);
+    }
+    await precachear(rutas);
+  })());
 });
 
 // Activación del Service Worker y limpieza de cachés antiguos

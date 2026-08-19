@@ -133,8 +133,8 @@ watch(temaEfectivo, aplicarTema);
  * Vive aquí y no en cada plantilla porque el logo aparece en varias vistas y
  * duplicar la condición garantiza que alguna se quede sin cambiar.
  */
-const LOGO_CLARO  = 'https://sansalvadorsur.gob.sv/images/logo-azul-horizontal.png';
-const LOGO_OSCURO = 'https://sansalvadorsur.gob.sv/images/logo-blanco-horizontal.png';
+const LOGO_CLARO  = '/assets/img/marca/logo-azul-horizontal.png';
+const LOGO_OSCURO = '/assets/img/marca/logo-blanco-horizontal.png';
 
 const logoHorizontal = computed(() =>
   temaEfectivo.value === 'oscuro' ? LOGO_OSCURO : LOGO_CLARO

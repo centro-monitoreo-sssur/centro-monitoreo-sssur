@@ -36,7 +36,7 @@ import { almacen } from '../core/almacen.js';
 
 const CLAVE_SEGUIDAS = 'denuncias_seguidas';
 const CLAVE_ESTADOS = 'denuncias_ultimo_estado';
-const ICONO_AVISO = 'https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png';
+const ICONO_AVISO = '/assets/img/marca/icono-192.png';
 
 // Se publica en un `ref` para que la vista pinte el botón según corresponda sin
 // consultar el almacén en cada repintado.
@@ -112,9 +112,9 @@ export async function alternarAviso(casoId) {
 async function mostrarAviso(titulo, cuerpo, datos) {
   const opciones = {
     body: cuerpo,
-    // El mismo icono que declara manifest-poblacion.json. Es remoto porque el
-    // proyecto no guarda copia local de los iconos institucionales; si el
-    // navegador no lo alcanza, muestra el suyo por defecto y ya está.
+    // El mismo icono que declaran los manifiestos. Local desde que se
+    // vendorizó todo: un aviso con el icono roto es lo que pasaba cuando el
+    // teléfono no tenía cobertura, que es justo cuando más se nota.
     icon: ICONO_AVISO,
     badge: ICONO_AVISO,
     // Una denuncia, un aviso: si el estado cambia dos veces antes de que la

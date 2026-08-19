@@ -68,10 +68,17 @@
 # `cpanel/` es el ORIGEN de los endpoints; las copias vivas están en
 # api-monitoreo/ y esas sí se sirven. Servir las dos multiplica la superficie
 # y hace ambiguo cuál está en uso.
-RedirectMatch 404 ^/(database|docs|cpanel|node_modules)(/|$)
+RedirectMatch 404 ^/(database|docs|cpanel|node_modules|herramientas)(/|$)
 
 # ── 2. Archivos de desarrollo sueltos en la raíz ───────────────────────────
 <FilesMatch "\.(md|sql|yml|yaml|jsonl|log|bak|example\.php)$">
+    Require all denied
+</FilesMatch>
+
+# El utillaje de compilación, que llegó con la vendorización: `package.json`
+# declara la versión exacta de cada herramienta y `tailwind.config.js` el tema
+# entero. Publicados no hacen daño, pero tampoco pintan nada ahí.
+<FilesMatch "^(package(-lock)?\.json|tailwind\.config\.js|tailwind-fuente\.css)$">
     Require all denied
 </FilesMatch>
 

@@ -70,3 +70,10 @@ RECOMENDACIONES_ARQUITECTURA_BACKEND.md
 # pueden firmar tokens válidos en nombre de cualquier usuario, incluido el
 # superadministrador. Nunca debe llegar al repositorio.
 # La plantilla sí se versiona: cpanel/config-monitoreo.example.php
+
+# ── Dependencias de desarrollo ─────────────────────────────────────────────
+# `node_modules` NO se commitea; `assets/vendor` SÍ. No es contradictorio:
+# node_modules es la caja de herramientas para compilar (Tailwind, sharp) y
+# vive solo en la máquina de quien desarrolla. assets/vendor es lo que el
+# navegador descarga, y todo el punto de vendorizar es que esté en el servidor.
+node_modules/

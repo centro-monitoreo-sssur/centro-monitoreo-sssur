@@ -1,0 +1,7 @@
+/* Entrada de la compilación de Tailwind.
+   NO se enlaza desde el HTML: lo que carga el navegador es `tailwind.css`, que
+   genera `npm run css` a partir de este archivo. Editar la salida a mano es
+   trabajo que se pierde en la siguiente compilación. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

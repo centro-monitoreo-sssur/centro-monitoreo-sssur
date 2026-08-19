@@ -23,48 +23,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="CM SSSur">
-  <link rel="apple-touch-icon" href="https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png">
+  <link rel="apple-touch-icon" href="/assets/img/marca/icono-192.png">
 
-  <link rel="icon" type="image/png" href="https://sansalvadorsur.gob.sv/images/logo-circulo-blanco.png">
+  <link rel="icon" type="image/png" href="/assets/img/marca/favicon-32.png">
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50:  '#eef2ff', 100: '#dde4ff', 200: '#bcc9ff', 300: '#93a5fb',
-              400: '#6076ef', 500: '#3048d2', 600: '#001ba0', 700: '#001785',
-              800: '#00126a', 900: '#0d1a5c', 950: '#0a1240',
-            },
-            gold: {
-              50: '#fffbeb', 100: '#fff3c4', 200: '#ffe680', 300: '#ffd94d',
-              400: '#ffcc00', 500: '#e6b800', 600: '#b38f00', 700: '#806600',
-            },
-            gray: {
-              750: '#2a323f',
-            },
-          },
-          boxShadow: {
-            card:       '0 1px 3px 0 rgb(16 24 40 / 0.08), 0 1px 2px -1px rgb(16 24 40 / 0.06)',
-            'card-hover':'0 8px 24px -4px rgb(16 24 40 / 0.12), 0 2px 6px -2px rgb(16 24 40 / 0.07)',
-            popover:    '0 12px 32px -8px rgb(16 24 40 / 0.20)',
-          },
-          fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-          },
-          fontSize: {
-            'title-sm': ['1.125rem', { lineHeight: '1.6rem',  fontWeight: '600' }],
-            'title-md': ['1.5rem',   { lineHeight: '2rem',    fontWeight: '700' }],
-            'title-lg': ['1.875rem', { lineHeight: '2.375rem',fontWeight: '700' }],
-          },
-        },
-      },
-    }
-  </script>
   <script>
     if (localStorage.getItem('color-theme') === 'dark') {
       document.documentElement.classList.add('dark');
@@ -72,34 +34,47 @@
       document.documentElement.classList.remove('dark');
     }
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
-  <script src="https://unpkg.com/vue-virtual-scroller@2.0.0-beta.8/dist/vue-virtual-scroller.min.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <!-- ============================================================
+     DEPENDENCIAS · TODAS LOCALES
+     ------------------------------------------------------------
+     Nada de CDN. Los quince recursos que se cargaban de unpkg, cdnjs y
+     Google Fonts viven ahora en /assets/vendor/, descargados con la versión
+     fijada por "node herramientas/vendorizar.mjs".
+
+     Es lo que permite que la PWA de campo funcione sin señal: el service
+     worker no puede precachear lo que no controla, y sin Vue no hay
+     aplicación — una cuadrilla sin cobertura abría una pantalla en blanco.
+     De paso quita a cuatro terceros que sabían qué IP entra al panel
+     municipal y cuándo, y fija versiones que antes flotaban: "supabase-js@2"
+     servía lo último de la rama, así que un cambio de comportamiento podía
+     llegar solo, un martes, sin que nadie tocara el código.
+     ============================================================ -->
+  <link rel="stylesheet" href="/assets/vendor/fuentes/fuentes.css">
+  <link rel="stylesheet" href="/assets/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet-markercluster/MarkerCluster.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet-markercluster/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="/assets/vendor/leaflet-measure/leaflet-measure.css">
+
+  <script src="/assets/vendor/leaflet/leaflet.js"></script>
+  <script src="/assets/vendor/leaflet-markercluster/leaflet.markercluster.js"></script>
+  <script src="/assets/vendor/leaflet-heat/leaflet-heat.js"></script>
+  <script src="/assets/vendor/leaflet-measure/leaflet-measure.js"></script>
+  <script src="/assets/vendor/chartjs/chart.umd.min.js"></script>
+  <script src="/assets/vendor/vue/vue.global.prod.js"></script>
+  <script src="/assets/vendor/vue-virtual-scroller/vue-virtual-scroller.min.js"></script>
+  <script src="/assets/vendor/supabase/supabase.js"></script>
+  <script src="/assets/vendor/turf/turf.min.js"></script>
+
   <script src="/assets/js/services/geo-json/limites-municipio.js"></script>
   <script src="/assets/js/services/geo-json/limites-poligonos.js"></script>
   <script src="/assets/js/utils/validacion-limites.js"></script>
-
-  <!-- PLUGINS LEAFLET -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
-  <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
-  <script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
-
   <!-- ============================================================
      ESTILOS MODULARES (orden de cascada: tokens → base → componentes)
      ============================================================ -->
+  <!-- Lo compila "npm run css" desde tailwind.config.js. No se edita a mano:
+       lo que se escriba aquí se pierde en la siguiente compilación. -->
+  <link rel="stylesheet" href="/assets/css/tailwind.css">
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/pwa-oscuro.css">
   <link rel="stylesheet" href="/assets/css/base.css">
