@@ -1,0 +1,21 @@
+<div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+  <div class="flex items-center gap-4 sm:block">
+    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-xl sm:h-12 sm:w-12" :class="claseFondo">
+      <i class="text-lg" :class="[icono, claseColor]" aria-hidden="true"></i>
+    </div>
+    <div class="min-w-0 sm:mt-5">
+      <span class="text-sm text-gray-500 dark:text-gray-400">{{ etiqueta }}</span>
+      <h4 class="mt-1 text-title-sm font-bold font-mono sm:mt-2" :class="claseColor">
+        <span v-if="cargando" class="skeleton inline-block h-7 w-16 rounded"></span>
+        <span v-else>{{ valor }}</span>
+      </h4>
+    </div>
+  </div>
+
+  <!-- La línea de contexto: la variación contra el periodo anterior, un
+       desglose corto. Va en slot porque cada vista trae la suya y varias no
+       traen ninguna. -->
+  <div v-if="$slots.pie" class="mt-3 flex items-end justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+    <slot name="pie"></slot>
+  </div>
+</div>

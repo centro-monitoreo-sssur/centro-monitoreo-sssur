@@ -6,6 +6,7 @@
 import { ref, computed } from '../core/vue.js';
 import { db } from '../core/supabase.js';
 import { almacen, almacenDispositivo } from '../core/almacen.js';
+import { enDesarrollo } from '../core/app-contexto.js';
 import { useDenuncias } from './denuncias.js';
 import { usePermisos } from './permisos.js';
 import { useNotificaciones } from './notificaciones.js';
@@ -453,6 +454,13 @@ const gruposNav = [
       { id: 'roles',    label: 'Roles y Permisos',      icono: 'fa-lock',    modulo: 'usuarios' },
       { id: 'bitacora', label: 'Bitácora de Auditoría', icono: 'fa-history', modulo: 'config' },
       { id: 'config',   label: 'Configuración',         icono: 'fa-cog',     modulo: 'config' },
+      // La galería de componentes existe SOLO en desarrollo: es la referencia
+      // visual de la librería (Fase 2 de la migración TailAdmin) y el banco
+      // la fotografía. En producción el ítem no se genera y la vista queda
+      // inalcanzable, que es exactamente lo que se quiere.
+      ...(enDesarrollo
+        ? [{ id: 'galeria', label: 'Galería de componentes', icono: 'fa-swatchbook', modulo: 'config' }]
+        : []),
     ],
   },
 ];
@@ -504,6 +512,8 @@ const titulos = {
   'vista-notificaciones': 'Gestión de Notificaciones',
   'vista-comunicados': 'Comunicados de la Municipalidad',
   cartograma: 'Cartograma Territorial',   // faltaba: la topbar mostraba el genérico
+  catalogo: 'Catálogo de Categorías', cuadrillas: 'Cuadrillas de Campo',
+  galeria: 'Galería de componentes',       // solo desarrollo; sin él la topbar cae al genérico
 };
 const tituloVista = computed(() => titulos[vistaActual.value] || 'Centro de Monitoreo');
 

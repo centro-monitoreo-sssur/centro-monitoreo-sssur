@@ -1,0 +1,16 @@
+<div class="inline-flex shrink-0 items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800"
+     role="tablist" :aria-label="etiquetaAccesible"
+     @keydown.left.prevent="alFlecha(-1)"
+     @keydown.right.prevent="alFlecha(1)">
+  <button v-for="opcion in opciones" :key="opcion.valor"
+          type="button" role="tab"
+          :aria-selected="modelValue === opcion.valor ? 'true' : 'false'"
+          :tabindex="modelValue === opcion.valor ? 0 : -1"
+          class="rounded-lg font-semibold transition-colors focus:outline-none focus:ring-3 focus:ring-brand-500/10"
+          :class="[claseTamano, modelValue === opcion.valor
+            ? 'bg-white text-brand-600 shadow-theme-xs dark:bg-gray-700 dark:text-white'
+            : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200']"
+          @click="elegir(opcion.valor)">
+    <i v-if="opcion.icono" :class="opcion.icono" class="mr-1.5" aria-hidden="true"></i>{{ opcion.etiqueta }}
+  </button>
+</div>

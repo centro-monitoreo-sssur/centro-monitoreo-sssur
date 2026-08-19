@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Banco de pruebas visual: abre cada vista del panel en un navegador de verdad,
- * la fotografía a tres anchos y comprueba diez cosas mientras está abierta.
+ * la fotografía a tres anchos y comprueba once cosas mientras está abierta.
  *
  * ── POR QUÉ EXISTE ──────────────────────────────────────────────────────────
  * Todo el rediseño se verificó leyendo archivos: etiquetas equilibradas, clases
@@ -95,6 +95,9 @@ const VISTAS = [
   ['roles',              'Roles y Permisos'],
   ['bitacora',           'Bitácora de Auditoría'],
   ['config',             'Configuración'],
+  // Solo existe en desarrollo, que es donde corre el banco. Es la hoja de
+  // contactos de la librería: cada primitiva en cada estado.
+  ['galeria',            'Galería de componentes'],
 ];
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -123,7 +126,7 @@ async function asegurarServidor() {
 }
 
 /**
- * Las diez comprobaciones. Corren dentro de la página, con ella ya pintada.
+ * Las once comprobaciones. Corren dentro de la página, con ella ya pintada.
  * Devuelven datos, no juicios: quién falla y quién solo avisa se decide fuera.
  */
 const SONDA = () => {
@@ -176,6 +179,31 @@ const SONDA = () => {
     }
   }
 
+  /* 11 · Contenido recortado SIN ruta de scroll.
+     Es la queja literal de Richard sobre la primera migración: «algunas no
+     tiene scroll». Una vista puede desbordar su caja y estar bien —si algún
+     ancestro se desplaza— o estar rota —si nada se desplaza y el resto de la
+     pantalla sencillamente no existe para el usuario—. Midiendo se encontró
+     que usuarios recortaba 75px y comunicados 163px en móvil, invisibles en
+     una captura porque el borde cortado parece el final natural de la página. */
+  let recorteSinScroll = 0;
+  const principal = doc.querySelector('main');
+  if (principal) {
+    const conScroll = [principal, ...principal.querySelectorAll('*')].some((el) => {
+      const c = getComputedStyle(el);
+      return el.scrollHeight - el.clientHeight > 4 && /auto|scroll/.test(c.overflowY);
+    });
+    if (!conScroll) {
+      const caja = principal.getBoundingClientRect();
+      let masBajo = caja.bottom;
+      for (const el of principal.querySelectorAll('*')) {
+        const r = el.getBoundingClientRect();
+        if (r.height > 0 && r.bottom > masBajo) masBajo = r.bottom;
+      }
+      recorteSinScroll = Math.max(0, Math.round(masBajo - caja.bottom));
+    }
+  }
+
   /* El menú tiene que poder ABRIRSE. Como la navegación del banco invoca el
      manejador directamente, esto es lo único que separa «el menú está oculto a
      propósito en móvil» de «el menú es inalcanzable». */
@@ -192,6 +220,7 @@ const SONDA = () => {
   return {
     capaEncima,
     menuAlcanzable,
+    recorteSinScroll,
     totalControlesBajos: bajos.length,
     totalBotonesMudos: mudos.length,
     sinResolver: texto.includes('{{'),                                   // 2
@@ -361,6 +390,13 @@ async function main() {
         }
         // Aviso con presupuesto.
         if (sonda.desborde > 1)    informe.avisos.push(`${clave}: desborda ${sonda.desborde}px en horizontal`);
+        /* Mapa y cartograma quedan fuera de esta sonda: son lienzos con
+           paneles deslizantes que viven más abajo del borde a propósito y se
+           alcanzan arrastrando, no con scroll — aquí la sonda solo produciría
+           falsos positivos que enseñan a ignorar el informe. */
+        if (sonda.recorteSinScroll > 4 && id !== 'mapa' && id !== 'cartograma') {
+          informe.avisos.push(`${clave}: ${sonda.recorteSinScroll}px de contenido inalcanzable — nada permite desplazarse`);
+        }
         if (ancho.nombre === 'movil' && sonda.controlesBajos.length) {
           informe.avisos.push(`${clave}: ${sonda.totalControlesBajos} control(es) bajo 40px — ` +
             sonda.controlesBajos.slice(0, 3).map((c) => `"${c.etiqueta}" ${c.alto}px`).join(', '));
@@ -409,12 +445,19 @@ async function main() {
 
   /* Los recuentos que la Fase 4 congela como presupuesto. Van agregados aquí
      para que el linter no tenga que reinterpretar el detalle. */
+  /* La galería no cuenta: es una vista solo de desarrollo que EXHIBE a
+     propósito las variantes compactas. Meterla inflaría el presupuesto con
+     controles que ningún operador verá. Mapa y cartograma no cuentan en el
+     recorte por la misma razón que arriba: su desplazamiento es por arrastre. */
+  const deProduccion = informe.vistas.filter((v) => v.vista !== 'galeria');
   informe.presupuesto = {
-    controlesBajo40enMovil: informe.vistas
+    controlesBajo40enMovil: deProduccion
       .filter((v) => v.ancho === 'movil')
       .reduce((a, v) => a + v.totalControlesBajos, 0),
-    botonesSinNombre: informe.vistas.reduce((a, v) => a + v.totalBotonesMudos, 0),
-    vistasConDesborde: informe.vistas.filter((v) => v.desborde > 1).length,
+    botonesSinNombre: deProduccion.reduce((a, v) => a + v.totalBotonesMudos, 0),
+    vistasConDesborde: deProduccion.filter((v) => v.desborde > 1).length,
+    vistasConRecorteSinScroll: deProduccion
+      .filter((v) => v.recorteSinScroll > 4 && v.vista !== 'mapa' && v.vista !== 'cartograma').length,
   };
 
   await writeFile(join(DESTINO, 'informe.json'), JSON.stringify(informe, null, 2));

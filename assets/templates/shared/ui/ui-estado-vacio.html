@@ -1,0 +1,12 @@
+<div class="flex flex-col items-center justify-center px-4 text-center"
+     :class="compacto ? 'py-6' : 'py-12'">
+  <div class="grid place-items-center rounded-full bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500"
+       :class="compacto ? 'h-10 w-10' : 'h-14 w-14'">
+    <i :class="[icono, compacto ? 'text-base' : 'text-xl']" aria-hidden="true"></i>
+  </div>
+  <p class="mt-3 text-sm font-medium text-gray-700 dark:text-gray-200">{{ titulo }}</p>
+  <p v-if="descripcion" class="mt-1 max-w-sm text-theme-xs text-gray-500 dark:text-gray-400">{{ descripcion }}</p>
+  <div v-if="$slots.default" class="mt-4">
+    <slot></slot>
+  </div>
+</div>

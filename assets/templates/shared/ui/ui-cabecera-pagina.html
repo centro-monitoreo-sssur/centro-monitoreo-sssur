@@ -1,0 +1,24 @@
+<div :class="clases">
+  <div class="min-w-0">
+    <nav v-if="ruta.length" class="mb-1 flex items-center gap-1.5 text-theme-xs text-gray-400 dark:text-gray-500"
+         aria-label="Ruta de navegación">
+      <template v-for="(paso, i) in ruta" :key="i">
+        <button v-if="paso.id && i < ruta.length - 1" type="button"
+                class="truncate hover:text-brand-600 dark:hover:text-brand-400"
+                @click="$emit('navegar', paso.id)">{{ paso.etiqueta }}</button>
+        <span v-else class="truncate" :aria-current="i === ruta.length - 1 ? 'page' : null">{{ paso.etiqueta }}</span>
+        <i v-if="i < ruta.length - 1" class="fa-solid fa-chevron-right text-[9px] opacity-60" aria-hidden="true"></i>
+      </template>
+    </nav>
+
+    <h1 class="text-title-md text-gray-900 dark:text-white">{{ titulo }}</h1>
+    <p v-if="subtitulo" class="mt-0.5 text-theme-sm text-gray-500 dark:text-gray-400">{{ subtitulo }}</p>
+  </div>
+
+  <!-- `shrink-0` para que los botones no se compriman cuando el título es
+       largo, y `flex-wrap` para que en un teléfono se repartan en dos filas en
+       vez de salirse por el borde. -->
+  <div v-if="$slots.acciones" class="flex shrink-0 flex-wrap items-center gap-2">
+    <slot name="acciones"></slot>
+  </div>
+</div>

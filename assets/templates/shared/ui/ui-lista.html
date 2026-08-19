@@ -1,0 +1,14 @@
+<div>
+  <ui-estado-carga v-if="cargando"></ui-estado-carga>
+
+  <ui-estado-vacio v-else-if="vacio"
+                   :icono="iconoVacio"
+                   :titulo="tituloVacio"
+                   :descripcion="descripcionVacio">
+    <slot name="accion-vacio"></slot>
+  </ui-estado-vacio>
+
+  <div v-else :class="sinDivisores ? '' : 'divide-y divide-gray-100 dark:divide-gray-800'">
+    <slot></slot>
+  </div>
+</div>

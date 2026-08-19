@@ -1,0 +1,158 @@
+<!-- ================== VISTA: GALERÍA DE COMPONENTES (solo desarrollo) ================== -->
+<ui-contenedor-pagina fluido>
+  <ui-cabecera-pagina
+    titulo="Galería de componentes"
+    subtitulo="Cada primitiva en cada variante y estado. Lo que el banco visual fotografía y el linter defiende."
+    :ruta="RUTA_DEMO">
+    <template #acciones>
+      <ui-boton variante="secundario" icono="fa-solid fa-rotate">Acción secundaria</ui-boton>
+      <ui-boton icono="fa-solid fa-plus">Acción primaria</ui-boton>
+    </template>
+  </ui-cabecera-pagina>
+
+  <!-- ── Franja y tarjetas KPI ─────────────────────────────────────────── -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-franja-kpi + ui-tarjeta-kpi</h2>
+    <ui-franja-kpi :columnas="4">
+      <ui-tarjeta-kpi etiqueta="Ingresadas" valor="128" icono="fas fa-inbox" estado="total">
+        <template #pie><span><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> 12% vs. periodo anterior</span></template>
+      </ui-tarjeta-kpi>
+      <ui-tarjeta-kpi etiqueta="Pendientes" valor="37" icono="fas fa-clock" estado="pendiente">
+        <template #pie><span>Acumulado actual · 5 en atención</span></template>
+      </ui-tarjeta-kpi>
+      <ui-tarjeta-kpi etiqueta="Resueltas" valor="86" icono="fas fa-check-circle" estado="resuelta"></ui-tarjeta-kpi>
+      <ui-tarjeta-kpi etiqueta="Cargando" icono="fas fa-chart-pie" estado="en-curso" cargando></ui-tarjeta-kpi>
+    </ui-franja-kpi>
+  </section>
+
+  <!-- ── Botones ───────────────────────────────────────────────────────── -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-boton</h2>
+    <ui-card titulo="Variantes, tamaños y estados">
+      <div class="flex flex-wrap items-center gap-3">
+        <ui-boton>Primario</ui-boton>
+        <ui-boton variante="secundario">Secundario</ui-boton>
+        <ui-boton variante="peligro">Peligro</ui-boton>
+        <ui-boton variante="fantasma">Fantasma</ui-boton>
+        <ui-boton tamano="sm">Pequeño</ui-boton>
+        <ui-boton tamano="lg">Grande</ui-boton>
+        <ui-boton icono="fa-solid fa-plus">Con icono</ui-boton>
+        <ui-boton cargando>Guardando</ui-boton>
+        <ui-boton deshabilitado>Deshabilitado</ui-boton>
+        <ui-boton icono="fa-solid fa-trash" variante="peligro" etiqueta-accesible="Eliminar registro"></ui-boton>
+      </div>
+    </ui-card>
+  </section>
+
+  <!-- ── Campos de formulario ──────────────────────────────────────────── -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-input · ui-textarea · ui-select</h2>
+    <ui-card titulo="Estados de campo">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <ui-input etiqueta="Normal" marcador="Escribe aquí"></ui-input>
+        <ui-input etiqueta="Con icono" icono="fa-solid fa-user" marcador="Nombre del responsable"></ui-input>
+        <ui-input etiqueta="Con ayuda" ayuda="El DUI sin guiones." marcador="000000000"></ui-input>
+        <ui-input etiqueta="Con error" error="Este campo es obligatorio." requerido></ui-input>
+        <ui-textarea v-model="area" etiqueta="Área de texto" marcador="Describe el motivo…" :maximo="200"></ui-textarea>
+        <ui-textarea v-model="areaConTexto" etiqueta="Con contenido y contador" :maximo="80"></ui-textarea>
+      </div>
+    </ui-card>
+  </section>
+
+  <!-- ── Búsqueda y barra de filtros ───────────────────────────────────── -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-campo-busqueda + ui-barra-filtros</h2>
+    <ui-barra-filtros>
+      <div class="w-full sm:w-64">
+        <ui-campo-busqueda v-model="busqueda" tamano="compacto"></ui-campo-busqueda>
+      </div>
+      <div class="w-full sm:w-64">
+        <ui-campo-busqueda v-model="busquedaConTexto" tamano="compacto"></ui-campo-busqueda>
+      </div>
+      <template #derecha>
+        <ui-boton variante="secundario" tamano="sm" icono="fa-solid fa-file-csv">Exportar</ui-boton>
+      </template>
+    </ui-barra-filtros>
+  </section>
+
+  <!-- ── Interruptores, casillas y segmentado ──────────────────────────── -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-interruptor · ui-casilla · ui-control-segmentado</h2>
+    <ui-card titulo="Controles de estado">
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div class="space-y-4">
+          <ui-interruptor v-model="interruptorApagado" etiqueta="Apagado" descripcion="Estado inicial."></ui-interruptor>
+          <ui-interruptor v-model="interruptorEncendido" etiqueta="Encendido" descripcion="Con descripción larga para ver el ajuste de línea."></ui-interruptor>
+          <ui-interruptor :model-value="true" etiqueta="Deshabilitado" deshabilitado></ui-interruptor>
+        </div>
+        <div class="space-y-4">
+          <ui-casilla v-model="casillaApagada" etiqueta="Sin marcar" descripcion="Casilla nativa con accent institucional."></ui-casilla>
+          <ui-casilla v-model="casillaEncendida" etiqueta="Marcada"></ui-casilla>
+          <ui-casilla :model-value="true" etiqueta="Deshabilitada" deshabilitado></ui-casilla>
+        </div>
+      </div>
+      <div class="mt-6 flex flex-wrap items-center gap-4">
+        <ui-control-segmentado v-model="segmento" :opciones="OPCIONES_SEGMENTO" etiqueta-accesible="Periodo"></ui-control-segmentado>
+        <ui-control-segmentado v-model="segmentoVista" :opciones="OPCIONES_VISTA" tamano="compacto" etiqueta-accesible="Modo de vista"></ui-control-segmentado>
+      </div>
+    </ui-card>
+  </section>
+
+  <!-- ── Badges ────────────────────────────────────────────────────────── -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-badge</h2>
+    <ui-card titulo="Tonos semánticos y color de BD">
+      <div class="flex flex-wrap items-center gap-2">
+        <ui-badge>Neutro</ui-badge>
+        <ui-badge tono="info">Info</ui-badge>
+        <ui-badge tono="exito" icono="fa-solid fa-check">Éxito</ui-badge>
+        <ui-badge tono="alerta" punto>Alerta</ui-badge>
+        <ui-badge tono="peligro">Peligro</ui-badge>
+        <ui-badge tono="marca">Marca</ui-badge>
+        <ui-badge color="#7a5af8">Hex de BD</ui-badge>
+        <ui-badge color="#0d9488" tamano="sm">Hex pequeño</ui-badge>
+      </div>
+    </ui-card>
+  </section>
+
+  <!-- ── Lista y estados ───────────────────────────────────────────────── -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-lista · ui-estado-vacio · ui-estado-carga</h2>
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <ui-card titulo="Cargando" sin-relleno>
+        <ui-lista cargando></ui-lista>
+      </ui-card>
+      <ui-card titulo="Vacía" sin-relleno>
+        <ui-lista vacio titulo-vacio="Sin denuncias en este periodo"
+                  descripcion-vacio="Prueba a ampliar el rango de fechas."
+                  icono-vacio="fa-solid fa-clipboard-list">
+          <template #accion-vacio>
+            <ui-boton variante="secundario" tamano="sm">Limpiar filtros</ui-boton>
+          </template>
+        </ui-lista>
+      </ui-card>
+      <ui-card titulo="Con elementos" sin-relleno>
+        <ui-lista>
+          <div v-for="n in 3" :key="n" class="flex items-center justify-between gap-3 px-4 py-3">
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium text-gray-800 dark:text-white/90">Elemento {{ n }}</p>
+              <p class="text-theme-xs text-gray-500 dark:text-gray-400">Descripción corta del elemento.</p>
+            </div>
+            <ui-badge tono="exito" tamano="sm">Activo</ui-badge>
+          </div>
+        </ui-lista>
+      </ui-card>
+    </div>
+  </section>
+
+  <!-- ── Estado vacío compacto, suelto ─────────────────────────────────── -->
+  <section class="mb-12">
+    <h2 class="mb-3 text-title-sm text-gray-900 dark:text-white">ui-estado-vacio compacto + ui-estado-carga compacto</h2>
+    <ui-card>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <ui-estado-vacio compacto titulo="Sin fotografías" icono="fa-solid fa-image"></ui-estado-vacio>
+        <ui-estado-carga compacto texto="Actualizando…"></ui-estado-carga>
+      </div>
+    </ui-card>
+  </section>
+</ui-contenedor-pagina>
