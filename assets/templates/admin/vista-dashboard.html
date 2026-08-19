@@ -38,19 +38,21 @@
   </div>
 
   <!-- ======================= KPIs ======================= -->
-  <div class="grid grid-cols-2 gap-4 mb-6 xl:grid-cols-4">
+  <div class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 md:gap-6 xl:grid-cols-4">
 
     <!-- Ingresadas (flujo del periodo) -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="grid h-12 w-12 place-items-center rounded-xl kpi-fondo--total">
-        <i class="fas fa-inbox kpi-color--total text-lg" aria-hidden="true"></i>
-      </div>
-      <div class="mt-5">
-        <span class="text-sm text-gray-500 dark:text-gray-400">Ingresadas</span>
-        <h4 class="mt-2 text-title-sm font-bold kpi-color--total font-mono">
+      <div class="flex items-center gap-4 sm:block">
+        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-xl kpi-fondo--total sm:h-12 sm:w-12">
+          <i class="fas fa-inbox kpi-color--total text-lg" aria-hidden="true"></i>
+        </div>
+        <div class="min-w-0 sm:mt-5">
+          <span class="text-sm text-gray-500 dark:text-gray-400">Ingresadas</span>
+          <h4 class="mt-1 text-title-sm font-bold kpi-color--total font-mono sm:mt-2">
           <span v-if="cargandoAnalitica" class="skeleton inline-block h-7 w-16 rounded"></span>
             <span v-else>{{ metricas.nuevos }}</span>
-        </h4>
+          </h4>
+        </div>
       </div>
       <div class="mt-3 flex items-end justify-between gap-2">
         <span class="text-[11px] text-gray-500 dark:text-gray-400">
@@ -69,15 +71,17 @@
 
     <!-- Resueltas (flujo del periodo) -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="grid h-12 w-12 place-items-center rounded-xl kpi-fondo--resuelta">
-        <i class="fas fa-check-circle kpi-color--resuelta text-lg" aria-hidden="true"></i>
-      </div>
-      <div class="mt-5">
-        <span class="text-sm text-gray-500 dark:text-gray-400">Resueltas</span>
-        <h4 class="mt-2 text-title-sm font-bold kpi-color--resuelta font-mono">
+      <div class="flex items-center gap-4 sm:block">
+        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-xl kpi-fondo--resuelta sm:h-12 sm:w-12">
+          <i class="fas fa-check-circle kpi-color--resuelta text-lg" aria-hidden="true"></i>
+        </div>
+        <div class="min-w-0 sm:mt-5">
+          <span class="text-sm text-gray-500 dark:text-gray-400">Resueltas</span>
+          <h4 class="mt-1 text-title-sm font-bold kpi-color--resuelta font-mono sm:mt-2">
           <span v-if="cargandoAnalitica" class="skeleton inline-block h-7 w-16 rounded"></span>
             <span v-else>{{ metricas.resueltos }}</span>
-        </h4>
+          </h4>
+        </div>
       </div>
       <div class="mt-3 flex items-end justify-between gap-2">
         <span class="text-[11px]"
@@ -99,14 +103,16 @@
 
     <!-- Pendientes (stock: foto del presente, sin variación por definición) -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="grid h-12 w-12 place-items-center rounded-xl kpi-fondo--pendiente">
-        <i class="fas fa-clock kpi-color--pendiente text-lg" aria-hidden="true"></i>
-      </div>
-      <div class="mt-5">
-        <span class="text-sm text-gray-500 dark:text-gray-400">Pendientes</span>
-        <h4 class="mt-2 text-title-sm font-bold kpi-color--pendiente font-mono">
+      <div class="flex items-center gap-4 sm:block">
+        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-xl kpi-fondo--pendiente sm:h-12 sm:w-12">
+          <i class="fas fa-clock kpi-color--pendiente text-lg" aria-hidden="true"></i>
+        </div>
+        <div class="min-w-0 sm:mt-5">
+          <span class="text-sm text-gray-500 dark:text-gray-400">Pendientes</span>
+          <h4 class="mt-1 text-title-sm font-bold kpi-color--pendiente font-mono sm:mt-2">
           {{ metricas.pendientes }}
-        </h4>
+          </h4>
+        </div>
       </div>
       <p class="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
         Acumulado actual · {{ metricas.enCurso }} en atención
@@ -115,15 +121,17 @@
 
     <!-- Tasa de resolución del periodo -->
     <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="grid h-12 w-12 place-items-center rounded-xl kpi-fondo--en-curso">
-        <i class="fas fa-gauge-high kpi-color--en-curso text-lg" aria-hidden="true"></i>
-      </div>
-      <div class="mt-5">
-        <span class="text-sm text-gray-500 dark:text-gray-400">Tasa de resolución</span>
-        <h4 class="mt-2 text-title-sm font-bold kpi-color--en-curso font-mono">
+      <div class="flex items-center gap-4 sm:block">
+        <div class="grid h-11 w-11 shrink-0 place-items-center rounded-xl kpi-fondo--en-curso sm:h-12 sm:w-12">
+          <i class="fas fa-gauge-high kpi-color--en-curso text-lg" aria-hidden="true"></i>
+        </div>
+        <div class="min-w-0 sm:mt-5">
+          <span class="text-sm text-gray-500 dark:text-gray-400">Tasa de resolución</span>
+          <h4 class="mt-1 text-title-sm font-bold kpi-color--en-curso font-mono sm:mt-2">
           <span v-if="cargandoAnalitica" class="skeleton inline-block h-7 w-16 rounded"></span>
             <span v-else>{{ metricas.tasa }}%</span>
-        </h4>
+          </h4>
+        </div>
       </div>
       <p class="mt-3 text-[11px]"
          :class="metricas.deltaTasa === 0 ? 'text-gray-500 dark:text-gray-400'
@@ -137,7 +145,7 @@
   </div>
 
   <!-- ================ TENDENCIA + DISTRIBUCIÓN ================ -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+  <div class="grid grid-cols-1 gap-4 mb-6 md:gap-6 lg:grid-cols-3">
 
     <div class="lg:col-span-2 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 flex flex-col">
       <div class="flex items-center justify-between mb-4 gap-3">
