@@ -24,6 +24,7 @@ import { db } from '../core/supabase.js';
 const guardando = ref(false);
 const historial = ref([]);
 const cargandoHistorial = ref(false);
+const derivaciones = ref([]);
 
 /**
  * Traduce el error a algo accionable.
@@ -159,9 +160,67 @@ async function cargarHistorial(casoId) {
   }
 }
 
+/**
+ * Mueve el caso a otra unidad.
+ *
+ * El motivo NO es opcional y se comprueba también aquí, antes de salir: el RPC
+ * lo rechaza igual, pero hacer un viaje al servidor para que devuelva «escribe
+ * un motivo» es peor experiencia que decirlo al instante.
+ *
+ * Cuatro efectos, todos en la misma transacción del RPC: el caso cambia de
+ * unidad, se retira la asignación anterior —pertenecía al departamento que lo
+ * suelta—, queda la anotación en la bitácora, y se avisa al destino.
+ */
+async function derivarCaso({ casoId, departamentoDestinoId, motivo }) {
+  if (!db) return { ok: false, error: 'Sin conexión a la base de datos.' };
+  if (!casoId) return { ok: false, error: 'Falta el caso.' };
+  if (!departamentoDestinoId) return { ok: false, error: 'Elige la unidad de destino.' };
+  if (!motivo || motivo.trim().length < 10) {
+    return { ok: false, error: 'Explica en pocas palabras por qué no corresponde a esta unidad (mínimo 10 caracteres).' };
+  }
+
+  guardando.value = true;
+  try {
+    const { data, error } = await db.rpc('derivar_caso', {
+      p_caso_id: Number(casoId),
+      p_departamento_destino_id: Number(departamentoDestinoId),
+      p_motivo: motivo.trim(),
+    });
+    if (error) throw error;
+    return { ok: true, ...(data || {}) };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e, 'derivarCaso') };
+  } finally {
+    guardando.value = false;
+  }
+}
+
+/** Derivaciones del caso, de la más reciente a la más antigua. */
+async function cargarDerivaciones(casoId) {
+  if (!db || !casoId) { derivaciones.value = []; return; }
+  try {
+    const { data, error } = await db
+      .from('v_derivaciones_caso')
+      .select('id, created_at, motivo, departamento_origen, departamento_destino, derivado_por')
+      .eq('caso_id', casoId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    derivaciones.value = data || [];
+  } catch (e) {
+    // La vista no existe hasta la v41. Sin este aviso el sintoma seria una
+    // seccion vacia por una relacion inexistente, que no se parece a la causa.
+    const faltaVista = /v_derivaciones_caso/i.test(e.message || '');
+    console.warn(faltaVista
+      ? '[gestion-casos] Falta la v41. Ejecuta database/migration_v41_derivar_caso_a_otra_unidad.sql.'
+      : '[gestion-casos] cargarDerivaciones: ' + e.message);
+    derivaciones.value = [];
+  }
+}
+
 export function useGestionCasos() {
   return {
-    guardando, historial, cargandoHistorial,
+    guardando, historial, cargandoHistorial, derivaciones,
     asignarCaso, cambiarEstadoCaso, cargarHistorial,
+    derivarCaso, cargarDerivaciones,
   };
 }

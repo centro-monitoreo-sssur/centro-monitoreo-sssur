@@ -36,10 +36,11 @@ export default {
       // falta poder decir cuánto falta y poder traerlo.
       hayMasCasos, totalCasos, cargarMasCasos, cargandoMas,
     } = useDenuncias();
-    const { tiposDenuncia, flujoDeCategoria } = useCatalogos();
+    const { tiposDenuncia, flujoDeCategoria, departamentos } = useCatalogos();
     const {
       guardando, historial, cargandoHistorial,
       asignarCaso, cambiarEstadoCaso, cargarHistorial,
+      derivarCaso, cargarDerivaciones, derivaciones,
     } = useGestionCasos();
     // Se reutiliza el store de cuadrillas en lugar de volver a consultar
     // personal y equipos: su estado es de módulo, así que la carga se comparte
@@ -246,11 +247,15 @@ export default {
       casoAbiertoId.value = denuncia.id;
       sincronizarBorrador();
       cargarHistorial(denuncia.id);
+      cargarDerivaciones(denuncia.id);
+      derivacion.value = { departamentoId: '', motivo: '' };
+      panelDerivar.value = false;
     }
 
     function cerrarDetalle() {
       casoAbiertoId.value = null;
       historial.value = [];
+      derivaciones.value = [];
     }
 
     /** Estados que ofrece el flujo de la categoría del caso abierto. */
@@ -308,6 +313,58 @@ export default {
       avisoGestion.value = mensaje;
     }
 
+    /* ── Derivar a otra unidad ────────────────────────────────────────────
+       Va en un panel que hay que abrir, no a la vista. Mover un caso de
+       departamento es poco frecuente y difícil de deshacer —queda en el
+       historial para siempre—, así que no debe compartir espacio con los
+       controles del día a día. */
+    const panelDerivar = ref(false);
+    const derivacion = ref({ departamentoId: '', motivo: '' });
+
+    /* La unidad actual no se ofrece: derivar a donde ya está es el error que
+       más veces se comete con un desplegable de departamentos. */
+    const unidadesDestino = computed(() => {
+      const actual = denunciaSeleccionada.value?.departamento_id ?? null;
+      return (departamentos.value || [])
+        .filter((d) => d.activo !== false && d.id !== actual)
+        .map((d) => ({ id: d.id, nombre: d.nombre }));
+    });
+
+    const nombreUnidadActual = computed(() => {
+      const actual = denunciaSeleccionada.value?.departamento_id ?? null;
+      if (actual == null) return 'Sin unidad asignada';
+      const d = (departamentos.value || []).find((x) => x.id === actual);
+      return d?.nombre || ('Unidad ' + actual);
+    });
+
+    const puedeDerivar = computed(() =>
+      Boolean(derivacion.value.departamentoId)
+      && derivacion.value.motivo.trim().length >= 10
+    );
+
+    async function confirmarDerivacion() {
+      if (guardando.value || !puedeDerivar.value) return;
+      errorGestion.value = '';
+      avisoGestion.value = '';
+
+      const res = await derivarCaso({
+        casoId: casoAbiertoId.value,
+        departamentoDestinoId: derivacion.value.departamentoId,
+        motivo: derivacion.value.motivo,
+      });
+      if (!res.ok) { errorGestion.value = res.error; return; }
+
+      panelDerivar.value = false;
+      derivacion.value = { departamentoId: '', motivo: '' };
+      await cargarDerivaciones(casoAbiertoId.value);
+      /* Se dice que la asignación se retiró. Es un efecto que el operador no
+         pidió y que, callado, parece que el sistema perdió el dato. */
+      await refrescarTrasOperacion(
+        (res.mensaje || 'Caso derivado.')
+        + (res.asignacion_retirada ? ' Se retiró la asignación anterior.' : '')
+      );
+    }
+
     async function guardarAsignacion() {
       if (guardando.value) return;
       errorGestion.value = '';
@@ -363,6 +420,9 @@ export default {
       cuadrillasAsignables, personal, nombreDePersona, nombreDeCuadrilla,
       guardarAsignacion, guardarEstado,
       historial, cargandoHistorial,
+      // Derivación entre unidades
+      panelDerivar, derivacion, unidadesDestino, nombreUnidadActual,
+      puedeDerivar, confirmarDerivacion, derivaciones,
     };
   }
 };
