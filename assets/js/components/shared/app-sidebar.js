@@ -1,6 +1,16 @@
-﻿// Sidebar institucional (identidad San Salvador Sur). Lee el store de
-// navegación; muestra estado de conexión a Supabase desde el core. El botón
-// de colapso/expansión (escritorio) y el drawer (móvil) vienen del store.
+﻿// Barra lateral. Estructura de TailAdmin con la identidad de San Salvador Sur:
+// fondo claro, item activo como pildora de tinte azul institucional, y colapso
+// a 90 px que se despliega al pasar el raton (ver assets/css/tailwind-fuente.css).
+//
+// Se retiró el acordeón por grupos: TailAdmin los muestra siempre abiertos y
+// con catorce ítems no hay nada que plegar. El store sigue ofreciendo
+// `toggleGrupo`, `grupoVisible` y `navPlano` por si otra vista los quisiera,
+// pero aquí ya no se usan — y con ellos deja de tener efecto la preferencia de
+// grupos abiertos que se guardaba en el almacén local.
+//
+// Lee el store de navegación; el estado de conexión a Supabase viene del core.
+// El botón de colapso (escritorio) y el cajón lateral (móvil) los gobierna el
+// store, no este componente.
 import { computed } from '../../core/vue.js';
 import { useNavegacion } from '../../stores/navegacion.js';
 import { conexionOk } from '../../core/supabase.js';
@@ -9,8 +19,7 @@ export default {
   setup() {
     const {
       vistaActual, sidebarAbierto, sidebarColapsado, logoError,
-      gruposVisibles, navPlano, grupoVisible, toggleGrupo,
-      irA, toggleSidebar,
+      gruposVisibles, irA, toggleSidebar,
       nombreUsuario, usuarioActual, rolUsuario,
     } = useNavegacion();
 
@@ -41,8 +50,7 @@ export default {
 
     return {
       vistaActual, sidebarAbierto, sidebarColapsado, logoError,
-      gruposVisibles, navPlano, grupoVisible, toggleGrupo,
-      irA, toggleSidebar, conexionOk, abrirModalLogout,
+      gruposVisibles, irA, toggleSidebar, conexionOk, abrirModalLogout,
       nombreMostrado, iniciales, rolUsuario,
     };
   },

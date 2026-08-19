@@ -5,3 +5,114 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BARRA LATERAL · lenguaje de TailAdmin, identidad de San Salvador Sur
+   ──────────────────────────────────────────────────────────────────────────
+   Se toma de TailAdmin la ESTRUCTURA —fondo claro, ítem como píldora de tinte
+   suave, títulos de grupo en versalitas grises, colapsado a 90 px que se
+   despliega al pasar el ratón— y se cambia la paleta: donde TailAdmin usa su
+   `brand` (#3C50E0), aquí va el azul institucional (#001ba0).
+
+   El fondo pasa de azul marino a blanco. Es un cambio de identidad
+   deliberado, no un descuido: el azul institucional deja de ser el lienzo y
+   pasa a ser el ACENTO del elemento activo, que es donde más se ve.
+
+   Esto vive aquí y no en `components.css` porque `@apply` solo funciona en el
+   archivo que compila Tailwind. Es, literalmente, lo que la CDN no dejaba
+   hacer.
+   ══════════════════════════════════════════════════════════════════════════ */
+@layer components {
+
+  .menu-grupo-titulo {
+    @apply mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500;
+  }
+
+  .menu-item {
+    @apply relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5
+           text-sm font-medium transition-colors duration-150;
+  }
+
+  /* Tinte suave, no bloque sólido. Un ítem activo tiene que leerse como
+     «estás aquí», no competir con el contenido de la pantalla. */
+  .menu-item--activo {
+    @apply bg-brand-50 text-brand-600 dark:bg-brand-500/[0.14] dark:text-brand-300;
+  }
+
+  .menu-item--inactivo {
+    @apply text-gray-700 hover:bg-gray-100 hover:text-gray-900
+           dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white;
+  }
+
+  .menu-item__icono {
+    @apply w-5 shrink-0 text-center text-base transition-colors;
+  }
+
+  .menu-item--activo .menu-item__icono  { @apply text-brand-600 dark:text-brand-300; }
+  .menu-item--inactivo .menu-item__icono { @apply text-gray-500 dark:text-gray-400; }
+
+  .menu-badge {
+    @apply ml-auto flex h-[18px] min-w-[18px] shrink-0 items-center justify-center
+           rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white;
+  }
+
+  /* Barra de desplazamiento oculta: en 90 px de ancho ocupa un tercio del
+     icono, y con `overflow-y: auto` reaparece en cuanto el menú crece. */
+  .sin-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .sin-scrollbar::-webkit-scrollbar { display: none; }
+}
+
+/* ── Colapsado y despliegue al pasar el ratón ───────────────────────────────
+   TailAdmin ensancha el <aside> a 290 px en `:hover`, y como está en el flujo
+   la página entera se recoloca. Aquí eso no vale: el Mapa en Vivo y el
+   Cartograma llevan Leaflet, y los paneles llevan Chart.js. Los dos vuelven a
+   medirse en cada cambio de ancho, así que pasar el ratón por el menú
+   dispararía una tormenta de `invalidateSize` y redibujados.
+
+   Se consigue el mismo efecto sin recolocar nada: el <aside> mantiene sus
+   90 px en el flujo y lo que crece es el panel de dentro, en posición
+   absoluta, que se despliega POR ENCIMA del contenido.
+   ─────────────────────────────────────────────────────────────────────────── */
+.barra-lateral__panel {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: inherit;
+  transition: width 300ms ease;
+}
+
+/* La marca reducida y los separadores de grupo NO existen salvo con el menú
+   estrecho. Esta regla va FUERA de la consulta de medios a propósito: dentro,
+   en móvil no habría ninguna regla que los ocultara y aparecerían junto al
+   logotipo completo. */
+.solo-estrecho { display: none; }
+
+@media (min-width: 1024px) {
+  .barra-lateral--estrecha:hover .barra-lateral__panel {
+    width: 290px;
+    box-shadow: 0 12px 32px -8px rgb(16 24 40 / 0.20);
+  }
+
+  /* Lo que solo tiene sentido con el menú ancho: se oculta al colapsar y
+     vuelve mientras el ratón está encima.
+
+     Hay tres variantes porque al volver hay que restituir el `display` que
+     cada elemento tenía. Con una sola regla `display: block`, la cabecera
+     dejaba de ser flex y el botón de colapso perdía su centrado: se veía como
+     un icono descolgado a la izquierda. */
+  .barra-lateral--estrecha .solo-ancho,
+  .barra-lateral--estrecha .solo-ancho--flex,
+  .barra-lateral--estrecha .solo-ancho--grid { display: none; }
+
+  .barra-lateral--estrecha:hover .solo-ancho       { display: block; }
+  .barra-lateral--estrecha:hover .solo-ancho--flex { display: flex; }
+  .barra-lateral--estrecha:hover .solo-ancho--grid { display: grid; }
+
+  .barra-lateral--estrecha .solo-estrecho       { display: block; }
+  .barra-lateral--estrecha:hover .solo-estrecho { display: none; }
+
+  .barra-lateral--estrecha .menu-item       { justify-content: center; }
+  .barra-lateral--estrecha:hover .menu-item { justify-content: flex-start; }
+}

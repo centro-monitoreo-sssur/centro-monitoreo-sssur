@@ -1,143 +1,144 @@
+<!-- ============================================================
+     BARRA LATERAL · estructura de TailAdmin, identidad municipal
+     ------------------------------------------------------------
+     Fondo claro, ítem activo como píldora de tinte suave, títulos de grupo en
+     versalitas grises y colapsado a 90 px que se despliega al pasar el ratón.
+     El azul institucional deja de ser el lienzo y pasa a ser el acento.
+
+     El <aside> solo pone el ancho en el flujo; todo lo visible vive en
+     `.barra-lateral__panel`, que es lo que crece al pasar el ratón sin
+     recolocar la página. Ver el porqué en assets/css/tailwind-fuente.css.
+     ============================================================ -->
 <aside :class="[
     sidebarAbierto ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-    sidebarColapsado ? 'w-[76px]' : 'w-[250px]'
+    sidebarColapsado ? 'w-[290px] lg:w-[90px] barra-lateral--estrecha' : 'w-[290px]'
   ]"
-  class="fixed lg:sticky top-0 h-screen shrink-0 z-[9999] flex flex-col text-white transition-all duration-300 shadow-2xl"
-  :class="sidebarColapsado ? 'overflow-visible' : 'overflow-hidden'"
-  :style="{background:'#0B132B'}">
+  class="barra-lateral fixed lg:sticky top-0 h-screen shrink-0 z-[9999]
+         border-r border-gray-200 bg-white transition-all duration-300
+         dark:border-gray-800 dark:bg-gray-900">
 
-  <!-- LOGO Y TOGGLE -->
-  <div class="px-4 py-4 flex items-center transition-all duration-300"
-    :class="sidebarColapsado ? 'justify-center' : 'justify-between'">
-    <div class="flex items-center gap-3 overflow-hidden" v-show="!sidebarColapsado">
-      <img src="/assets/img/marca/logo-blanco-horizontal.png" alt="Municipalidad de San Salvador Sur"
-        class="h-8 object-contain" @error="logoError=true" v-show="!logoError">
-      <div v-show="logoError" class="flex items-center gap-2">
-        <i class="fas fa-shield-alt text-[var(--gold)] text-xl shrink-0"></i>
-        <span class="font-extrabold tracking-tight leading-tight text-xs">San Salvador<br>Sur</span>
-      </div>
-    </div>
-    <button @click="toggleSidebar" type="button"
-      :aria-label="sidebarColapsado ? 'Expandir menú lateral' : 'Colapsar menú lateral'"
-      :aria-expanded="sidebarColapsado ? 'false' : 'true'"
-      class="toque-comodo hidden lg:flex w-8 h-8 shrink-0 items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white">
-      <i class="fas fa-bars text-lg" aria-hidden="true"></i>
-    </button>
-  </div>
+  <div class="barra-lateral__panel">
 
-  <!-- TÍTULO SISTEMA -->
-  <div
-    class="border-b border-white/10 whitespace-nowrap overflow-hidden transition-all duration-300 flex flex-col justify-center"
-    :class="sidebarColapsado ? 'h-0 opacity-0 border-transparent' : 'h-[55px] px-5 opacity-100'">
-    <p class="text-[9px] tracking-[0.2em] text-white/50 font-bold uppercase">Centro de Monitoreo</p>
-    <p class="text-[13px] font-extrabold truncate mt-0.5 tracking-wide text-white">Gestión Integral de Incidentes</p>
-  </div>
+    <!-- ── Cabecera: logotipo y colapso ───────────────────────────────── -->
+    <div class="flex h-[72px] shrink-0 items-center gap-2 px-5"
+         :class="sidebarColapsado ? 'lg:justify-center' : 'justify-between'">
 
-  <!-- NAVEGACIÓN (Overflow visible para no cortar los tooltips) -->
-  <nav class="flex-1 py-4 space-y-1"
-    :class="sidebarColapsado ? 'overflow-visible' : 'overflow-y-auto overflow-x-visible'">
-
-    <!-- ══ COLAPSADO (76 px): lista plana. A este ancho no caben encabezados
-         de grupo, y un acordeón que no se puede leer solo añade clics. ══ -->
-    <div v-if="sidebarColapsado" class="px-3 overflow-visible">
-      <button v-for="item in navPlano" :key="item.id" @click="irA(item.id)"
-        class="sidebar-nav-item group relative flex items-center justify-center w-10 h-10 mx-auto transition-all duration-300 rounded-xl overflow-visible"
-        :class="vistaActual===item.id ? 'bg-white shadow-lg' : 'hover:bg-white/5'"
-        :id="'nav-btn-' + item.id" :aria-label="item.label">
-
-        <i :class="['fas', item.icono, 'text-lg transition-colors shrink-0', vistaActual===item.id ? 'text-blue-600' : 'text-white/70 group-hover:text-white']"></i>
-
-        <!-- Punto rojo: con el texto oculto, el número del badge no cabe -->
-        <span v-if="item.badge && item.badge()"
-          class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 shadow-[0_0_4px_#ef4444]"></span>
-
-        <div class="sidebar-tooltip absolute left-[76px] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-white text-slate-900 text-[13px] font-bold rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap flex items-center gap-2 border border-slate-100 pointer-events-none"
-          style="z-index: 10002;">
-          {{ item.label }}
-          <span v-if="item.badge && item.badge()" class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">{{ item.badge() }}</span>
+      <div class="solo-ancho--flex flex items-center gap-3 overflow-hidden">
+        <img src="/assets/img/marca/logo-azul-horizontal.png"
+             alt="Municipalidad de San Salvador Sur"
+             class="h-9 object-contain dark:hidden"
+             @error="logoError=true" v-show="!logoError">
+        <img src="/assets/img/marca/logo-blanco-horizontal.png"
+             alt="Municipalidad de San Salvador Sur"
+             class="hidden h-9 object-contain dark:block"
+             v-show="!logoError">
+        <div v-show="logoError" class="flex items-center gap-2">
+          <i class="fas fa-shield-alt text-xl text-brand-600 dark:text-brand-300"></i>
+          <span class="text-xs font-extrabold leading-tight tracking-tight text-gray-900 dark:text-white">
+            San Salvador<br>Sur
+          </span>
         </div>
+      </div>
+
+      <!-- Marca reducida cuando el menú está estrecho -->
+      <div class="solo-estrecho">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-sm font-black text-white">
+          SS
+        </span>
+      </div>
+
+      <button @click="toggleSidebar" type="button"
+        :aria-label="sidebarColapsado ? 'Expandir menú lateral' : 'Colapsar menú lateral'"
+        :aria-expanded="sidebarColapsado ? 'false' : 'true'"
+        class="solo-ancho--grid toque-comodo hidden h-9 w-9 shrink-0 lg:grid place-items-center rounded-lg
+               text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700
+               dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white">
+        <i class="fas fa-bars" aria-hidden="true"></i>
       </button>
     </div>
 
-    <!-- ══ EXPANDIDO: acordeón por grupos ══ -->
-    <div v-else class="px-3 space-y-1">
-      <div v-for="grupo in gruposVisibles" :key="grupo.id">
+    <!-- Nombre del sistema. Desaparece al colapsar: a 90 px no cabe, y
+         partirlo en dos líneas ilegibles no informa de nada. -->
+    <div class="solo-ancho border-b border-gray-100 px-5 pb-4 dark:border-gray-800">
+      <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">Centro de Monitoreo</p>
+      <p class="mt-0.5 truncate text-[13px] font-bold text-gray-800 dark:text-gray-100">
+        Gestión Integral de Incidentes
+      </p>
+    </div>
 
-        <button @click="toggleGrupo(grupo.id)"
-          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-white/45 hover:text-white/80 hover:bg-white/5 transition-colors"
-          :aria-expanded="grupoVisible(grupo.id) ? 'true' : 'false'">
-          <i :class="['fas', grupo.icono, 'text-[11px] shrink-0 w-4 text-center']"></i>
-          <span class="flex-1 text-left text-[9px] tracking-[0.18em] font-bold uppercase whitespace-nowrap">{{ grupo.label }}</span>
-          <i class="fas fa-chevron-down text-[9px] transition-transform duration-200 shrink-0"
-             :class="grupoVisible(grupo.id) ? 'rotate-180' : ''"></i>
-        </button>
+    <!-- ── Navegación ─────────────────────────────────────────────────── -->
+    <nav class="sin-scrollbar flex-1 overflow-y-auto px-4 py-5">
 
-        <div v-show="grupoVisible(grupo.id)" class="mt-0.5 space-y-0.5">
-          <button v-for="item in grupo.items" :key="item.id" @click="irA(item.id)"
-            class="sidebar-nav-item group relative flex items-center w-full pl-4 pr-3 py-2.5 gap-3 transition-all duration-200 rounded-xl"
-            :class="vistaActual===item.id ? 'bg-white shadow-lg' : 'hover:bg-white/5'"
-            :id="'nav-btn-' + item.id">
+      <div v-for="grupo in gruposVisibles" :key="grupo.id" class="mb-6 last:mb-0">
 
-            <i :class="['fas', item.icono, 'text-base transition-colors shrink-0 w-5 text-center', vistaActual===item.id ? 'text-blue-600' : 'text-white/70 group-hover:text-white']"></i>
+        <!-- Título del grupo. Al colapsar se sustituye por los tres puntos de
+             TailAdmin: mantiene la separación visual entre bloques sin
+             pretender que un texto de once píxeles se lea a 90 px de ancho. -->
+        <h3 class="menu-grupo-titulo solo-ancho">{{ grupo.label }}</h3>
+        <p class="solo-estrecho mb-3 text-center text-gray-300 dark:text-gray-600" aria-hidden="true">
+          <i class="fas fa-ellipsis text-xs"></i>
+        </p>
 
-            <span class="whitespace-nowrap flex-1 text-left text-[13px]"
-              :class="vistaActual===item.id ? 'text-slate-900 font-bold' : 'text-white/80 font-medium group-hover:text-white'">
-              {{ item.label }}
-            </span>
+        <ul class="flex flex-col gap-1">
+          <li v-for="item in grupo.items" :key="item.id">
+            <button type="button" @click="irA(item.id)"
+              :id="'nav-btn-' + item.id"
+              :title="item.label"
+              :aria-current="vistaActual===item.id ? 'page' : null"
+              class="menu-item"
+              :class="vistaActual===item.id ? 'menu-item--activo' : 'menu-item--inactivo'">
 
-            <span v-if="item.badge && item.badge()"
-              class="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-sm shrink-0">
-              {{ item.badge() }}
-            </span>
-          </button>
-        </div>
+              <i :class="['fas', item.icono, 'menu-item__icono']" aria-hidden="true"></i>
+
+              <span class="solo-ancho flex-1 text-left whitespace-nowrap">{{ item.label }}</span>
+
+              <!-- Con el menú ancho, el número. Estrecho, un punto: el número
+                   no cabe junto al icono y recortado engaña más que informa. -->
+              <span v-if="item.badge && item.badge()" class="menu-badge solo-ancho">
+                {{ item.badge() }}
+              </span>
+              <span v-if="item.badge && item.badge()"
+                class="solo-estrecho absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500"></span>
+            </button>
+          </li>
+        </ul>
       </div>
 
       <!-- Si los permisos dejaran el menú vacío, decirlo. En blanco parecería
-           que la app no terminó de cargar. -->
-      <p v-if="!gruposVisibles.length" class="px-3 py-6 text-[11px] text-white/40 leading-relaxed">
+           que la aplicación no terminó de cargar. -->
+      <p v-if="!gruposVisibles.length"
+         class="solo-ancho px-3 py-6 text-[11px] leading-relaxed text-gray-400">
         Tu rol no tiene módulos asignados. Contacta al administrador del sistema.
       </p>
-    </div>
-  </nav>
+    </nav>
 
-  <!-- USER / FOOTER -->
-  <div class="p-3 border-t border-white/10">
-    <div
-      class="flex items-center rounded-xl bg-[#141d34] hover:bg-[#1a2542] transition-colors cursor-pointer group relative shadow-inner border border-white/5"
-      :class="sidebarColapsado ? 'w-10 h-10 justify-center mx-auto' : 'px-3 py-2.5 gap-3'">
+    <!-- ── Ficha de la persona ────────────────────────────────────────── -->
+    <div class="shrink-0 border-t border-gray-100 p-4 dark:border-gray-800">
+      <div class="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors
+                  hover:bg-gray-50 dark:hover:bg-white/5"
+           :class="sidebarColapsado ? 'lg:justify-center lg:px-0' : ''">
 
-      <!-- Estos datos estaban escritos a mano: todo el mundo veía "Admin
-           Sistema" / "RA" independientemente de con quién hubiera entrado. -->
-      <div
-        class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
-        {{ iniciales }}
-      </div>
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-600 text-xs font-bold text-white">
+          {{ iniciales }}
+        </span>
 
-      <div class="flex-1 min-w-0 overflow-hidden" v-show="!sidebarColapsado">
-        <p class="text-[12px] font-bold truncate text-white leading-tight">{{ nombreMostrado }}</p>
-        <p class="text-[9px] text-white/50 truncate flex items-center gap-1 mt-0.5">
-          <span class="w-1.5 h-1.5 rounded-full"
-            :class="conexionOk ? 'bg-emerald-500 shadow-[0_0_5px_#10b981]' : 'bg-red-500 shadow-[0_0_5px_#ef4444]'"></span>
-          <span class="truncate">{{ rolUsuario || (conexionOk ? 'En línea' : 'Modo offline') }}</span>
-        </p>
-      </div>
+        <div class="solo-ancho min-w-0 flex-1">
+          <p class="truncate text-[13px] font-semibold leading-tight text-gray-800 dark:text-gray-100">
+            {{ nombreMostrado }}
+          </p>
+          <p class="mt-0.5 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+            <span class="h-1.5 w-1.5 shrink-0 rounded-full"
+                  :class="conexionOk ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+            <span class="truncate">{{ rolUsuario || (conexionOk ? 'En línea' : 'Modo offline') }}</span>
+          </p>
+        </div>
 
-      <button v-show="!sidebarColapsado"
-        @click="abrirModalLogout"
-        class="toque-comodo shrink-0 text-white/40 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
-        title="Cerrar sesión">
-        <i class="fas fa-sign-out-alt text-sm"></i>
-      </button>
-
-      <!-- Tooltip Perfil (solo en colapsado) -->
-      <div v-if="sidebarColapsado"
-        class="absolute left-12 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-900 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 whitespace-nowrap min-w-[140px] pointer-events-none">
-        <p class="text-[12px] font-bold">{{ nombreMostrado }}</p>
-        <p class="text-[9px] text-slate-500 flex items-center gap-1.5 mt-1">
-          <span class="w-1.5 h-1.5 rounded-full" :class="conexionOk ? 'bg-emerald-500' : 'bg-red-500'"></span>
-          {{ conexionOk ? 'Conectado a Supabase' : 'Modo offline' }}
-        </p>
+        <button @click="abrirModalLogout" type="button" title="Cerrar sesión"
+          class="solo-ancho toque-comodo shrink-0 rounded-lg p-2 text-gray-400 transition-colors
+                 hover:bg-gray-100 hover:text-gray-700
+                 dark:hover:bg-white/5 dark:hover:text-white">
+          <i class="fas fa-sign-out-alt text-sm" aria-hidden="true"></i>
+        </button>
       </div>
     </div>
   </div>
