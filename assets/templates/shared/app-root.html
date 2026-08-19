@@ -155,11 +155,6 @@
       <vista-notificaciones v-else-if="vistaActual==='vista-notificaciones' || vistaActual==='notificaciones'"></vista-notificaciones>
       <vista-comunicados v-else-if="vistaActual==='vista-comunicados'"></vista-comunicados>
       <vista-bitacora v-else-if="vistaActual==='bitacora'"></vista-bitacora>
-      <!-- Galería de la librería de componentes. Solo se puede llegar en
-           desarrollo: su ítem de menú se añade bajo `enDesarrollo` en
-           stores/navegacion.js. La rama vive aquí siempre porque quitar ramas
-           por entorno haría divergir este archivo entre local y producción. -->
-      <vista-galeria-componentes v-else-if="vistaActual==='galeria'"></vista-galeria-componentes>
       <vista-placeholder v-else :titulo="tituloVista"></vista-placeholder>
     </main>
 

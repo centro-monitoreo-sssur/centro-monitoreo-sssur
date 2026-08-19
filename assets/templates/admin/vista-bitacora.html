@@ -19,89 +19,70 @@
 </ui-cabecera-pagina>
 
 <!-- FILTROS -->
-<div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-end flex-shrink-0">
-  <div class="flex-1 min-w-[250px]">
-    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Búsqueda General</label>
-    <div class="relative">
-      <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-      <input type="text" v-model="busqueda" placeholder="Usuario, módulo, detalle de la acción..." 
-        class="w-full rounded-lg border py-2.5 pl-9 pr-3 border-gray-300 dark:border-gray-700 bg-transparent text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:text-white transition-all">
-    </div>
+<ui-barra-filtros>
+  <div class="w-full sm:w-72">
+    <ui-campo-busqueda v-model="busqueda" marcador="Usuario, módulo, detalle…" tamano="compacto"
+                       etiqueta-accesible="Buscar en la bitácora"></ui-campo-busqueda>
   </div>
-  
-  <div class="w-[200px]">
-    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Filtrar por Acción</label>
-    <select v-model="filtroAccion" class="w-full rounded-lg border px-3 py-2.5 border-gray-300 dark:border-gray-700 bg-transparent text-sm focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:text-white transition-all">
-      <option value="todas">Todas las acciones</option>
-      <option v-for="a in accionesUnicas" :key="a" :value="a">{{ a }}</option>
-    </select>
+  <div class="w-full sm:w-52">
+    <ui-select v-model="filtroAccion" :opciones="accionesUnicas"
+               texto-vacio="Todas las acciones" valor-vacio="todas"></ui-select>
   </div>
-  
-  <div class="w-[180px]">
-    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Rango de Fechas</label>
-    <div class="relative">
-      <i class="fa-regular fa-calendar absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-      <input type="text" placeholder="Últimos 7 días" class="w-full rounded-lg border py-2.5 pl-9 pr-3 border-gray-300 dark:border-gray-700 bg-transparent text-sm cursor-pointer dark:text-white" readonly>
-    </div>
-  </div>
+  <template #derecha>
+    <span class="text-theme-xs text-gray-500 dark:text-gray-400">
+      {{ logsFiltrados.length }} registro(s)
+    </span>
+  </template>
+</ui-barra-filtros>
+
+<!-- Nota de inmutabilidad, fuera de la tabla para que sobreviva al modo tarjetas. -->
+<div class="mb-4 flex shrink-0 items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-2.5 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/10 dark:text-blue-400">
+  <i class="fa-solid fa-lock mt-0.5 text-brand-500" aria-hidden="true"></i>
+  <span><strong>Nota de seguridad:</strong> los registros de esta bitácora son inmutables: ningún usuario puede modificarlos ni eliminarlos.</span>
 </div>
 
-<!-- TABLA DE LOGS -->
-<div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] shadow-sm flex flex-col overflow-hidden flex-1 min-h-0">
-  
-  <div class="p-3 border-b border-gray-100 dark:border-gray-700 bg-blue-50/50 dark:bg-blue-900/10 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400">
-    <i class="fa-solid fa-lock text-brand-500"></i> 
-    <span><strong>Nota de seguridad:</strong> Los registros de esta bitácora son inmutables y no pueden ser modificados ni eliminados por ningún usuario.</span>
-  </div>
+<!-- Registros: tabla desde lg, tarjetas en teléfono. La paginación por cursor
+     sobre `bitacora_auditoria.id` sigue pendiente; hasta entonces no se pintan
+     botones que no navegan (OFFSET prohibido por CONTEXTO_CRITICO.md §2.2). -->
+<ui-tabla
+  :columnas="COLUMNAS_TABLA"
+  :filas="logsFiltrados"
+  :cargando="cargando"
+  densidad="compacta"
+  ancho-minimo="900px"
+  vacio-icono="fa-solid fa-shield-halved"
+  vacio-texto="No hay registros de auditoría que coincidan con la búsqueda"
+  class="flex-1">
 
-  <!-- `sticky` en el thead: con miles de registros de auditoría, perder los
-       encabezados al tercer scroll obliga a subir para saber qué columna es cuál. -->
-  <div class="overflow-x-auto flex-1 min-h-0 overflow-y-auto">
-    <table class="w-full text-left border-collapse min-w-[900px]">
-      <thead class="sticky top-0 z-10">
-        <tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-          <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-24">ID Evento</th>
-          <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-40">Fecha y Hora</th>
-          <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-48">Usuario</th>
-          <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-28">Acción</th>
-          <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-32">Módulo</th>
-          <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500">Detalle</th>
-          <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-gray-500 w-32">Dir. IP</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-        <tr v-for="log in logsFiltrados" :key="log.id" class="hover:bg-gray-50 dark:hover:bg-gray-750/50 transition-colors font-mono text-[11px]">
-          <td class="px-5 py-3 font-semibold text-gray-500">{{ log.id }}</td>
-          <td class="px-5 py-3 text-gray-600 dark:text-gray-300">{{ formatearFecha(log.fecha) }}</td>
-          <td class="px-5 py-3">
-            <span class="font-sans font-semibold text-gray-800 dark:text-gray-200">{{ log.usuario }}</span>
-          </td>
-          <td class="px-5 py-3">
-            <span class="px-2 py-0.5 rounded uppercase font-bold tracking-wider" :class="getAccionBadge(log.accion)">
-              {{ log.accion }}
-            </span>
-          </td>
-          <td class="px-5 py-3 font-sans font-medium text-gray-700 dark:text-gray-300">{{ log.modulo }}</td>
-          <td class="px-5 py-3 font-sans text-xs text-gray-600 dark:text-gray-400">{{ log.detalle }}</td>
-          <td class="px-5 py-3 text-gray-500">{{ log.ip }}</td>
-        </tr>
-        
-        <tr v-if="logsFiltrados.length === 0">
-          <td colspan="7" class="px-5 py-12 text-center text-gray-400 font-sans">
-            <i class="fa-solid fa-shield-halved text-3xl mb-3 opacity-50"></i>
-            <p class="text-sm">No hay registros de auditoría que coincidan con la búsqueda.</p>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  
-  <!-- Pie. La paginación por cursor sobre `bitacora_auditoria.id` queda
-       pendiente; hasta entonces no se pintan botones que no navegan.
-       OFFSET está prohibido por docs/arquitectura/CONTEXTO_CRITICO.md §2.2. -->
-  <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 flex justify-between items-center text-xs text-gray-500 flex-shrink-0">
-    <div>Mostrando <span class="font-bold">{{ logsFiltrados.length }}</span> registros de auditoría</div>
-  </div>
-</div>
+  <template #celda-id="{ valor }">
+    <span class="font-mono font-semibold text-gray-500">{{ valor }}</span>
+  </template>
+  <template #celda-fecha="{ valor }">
+    <span class="font-mono text-[11px] text-gray-600 dark:text-gray-300">{{ formatearFecha(valor) }}</span>
+  </template>
+  <template #celda-usuario="{ valor }">
+    <span class="text-xs font-semibold text-gray-800 dark:text-gray-200">{{ valor }}</span>
+  </template>
+  <template #celda-accion="{ valor }">
+    <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider" :class="getAccionBadge(valor)">{{ valor }}</span>
+  </template>
+  <template #celda-detalle="{ valor }">
+    <span class="text-xs text-gray-600 dark:text-gray-400">{{ valor }}</span>
+  </template>
+  <template #celda-ip="{ valor }">
+    <span class="font-mono text-[11px] text-gray-500">{{ valor }}</span>
+  </template>
+
+  <template #tarjeta="{ fila }">
+    <div class="flex items-center justify-between gap-2">
+      <span class="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider" :class="getAccionBadge(fila.accion)">{{ fila.accion }}</span>
+      <span class="font-mono text-[10px] text-gray-400">#{{ fila.id }} · {{ formatearFecha(fila.fecha) }}</span>
+    </div>
+    <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ fila.usuario }}
+      <span class="font-normal text-gray-400">· {{ fila.modulo }}</span>
+    </p>
+    <p class="mt-0.5 text-theme-xs leading-relaxed text-gray-600 dark:text-gray-400">{{ fila.detalle }}</p>
+  </template>
+</ui-tabla>
 </ui-contenedor-pagina><!-- cierra el contenedor raíz: faltaba desde el original y solo no rompía
            porque el compilador de Vue autocierra las etiquetas al final del template -->

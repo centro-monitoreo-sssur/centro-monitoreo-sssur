@@ -25,8 +25,7 @@ import uiModal  from './shared/ui/ui-modal.js';
 import uiTabla  from './shared/ui/ui-tabla.js';
 import uiEditorTexto from './shared/ui/ui-editor-texto.js';
 import uiGaleriaEvidencias from './shared/ui/ui-galeria-evidencias.js';
-// Fase 2 de la migración TailAdmin: la librería que sustituye al marcado a
-// mano. Ver la galería (vista-galeria-componentes, solo desarrollo).
+// Fase 2 de la migración TailAdmin: la librería que sustituye al marcado a mano.
 import uiContenedorPagina  from './shared/ui/ui-contenedor-pagina.js';
 import uiCabeceraPagina    from './shared/ui/ui-cabecera-pagina.js';
 import uiFranjaKpi         from './shared/ui/ui-franja-kpi.js';
@@ -48,7 +47,6 @@ import vistaMapa          from './admin/vista-mapa.js';
 import vistaReportes      from './admin/vista-reportes.js';
 import vistaCartograma    from './admin/vista-cartograma.js';
 import vistaConfiguracion from './admin/vista-configuracion.js';
-import vistaGaleriaComponentes from './admin/vista-galeria-componentes.js';
 import vistaDenuncias     from './admin/vista-denuncias.js';
 import vistaIntervenciones from './admin/vista-intervenciones.js';
 import vistaUsuarios      from './admin/vista-usuarios.js';
@@ -129,7 +127,6 @@ export const componentes = {
   'vista-cartograma':       { comp: vistaCartograma,       tpl: 'admin/vista-cartograma' },
   'vista-reportes':         { comp: vistaReportes,         tpl: 'admin/vista-reportes' },
   'vista-configuracion':    { comp: vistaConfiguracion,    tpl: 'admin/vista-configuracion' },
-  'vista-galeria-componentes': { comp: vistaGaleriaComponentes, tpl: 'admin/vista-galeria-componentes' },
   'vista-denuncias':        { comp: vistaDenuncias,        tpl: 'admin/vista-denuncias' },
   'vista-intervenciones':   { comp: vistaIntervenciones,   tpl: 'admin/vista-intervenciones' },
   'vista-usuarios':         { comp: vistaUsuarios,         tpl: 'admin/vista-usuarios' },

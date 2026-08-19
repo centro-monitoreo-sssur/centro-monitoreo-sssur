@@ -17,6 +17,16 @@ export default {
     const busqueda = ref('');
     const filtroAccion = ref('todas');
 
+    const COLUMNAS_TABLA = [
+      { clave: 'id',      titulo: 'ID',           ordenable: true,  ancho: '80px' },
+      { clave: 'fecha',   titulo: 'Fecha y hora', ordenable: true,  ancho: '170px' },
+      { clave: 'usuario', titulo: 'Usuario',      ordenable: true,  ancho: '180px' },
+      { clave: 'accion',  titulo: 'Acción',       ordenable: true,  ancho: '120px' },
+      { clave: 'modulo',  titulo: 'Módulo',       ordenable: true,  ancho: '130px' },
+      { clave: 'detalle', titulo: 'Detalle',      ordenable: false },
+      { clave: 'ip',      titulo: 'Dir. IP',      ordenable: false, ancho: '130px' },
+    ];
+
     const accionesUnicas = ['LOGIN', 'FAILED_LOGIN', 'CREATE', 'UPDATE', 'DELETE', 'SYSTEM'];
 
     const logsFiltrados = computed(() => {
@@ -58,7 +68,7 @@ export default {
     }
 
     return {
-      busqueda, filtroAccion, accionesUnicas, logsFiltrados,
+      busqueda, filtroAccion, accionesUnicas, logsFiltrados, COLUMNAS_TABLA,
       getAccionBadge, formatearFecha, cargando
     };
   }

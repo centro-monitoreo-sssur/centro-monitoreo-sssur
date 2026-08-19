@@ -81,6 +81,27 @@ export default {
     const filtroBusqueda = ref('');
     const filtroRol = ref('');
     const filtroEstado = ref('');
+
+    /* Catalogos de la barra de filtros y columnas de la tabla. Viven aqui y
+       no en la plantilla para que la plantilla sea marcado, no datos. */
+    const OPCIONES_ROL = [
+      { id: 'admin',        nombre: 'Administrador' },
+      { id: 'supervisor',   nombre: 'Supervisor' },
+      { id: 'operador',     nombre: 'Operador' },
+      { id: 'cuadrilla',    nombre: 'Cuadrilla' },
+      { id: 'solo_lectura', nombre: 'Solo lectura' },
+    ];
+    const OPCIONES_ESTADO = [
+      { id: 'activo',   nombre: 'Activo' },
+      { id: 'inactivo', nombre: 'Inactivo' },
+    ];
+    const COLUMNAS_TABLA = [
+      { clave: 'nombre',       titulo: 'Usuario',        ordenable: true },
+      { clave: 'rol',          titulo: 'Rol',            ordenable: true,  ancho: '130px' },
+      { clave: 'estado',       titulo: 'Estado',         ordenable: true,  ancho: '110px' },
+      { clave: 'ultimoAcceso', titulo: 'Último acceso',  ordenable: false, ancho: '160px' },
+      { clave: 'acciones',     titulo: '',               ordenable: false, ancho: '90px', alineacion: 'centro' },
+    ];
     const usuarioSeleccionado = ref(null);
     const modalEditar = ref(false);
     const modalEliminar = ref(false);
@@ -375,6 +396,7 @@ export default {
       // Funciones
       cargarUsuarios,
       limpiarFiltros,
+      OPCIONES_ROL, OPCIONES_ESTADO, COLUMNAS_TABLA,
       abrirModalCrear,
       abrirModalEditar,
       abrirModalEliminar,

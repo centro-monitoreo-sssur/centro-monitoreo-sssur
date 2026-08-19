@@ -16,17 +16,23 @@
     </template>
   </ui-cabecera-pagina>
 
-  <!-- TABS ─────────────────────────────────────────────────────── -->
-  <div class="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 flex-wrap">
-    <button v-for="tab in tabs" :key="tab.id"
-      @click="tabActiva = tab.id"
-      class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all flex-1 min-w-[120px] justify-center"
-      :class="tabActiva === tab.id
-        ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
-        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
-      <i :class="'fa-solid ' + tab.icono" class="text-[13px]"></i>
-      {{ tab.label }}
-    </button>
+  <!-- TABS. En teléfono se desplazan de lado en una sola fila: las nueve
+       pestañas envueltas en rejilla ocupaban un tercio de la pantalla y
+       parecían botones sueltos, no navegación. -->
+  <div class="mb-6 overflow-x-auto">
+    <div class="inline-flex min-w-max items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800"
+         role="tablist" aria-label="Secciones de configuración">
+      <button v-for="tab in tabs" :key="tab.id" type="button" role="tab"
+        :aria-selected="tabActiva === tab.id ? 'true' : 'false'"
+        @click="tabActiva = tab.id"
+        class="flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-all"
+        :class="tabActiva === tab.id
+          ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-theme-xs font-semibold'
+          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+        <i :class="'fa-solid ' + tab.icono" class="text-[13px]" aria-hidden="true"></i>
+        {{ tab.label }}
+      </button>
+    </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════

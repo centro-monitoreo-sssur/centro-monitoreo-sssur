@@ -2,7 +2,7 @@
 <!-- `min-h-0` en toda la cadena: sin él los paneles con `overflow-hidden`
      pierden su tamaño mínimo automático, se encogen y recortan tanto la lista
      de roles como las últimas filas de la matriz. -->
-<ui-contenedor-pagina ancho="lectura">
+<ui-contenedor-pagina ancho="lectura" hibrido>
 
   <ui-cabecera-pagina titulo="Roles y Permisos"
                       subtitulo="Control de acceso basado en roles (RBAC)">
@@ -41,10 +41,10 @@
     </p>
   </div>
 
-  <div class="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
+  <div class="flex flex-col gap-6 lg:flex-row lg:flex-1 lg:min-h-0">
 
     <!-- LISTA DE ROLES -->
-    <div class="w-full md:w-80 flex-shrink-0 space-y-3 min-h-0 overflow-y-auto pr-1">
+    <div class="w-full shrink-0 space-y-3 lg:min-h-0 lg:w-80 lg:overflow-y-auto lg:pr-1">
 
       <!-- `v-if` y `v-for` en elementos distintos: juntos son error de
            compilación en Vue 3, porque el `v-if` se evalúa antes. -->
@@ -84,7 +84,7 @@
         </div>
 
         <!-- Acciones. Visibles siempre en táctil (no hay hover en un móvil). -->
-        <div v-if="puedeGestionar" class="flex gap-1 mt-3 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <div v-if="puedeGestionar" class="flex gap-1 mt-3 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
           <ui-boton tamano="sm" variante="secundario" icono="fa-solid fa-pen"
                     :etiqueta-accesible="'Editar el rol ' + rol.nombre"
                     @click.stop="abrirEdicion(rol)">Editar</ui-boton>
@@ -114,7 +114,40 @@
         <i v-if="guardando" class="fa-solid fa-circle-notch fa-spin text-gray-400 shrink-0" aria-label="Guardando"></i>
       </div>
 
-      <div class="flex-1 min-h-0 overflow-auto">
+      <!-- ══ TELÉFONO: un módulo, una tarjeta ══════════════════════════════
+           La matriz de 620 px con casillas de 28 px era inoperable con el
+           pulgar: se veía una columna y media y había que apuntar. Aquí cada
+           módulo lista sus permisos como botones de 44 px con la etiqueta
+           visible. Misma lógica (alternar/marcado/enCurso), otro cuerpo. -->
+      <div class="divide-y divide-gray-100 dark:divide-gray-800 lg:hidden">
+        <div v-for="m in modulos" :key="'mv-' + m.dbId" class="px-4 py-3.5">
+          <div class="mb-2 flex items-baseline justify-between gap-2">
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ m.label }}</p>
+            <span class="font-mono text-[10px] text-gray-400">{{ m.id }}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button v-for="a in ACCIONES" :key="'mv-' + m.dbId + a" type="button"
+                    @click="alternar(m, a)"
+                    :disabled="!puedeGestionar || enCurso(m, a)"
+                    :aria-pressed="marcado(m, a) ? 'true' : 'false'"
+                    :aria-label="etiquetaDe(a).titulo + ' en ' + m.label"
+                    class="flex h-11 items-center justify-between rounded-lg border px-3 text-xs font-semibold transition-colors focus:outline-none focus:ring-3 focus:ring-brand-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    :class="marcado(m, a)
+                      ? 'border-success-500/40 bg-success-50 text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-500'
+                      : 'border-gray-200 bg-white text-gray-500 dark:border-gray-700 dark:bg-transparent dark:text-gray-400'">
+              {{ etiquetaDe(a).titulo }}
+              <i v-if="enCurso(m, a)" class="fa-solid fa-circle-notch fa-spin text-[10px]" aria-hidden="true"></i>
+              <i v-else class="fa-solid text-[10px]" :class="marcado(m, a) ? 'fa-check' : 'fa-minus opacity-40'" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <p v-if="!modulos.length" class="px-5 py-10 text-center text-sm text-gray-400">
+          No hay módulos en <span class="font-mono">permisos_modulos</span>
+        </p>
+      </div>
+
+      <!-- ══ ESCRITORIO: la matriz completa ══ -->
+      <div class="hidden flex-1 min-h-0 overflow-auto lg:block">
         <table class="w-full text-left border-collapse min-w-[620px]">
           <thead>
             <tr class="bg-gray-50 dark:bg-gray-900">

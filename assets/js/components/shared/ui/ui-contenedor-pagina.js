@@ -38,10 +38,17 @@ export default {
     // paneles con scroll propio. `vista-reportes` es el caso: en móvil es una
     // página larga, no un tablero de alto fijo.
     fluido: { type: Boolean, default: false },
+    // Página larga en teléfono, tablero de alto fijo desde lg. Es la forma de
+    // roles y reportes: en un monitor conviene que cada panel tenga su scroll,
+    // pero en un teléfono los paneles apilados se reparten un alto minúsculo
+    // y ninguno se puede usar — mejor que la página entera se desplace.
+    hibrido: { type: Boolean, default: false },
   },
   setup(props) {
     const clases = computed(() => [
-      props.fluido ? 'w-full' : 'h-full min-h-0 flex flex-col',
+      props.hibrido
+        ? 'flex min-h-full flex-col lg:h-full lg:min-h-0'
+        : (props.fluido ? 'w-full' : 'h-full min-h-0 flex flex-col'),
       ANCHOS[props.ancho] ?? ANCHOS.ancho,
     ].filter(Boolean).join(' '));
 

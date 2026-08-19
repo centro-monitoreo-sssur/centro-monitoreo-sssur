@@ -95,9 +95,6 @@ const VISTAS = [
   ['roles',              'Roles y Permisos'],
   ['bitacora',           'Bitácora de Auditoría'],
   ['config',             'Configuración'],
-  // Solo existe en desarrollo, que es donde corre el banco. Es la hoja de
-  // contactos de la librería: cada primitiva en cada estado.
-  ['galeria',            'Galería de componentes'],
 ];
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -445,11 +442,8 @@ async function main() {
 
   /* Los recuentos que la Fase 4 congela como presupuesto. Van agregados aquí
      para que el linter no tenga que reinterpretar el detalle. */
-  /* La galería no cuenta: es una vista solo de desarrollo que EXHIBE a
-     propósito las variantes compactas. Meterla inflaría el presupuesto con
-     controles que ningún operador verá. Mapa y cartograma no cuentan en el
-     recorte por la misma razón que arriba: su desplazamiento es por arrastre. */
-  const deProduccion = informe.vistas.filter((v) => v.vista !== 'galeria');
+  /* Mapa y cartograma no cuentan en el recorte: su desplazamiento es por arrastre. */
+  const deProduccion = informe.vistas;
   informe.presupuesto = {
     controlesBajo40enMovil: deProduccion
       .filter((v) => v.ancho === 'movil')

@@ -125,6 +125,33 @@
         <i class="fa-solid fa-eye text-xs" aria-hidden="true"></i>
       </button>
     </template>
+
+    <!-- La denuncia como tarjeta, para gestionarla desde un teléfono: en la
+         tabla con scroll horizontal solo se veían la casilla y el ID. -->
+    <template #tarjeta="{ fila }">
+      <div class="flex items-start gap-3">
+        <div class="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+             :style="{ backgroundColor: getCategoria(fila.tipo_id).color_hex + '20', color: getCategoria(fila.tipo_id).color_hex }">
+          <i :class="['fa-solid', getCategoria(fila.tipo_id).icono]" aria-hidden="true"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-mono text-xs font-bold text-gray-500">{{ formatearId(fila.id) }}</span>
+            <span class="text-[10px] text-gray-400">{{ formatearFecha(fila.created_at) }}</span>
+          </div>
+          <p class="mt-0.5 truncate text-sm font-semibold text-gray-900 dark:text-white">
+            {{ getCategoria(fila.tipo_id).nombre }}
+          </p>
+          <p class="mt-0.5 flex items-center gap-1 text-theme-xs text-gray-500 dark:text-gray-400">
+            <i class="fa-solid fa-location-dot shrink-0 text-gray-400" aria-hidden="true"></i>
+            <span class="truncate">{{ fila.direccion }}</span>
+          </p>
+          <div class="mt-1.5">
+            <ui-badge tono="ninguno" tamano="sm" :class="badgeEstado(fila.estado)">{{ etiquetaEstado(fila.estado) }}</ui-badge>
+          </div>
+        </div>
+      </div>
+    </template>
   </ui-tabla>
 
   <!-- MODAL DETALLE Y GESTIÓN -->

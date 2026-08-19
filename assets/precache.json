@@ -1,8 +1,8 @@
 {
   "generado": "herramientas/generar-precache.mjs",
-  "huella": "53c1a52818ab",
-  "totalArchivos": 293,
-  "totalBytes": 6185767,
+  "huella": "f446cca0fc32",
+  "totalArchivos": 291,
+  "totalBytes": 6160278,
   "rutas": [
     "/",
     "/assets/css/base.css",
@@ -34,7 +34,6 @@
     "/assets/js/components/admin/vista-dashboard.js",
     "/assets/js/components/admin/vista-denuncias.js",
     "/assets/js/components/admin/vista-departamentos.js",
-    "/assets/js/components/admin/vista-galeria-componentes.js",
     "/assets/js/components/admin/vista-intervenciones.js",
     "/assets/js/components/admin/vista-mapa.js",
     "/assets/js/components/admin/vista-notificaciones.js",
@@ -182,7 +181,6 @@
     "/assets/templates/admin/vista-dashboard.html",
     "/assets/templates/admin/vista-denuncias.html",
     "/assets/templates/admin/vista-departamentos.html",
-    "/assets/templates/admin/vista-galeria-componentes.html",
     "/assets/templates/admin/vista-intervenciones.html",
     "/assets/templates/admin/vista-mapa.html",
     "/assets/templates/admin/vista-notificaciones.html",
